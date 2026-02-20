@@ -7,6 +7,8 @@ import ShowTimes from "./pages/Showtimes";
 import TicketPrice from "./pages/TicketPrice";
 import BookTicket from "./pages/Bookticket";
 import AdminDashboard from "./pages/AdminDashboard";
+import AboutUs from "./pages/AboutUs";
+import Contacts from "./pages/Contacts"; 
 
 export default function App() {
   return (
@@ -20,9 +22,9 @@ export default function App() {
         <Route path="/ticket-price" element={<TicketPrice />} />
         <Route path="/book/:id" element={<BookTicket />} />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/about" element={<div style={{ padding: "2rem", textAlign: "center" }}><h2>About CineBook</h2><p style={{ marginTop: "1rem", color: "#666" }}>CineBook is your premier cinema ticketing platform.</p></div>} />
-        <Route path="/contact" element={<div style={{ padding: "2rem", textAlign: "center" }}><h2>Contact Us</h2><p style={{ marginTop: "1rem", color: "#666" }}>Email: support@cinebook.com | Phone: +880-1234-567890</p></div>} />
-      </Routes>
+        <Route path="/about" element={<AboutUs />} />  
+        <Route path="/contact" element={<Contacts />} />
+             </Routes>
     </BrowserRouter>
   );
 }
