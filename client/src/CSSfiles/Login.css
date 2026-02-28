@@ -1,0 +1,117 @@
+/* Login.css */
+
+/* ── Page Wrapper ── */
+.login-wrapper {
+  min-height: 100vh;
+  background: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Card ── */
+.login-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  width: 380px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+}
+
+.login-card-header {
+  background: #6b1829;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.login-card-header h2 {
+  color: white;
+  font-family: "Playfair Display", serif;
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+/* ── Form ── */
+.login-form {
+  padding: 2rem;
+}
+
+.login-field {
+  margin-bottom: 1.2rem;
+}
+
+.login-field.last {
+  margin-bottom: 1.5rem;
+}
+
+.login-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.login-label span {
+  color: #6b1829;
+}
+
+/* ── Input ── */
+.login-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.login-input.with-icon {
+  padding-right: 2.5rem;
+}
+
+/* ── Password Row ── */
+.password-wrapper {
+  position: relative;
+}
+
+.toggle-pass-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 1rem;
+}
+
+/* ── Submit Button ── */
+.login-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #6b1829;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+/* ── Footer Text ── */
+.login-footer-text {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.83rem;
+  color: #555;
+}
+
+.login-footer-text a {
+  color: #6b1829;
+  font-weight: 600;
+  text-decoration: none;
+}
