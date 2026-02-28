@@ -4,12 +4,10 @@ services:
   client:
     build:
       context: ./client
-      args:
-        VITE_BACKEND_ENDPOINT: http://server:5000
-    #container_name: cinebook_client
+    container_name: cinebook-client
     restart: always
     ports:
-      - "3000:80"
-    #depends_on:
-      #- server
+      - "5173:5173"
+    volumes:
+      - ./client/src:/app/src
 
