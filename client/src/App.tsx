@@ -3,7 +3,7 @@ import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-//import ShowTimes from "./pages/Showtimes";
+import ShowTimes from "./pages/Showtimes";
 //import TicketPrice from "./pages/TicketPrice";
 //import BookTicket from "./pages/Bookticket";
 //import AdminDashboard from "./pages/AdminDashboard";
@@ -18,6 +18,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+         <Route path="/showtimes" element={<ShowTimes />} />
              </Routes>
     </BrowserRouter>
   );
