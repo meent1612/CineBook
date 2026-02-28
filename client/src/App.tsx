@@ -7,6 +7,7 @@ import ShowTimes from "./pages/Showtimes";
 //import TicketPrice from "./pages/TicketPrice";
 import BookTicket from "./pages/Bookticket";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserDashboard from "./pages/UserDashboard";
 //import AboutUs from "./pages/AboutUs";
 //import Contacts from "./pages/Contacts"; 
 
@@ -21,6 +22,7 @@ export default function App() {
          <Route path="/showtimes" element={<ShowTimes />} />
          <Route path="/book/:id" element={<BookTicket />} />
          <Route path="/admin" element={<AdminDashboard />} />
+         <Route path="/user" element={<UserDashboard />} />
              </Routes>
     </BrowserRouter>
   );
