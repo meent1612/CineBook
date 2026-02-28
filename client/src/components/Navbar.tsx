@@ -9,6 +9,7 @@ const navLinks = [
   { to: "/contact", label: "CONTACTS" },
   { to: "/ticket-price", label: "TICKET PRICE" },
   { to: "/admin", label: "ADMIN DASHBOARD" },
+  { to: "/user", label:"USER DASHBOARD"}
 ];
 
 export default function Navbar() {
