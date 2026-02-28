@@ -1,0 +1,150 @@
+/* ShowTimes.css */
+
+/* ── Page Wrapper ── */
+.showtimes-wrapper {
+  min-height: 100vh;
+  background: #f0f0f0;
+}
+
+/* ── Location Bar ── */
+.location-bar {
+  background: #2a2a2a;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.location-label {
+  color: #aaa;
+  font-size: 0.72rem;
+}
+
+.location-name {
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.change-location-btn {
+  background: #6b1829;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* ── Movie Rows ── */
+.movie-rows {
+  padding: 1rem;
+}
+
+.movie-row {
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.movie-row-inner {
+  display: flex;
+}
+
+/* ── Movie Info Panel ── */
+.movie-info {
+  min-width: 180px;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-right: 1px solid #eee;
+}
+
+.movie-info-poster {
+  width: 60px;
+  height: 85px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.movie-info-title {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  color: #1a1a1a;
+}
+
+.movie-info-details {
+  font-size: 0.68rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ── Showtimes Grid ── */
+.showtimes-grid-wrapper {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.showtimes-grid {
+  display: flex;
+  min-width: 700px;
+}
+
+.day-column {
+  flex: 1;
+  border-right: 1px solid #eee;
+  padding: 0.5rem 0.4rem;
+  min-width: 100px;
+}
+
+.day-header {
+  background: #6b1829;
+  color: white;
+  border-radius: 4px;
+  padding: 0.2rem 0.3rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.showtime-btn {
+  display: block;
+  width: 100%;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #2e7d32;
+  border-radius: 4px;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+.get-tickets-btn {
+  display: block;
+  width: 100%;
+  background: #6b1829;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+  margin-top: 0.3rem;
+}
+
+/* ── Footer ── */
+.footer {
+  background: #1a1a1a;
+  color: #aaa;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.78rem;
+}
