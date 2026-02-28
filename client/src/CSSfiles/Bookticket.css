@@ -1,0 +1,391 @@
+/* BookTicket.css */
+
+/* ── Page Wrapper ── */
+.book-wrapper {
+  background: #f0f0f0;
+  min-height: 100vh;
+}
+
+/* ── Location Bar ── */
+.book-location-bar {
+  background: #2a2a2a;
+  padding: 0.5rem 1.5rem;
+}
+
+.book-location-label {
+  color: #aaa;
+  font-size: 0.7rem;
+}
+
+.book-location-name {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.book-change-location-btn {
+  background: none;
+  border: none;
+  color: #6b9ed2;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ── Main Layout ── */
+.book-main {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ── Left Column ── */
+.book-left {
+  flex: 1;
+}
+
+/* ── Section Component ── */
+.book-section {
+  margin-bottom: 1rem;
+}
+
+.book-section h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #222;
+}
+
+.book-section-body {
+  background: white;
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Date Buttons ── */
+.date-btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.date-btn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 55px;
+}
+
+.date-btn.active {
+  border-color: #6b1829;
+  background: #6b1829;
+  color: white;
+}
+
+.date-btn-day,
+.date-btn-month {
+  font-size: 0.65rem;
+}
+
+/* ── Movie Poster Strip ── */
+.movie-poster-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.movie-strip-poster {
+  width: 60px;
+  height: 85px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.movie-strip-poster.active {
+  border: 3px solid #6b1829;
+}
+
+/* ── Showtime ── */
+.showtime-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.hall-badge {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.showtime-btn {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 2px solid #ddd;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.showtime-btn.active {
+  border-color: #6b1829;
+  background: #6b1829;
+  color: white;
+}
+
+/* ── Seat Type & Quantity Row ── */
+.seat-type-quantity-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.seat-type-quantity-row .book-section {
+  flex: 1;
+}
+
+/* ── Seat Type Radio ── */
+.seat-type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.seat-type-option:last-child {
+  margin-bottom: 0;
+}
+
+.seat-type-price {
+  color: #888;
+  font-size: 0.72rem;
+}
+
+/* ── Quantity Controls ── */
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.q-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #6b1829;
+  background: white;
+  color: #6b1829;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantity-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ── Seat Map ── */
+.seat-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.72rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.seat-map-wrapper {
+  overflow-x: auto;
+}
+
+.seat-row {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 3px;
+  align-items: center;
+}
+
+.seat-row-label {
+  width: 16px;
+  font-size: 0.65rem;
+  color: #888;
+  text-align: right;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.seat-btn {
+  width: 18px;
+  height: 16px;
+  border-radius: 3px 3px 0 0;
+  border: none;
+}
+
+.seat-btn.taken {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.seat-btn.available,
+.seat-btn.selected {
+  cursor: pointer;
+}
+
+.theatre-screen {
+  margin-top: 0.75rem;
+  background: #555;
+  border-radius: 4px;
+  text-align: center;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.2rem;
+  max-width: 280px;
+  margin-left: 20px;
+}
+
+/* ── Right: Ticket Summary ── */
+.book-right {
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 80px;
+}
+
+.summary-header {
+  background: #6b1829;
+  color: white;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.summary-body {
+  padding: 0.75rem;
+}
+
+.summary-movie-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.summary-poster {
+  width: 50px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.summary-movie-title {
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.summary-movie-genre {
+  color: #888;
+  font-size: 0.68rem;
+}
+
+.summary-details {
+  border-top: 1px solid #eee;
+  padding-top: 0.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  margin-bottom: 0.3rem;
+}
+
+.summary-row-key {
+  color: #888;
+}
+
+.summary-row-value {
+  font-weight: 600;
+  text-align: right;
+  max-width: 110px;
+  word-break: break-all;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.4rem;
+  margin-top: 0.4rem;
+  font-weight: 700;
+}
+
+.summary-total-amount {
+  color: #6b1829;
+}
+
+.purchase-btn {
+  width: 100%;
+  padding: 0.65rem;
+  background: #6b1829;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+/* ── Footer ── */
+.book-footer {
+  background: #1a1a1a;
+  color: #aaa;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.78rem;
+}
