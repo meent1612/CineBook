@@ -1,36 +1,30 @@
-import { Outlet, Route, Routes } from 'react-router';
-import BaseLayout from './views/BaseLayout';
-import Home from './views/Home';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './index.css';
-import { Toaster } from 'react-hot-toast';
-import Sessions from './views/Sessions';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ShowTimes from "./pages/Showtimes";
+import TicketPrice from "./pages/TicketPrice";
+import BookTicket from "./pages/Bookticket";
+import AdminDashboard from "./pages/AdminDashboard";
+import AboutUs from "./pages/AboutUs";
+import Contacts from "./pages/Contacts"; 
 
-function App() {
+export default function App() {
   return (
-    <>
+    <BrowserRouter>
+      <Navbar />
       <Routes>
-        <Route
-          element={
-            <BaseLayout>
-              <Outlet />
-            </BaseLayout>
-          }
-        >
-          <Route path={'/'} element={<Home />} />
-          <Route path={'/sessions'} element={<Sessions />} />
-        </Route>
-      </Routes>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          error: {
-            duration: 5000,
-          },
-        }}
-      />
-    </>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/showtimes" element={<ShowTimes />} />
+        <Route path="/ticket-price" element={<TicketPrice />} />
+        <Route path="/book/:id" element={<BookTicket />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/about" element={<AboutUs />} />  
+        <Route path="/contact" element={<Contacts />} />
+             </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
