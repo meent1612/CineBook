@@ -4,7 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ShowTimes from "./pages/Showtimes";
-//import TicketPrice from "./pages/TicketPrice";
+import TicketPrice from "./pages/TicketPrice";
 import BookTicket from "./pages/Bookticket";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
@@ -25,6 +25,7 @@ export default function App() {
          <Route path="/user" element={<UserDashboard />} />
          <Route path="/about" element={<AboutUs/>} />
          <Route path="/contact" element={<Contacts/>} />
+          <Route path="/ticket-price" element={<TicketPrice/>} />
              </Routes>
     </BrowserRouter>
   );
