@@ -9,7 +9,7 @@ import BookTicket from "./pages/Bookticket";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import AboutUs from "./pages/AboutUs";
-//import Contacts from "./pages/Contacts"; 
+import Contacts from "./pages/Contacts"; 
 
 export default function App() {
   return (
@@ -24,6 +24,7 @@ export default function App() {
          <Route path="/admin" element={<AdminDashboard />} />
          <Route path="/user" element={<UserDashboard />} />
          <Route path="/about" element={<AboutUs/>} />
+         <Route path="/contact" element={<Contacts/>} />
              </Routes>
     </BrowserRouter>
   );
