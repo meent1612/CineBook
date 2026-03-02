@@ -11,3 +11,20 @@ services:
     volumes:
       - ./client/src:/app/src
 
+  db:
+    image: mysql:8.0
+    container_name: cinebook_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: cinebook_db
+      MYSQL_USER: cinebook_user
+      MYSQL_PASSWORD: cinebook_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./database/migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - cinebook_db_data:/var/lib/mysql
+
+volumes:
+  cinebook_db_data:
