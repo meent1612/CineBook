@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/Register.css";
 
 export default function Register() {
@@ -11,6 +12,10 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const set =
@@ -18,13 +23,32 @@ export default function Register() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     if (form.password !== form.confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
-    navigate("/login");
+
+    setLoading(true);
+
+    try {
+      await register({
+        name: form.fullName,
+        email: form.email,
+        password: form.password,
+        password_confirmation: form.confirmPassword,
+        mobile_number: form.mobile ? `+880${form.mobile}` : undefined,
+        gender: form.gender,
+      });
+      navigate("/user");
+    } catch (err: any) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +59,12 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleSubmit} className="register-form">
+          {error && (
+            <p style={{ color: "red", marginBottom: "10px", fontSize: "14px" }}>
+              {error}
+            </p>
+          )}
+
           <Field label="Full Name*">
             <input
               type="text"
@@ -105,8 +135,8 @@ export default function Register() {
             />
           </Field>
 
-          <button type="submit" className="register-btn">
-            Register
+          <button type="submit" className="register-btn" disabled={loading}>
+            {loading ? "Registering..." : "Register"}
           </button>
 
           <p className="register-footer-text">
