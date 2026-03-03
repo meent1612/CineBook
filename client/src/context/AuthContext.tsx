@@ -28,7 +28,7 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
