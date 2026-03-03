@@ -1,21 +1,31 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/Navbar.css";
-
-const navLinks = [
-  { to: "/", label: "HOME" },
-  { to: "/showtimes", label: "SHOW TIMES" },
-  { to: "/about", label: "ABOUT US" },
-  { to: "/contact", label: "CONTACTS" },
-  { to: "/ticket-price", label: "TICKET PRICE" },
-  { to: "/admin", label: "ADMIN DASHBOARD" },
-  { to: "/user", label:"USER DASHBOARD"}
-];
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  // Build nav links based on role
+  const navLinks = [
+    { to: "/", label: "HOME" },
+    { to: "/showtimes", label: "SHOW TIMES" },
+    { to: "/about", label: "ABOUT US" },
+    { to: "/contact", label: "CONTACTS" },
+    { to: "/ticket-price", label: "TICKET PRICE" },
+    // Show Admin Dashboard only for admin
+    ...(user?.role === "admin" ? [{ to: "/admin", label: "ADMIN DASHBOARD" }] : []),
+    // Show User Dashboard only for logged in user
+    ...(user?.role === "user" ? [{ to: "/user", label: "USER DASHBOARD" }] : []),
+  ];
 
   return (
     <nav className="nav">
@@ -44,9 +54,20 @@ export default function Navbar() {
           <span>📍</span>
           <span>Tejgaon</span>
         </div>
-        <button className="login-btn" onClick={() => navigate("/login")}>
-          👤 Login
-        </button>
+
+        {user ? (
+          <>
+            <span className="nav-username">👤 {user.name}</span>
+            <button className="login-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </>
+        ) : (
+          <button className="login-btn" onClick={() => navigate("/login")}>
+            👤 Login
+          </button>
+        )}
+
         <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
           ☰
         </button>
@@ -64,6 +85,11 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          {user && (
+            <button className="mobile-menu-link" onClick={handleLogout}>
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>
