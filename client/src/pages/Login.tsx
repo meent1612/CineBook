@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/Login.css";
 
 export default function Login() {
-  console.log("Login component loaded"); // ADD THIS LINE
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -16,7 +15,6 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleLogin called with:", email, password); // ADD THIS LINE
     setError("");
     setLoading(true);
 
