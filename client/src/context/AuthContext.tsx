@@ -7,6 +7,7 @@ interface User {
   role: "admin" | "user";
   mobile_number: string | null;
   gender: string | null;
+  created_at: string;
 }
 
 interface AuthContextType {
