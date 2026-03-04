@@ -1,16 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/UserDashboard.css";
-
-const USER = {
-  name: "Rafi Ahmed",
-  email: "rafi.ahmed@gmail.com",
-  mobile: "+880 1712-345678",
-  gender: "Male",
-  location: "Tejgaon, Dhaka",
-  memberSince: "January 2025",
-  avatar: "RA",
-};
 
 const BOOKED_TICKETS = [
   {
@@ -54,26 +45,83 @@ const BOOKED_TICKETS = [
 const TABS = ["Overview", "My Tickets", "Profile"];
 
 export default function UserDashboard() {
+  const { user, token, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState("Overview");
   const [editMode, setEditMode] = useState(false);
-  const [profile, setProfile] = useState(USER);
-  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [profile, setProfile] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    mobile_number: user?.mobile_number || "",
+    gender: user?.gender || "",
+  });
 
   const totalSpent = BOOKED_TICKETS.reduce((s, t) => s + t.total, 0);
   const upcoming = BOOKED_TICKETS.filter((t) => t.status === "upcoming");
   const watched = BOOKED_TICKETS.filter((t) => t.status === "watched");
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setProfile((p) => ({ ...p, [k]: e.target.value }));
+  // Get initials for avatar
+  const initials = profile.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+
+  // Member since from user created_at
+  const memberSince = user
+    ? new Date((user as any).created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_ENDPOINT}/api/profile`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: profile.name,
+            mobile_number: profile.mobile_number,
+            gender: profile.gender,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      setEditMode(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="ud-wrapper">
       {/* Sidebar */}
       <aside className="ud-sidebar">
-        <div className="ud-avatar">{USER.avatar}</div>
+        <div className="ud-avatar">{initials}</div>
         <div className="ud-sidebar-name">{profile.name}</div>
         <div className="ud-sidebar-email">{profile.email}</div>
-        <div className="ud-sidebar-badge">Member since {USER.memberSince}</div>
+        <div className="ud-sidebar-badge">Member since {memberSince}</div>
 
         <nav className="ud-nav">
           {TABS.map((tab) => (
@@ -90,19 +138,19 @@ export default function UserDashboard() {
           ))}
         </nav>
 
-        <button className="ud-logout-btn" onClick={() => navigate("/")}>
+        <button className="ud-logout-btn" onClick={handleLogout}>
           ← Back to Home
         </button>
       </aside>
 
       {/* Main Content */}
       <main className="ud-main">
-        {/* ── OVERVIEW ── */}
+        {/* OVERVIEW */}
         {activeTab === "Overview" && (
           <div className="ud-section">
-            <h2 className="ud-section-title">Good to see you, {profile.name.split(" ")[0]} 👋</h2>
-
-            {/* Stats */}
+            <h2 className="ud-section-title">
+              Good to see you, {profile.name.split(" ")[0]} 👋
+            </h2>
             <div className="ud-stats-row">
               <div className="ud-stat-card">
                 <div className="ud-stat-value">{BOOKED_TICKETS.length}</div>
@@ -122,7 +170,6 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Upcoming ticket */}
             <h3 className="ud-sub-title">Upcoming Booking</h3>
             {upcoming.length === 0 ? (
               <div className="ud-empty">No upcoming bookings.</div>
@@ -130,7 +177,6 @@ export default function UserDashboard() {
               upcoming.map((t) => <TicketCard key={t.id} ticket={t} />)
             )}
 
-            {/* Recent */}
             <h3 className="ud-sub-title">Recently Watched</h3>
             <div className="ud-recent-row">
               {watched.map((t) => (
@@ -152,11 +198,10 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* ── MY TICKETS ── */}
+        {/* MY TICKETS */}
         {activeTab === "My Tickets" && (
           <div className="ud-section">
             <h2 className="ud-section-title">My Tickets</h2>
-
             <div className="ud-ticket-filter-row">
               <span className="ud-filter-badge upcoming">
                 {upcoming.length} Upcoming
@@ -165,49 +210,98 @@ export default function UserDashboard() {
                 {watched.length} Watched
               </span>
             </div>
-
             {BOOKED_TICKETS.map((t) => (
               <TicketCard key={t.id} ticket={t} showStatus />
             ))}
           </div>
         )}
 
-        {/* ── PROFILE ── */}
+        {/* PROFILE */}
         {activeTab === "Profile" && (
           <div className="ud-section">
             <div className="ud-profile-header">
               <h2 className="ud-section-title">My Profile</h2>
               <button
                 className="ud-edit-btn"
-                onClick={() => setEditMode(!editMode)}
+                onClick={() => (editMode ? handleSave() : setEditMode(true))}
+                disabled={saving}
               >
-                {editMode ? "✓ Save" : "✏️ Edit"}
+                {saving ? "Saving..." : editMode ? "✓ Save" : "✏️ Edit"}
               </button>
             </div>
 
+            {error && (
+              <p style={{ color: "red", marginBottom: "10px" }}>{error}</p>
+            )}
+
             <div className="ud-profile-card">
-              <div className="ud-profile-avatar">{USER.avatar}</div>
+              <div className="ud-profile-avatar">{initials}</div>
               <div className="ud-profile-fields">
-                {[
-                  { label: "Full Name", key: "name" },
-                  { label: "Email", key: "email" },
-                  { label: "Mobile", key: "mobile" },
-                  { label: "Gender", key: "gender" },
-                  { label: "Location", key: "location" },
-                ].map(({ label, key }) => (
-                  <div key={key} className="ud-field">
-                    <label className="ud-field-label">{label}</label>
-                    {editMode ? (
-                      <input
-                        className="ud-field-input"
-                        value={(profile as any)[key]}
-                        onChange={set(key)}
-                      />
-                    ) : (
-                      <div className="ud-field-value">{(profile as any)[key]}</div>
-                    )}
-                  </div>
-                ))}
+
+                {/* Full Name - editable */}
+                <div className="ud-field">
+                  <label className="ud-field-label">Full Name</label>
+                  {editMode ? (
+                    <input
+                      className="ud-field-input"
+                      value={profile.name}
+                      onChange={(e) =>
+                        setProfile((p) => ({ ...p, name: e.target.value }))
+                      }
+                    />
+                  ) : (
+                    <div className="ud-field-value">{profile.name}</div>
+                  )}
+                </div>
+
+                {/* Email - always read only */}
+                <div className="ud-field">
+                  <label className="ud-field-label">Email</label>
+                  <div className="ud-field-value">{profile.email}</div>
+                </div>
+
+                {/* Mobile - editable */}
+                <div className="ud-field">
+                  <label className="ud-field-label">Mobile</label>
+                  {editMode ? (
+                    <input
+                      className="ud-field-input"
+                      value={profile.mobile_number}
+                      onChange={(e) =>
+                        setProfile((p) => ({
+                          ...p,
+                          mobile_number: e.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <div className="ud-field-value">
+                      {profile.mobile_number || "—"}
+                    </div>
+                  )}
+                </div>
+
+                {/* Gender - editable */}
+                <div className="ud-field">
+                  <label className="ud-field-label">Gender</label>
+                  {editMode ? (
+                    <select
+                      className="ud-field-input"
+                      value={profile.gender}
+                      onChange={(e) =>
+                        setProfile((p) => ({ ...p, gender: e.target.value }))
+                      }
+                    >
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  ) : (
+                    <div className="ud-field-value">{profile.gender || "—"}</div>
+                  )}
+                </div>
+
               </div>
             </div>
           </div>
@@ -217,7 +311,13 @@ export default function UserDashboard() {
   );
 }
 
-function TicketCard({ ticket, showStatus }: { ticket: (typeof BOOKED_TICKETS)[0]; showStatus?: boolean }) {
+function TicketCard({
+  ticket,
+  showStatus,
+}: {
+  ticket: (typeof BOOKED_TICKETS)[0];
+  showStatus?: boolean;
+}) {
   return (
     <div className={`ud-ticket-card ${ticket.status}`}>
       <img

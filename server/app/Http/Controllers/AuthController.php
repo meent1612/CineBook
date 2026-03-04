@@ -85,4 +85,23 @@ class AuthController extends Controller
             'user'    => JWTAuth::user(),
         ]);
     }
+
+    // Update profile
+public function updateProfile(Request $request)
+{
+    $request->validate([
+        'name'          => 'sometimes|string|max:255',
+        'mobile_number' => 'sometimes|nullable|string|max:20',
+        'gender'        => 'sometimes|nullable|in:Male,Female,Other',
+    ]);
+
+    $user = JWTAuth::user();
+    $user->update($request->only('name', 'mobile_number', 'gender'));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Profile updated successfully',
+        'user'    => $user,
+    ]);
+}
 }
