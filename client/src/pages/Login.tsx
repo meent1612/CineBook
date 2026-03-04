@@ -1,39 +1,59 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/Login.css";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "admin" && password === "admin") {
-      navigate("/admin");
-    } else {
-      navigate("/");
+    setError("");
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/user");
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-wrapper">
       <div className="login-card">
-        {/* Header */}
         <div className="login-card-header">
           <h2>Login to CineBook</h2>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleLogin} className="login-form">
+          {error && (
+            <p style={{ color: "red", marginBottom: "10px", fontSize: "14px" }}>
+              {error}
+            </p>
+          )}
+
           <div className="login-field">
             <label className="login-label">
-              Email/Mobile<span>*</span>
+              Email<span>*</span>
             </label>
             <input
-              type="text"
-              placeholder="Email/Mobile*"
+              type="email"
+              placeholder="Email*"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -64,8 +84,8 @@ export default function Login() {
             </div>
           </div>
 
-          <button type="submit" className="login-btn">
-            Login
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <p className="login-footer-text">
