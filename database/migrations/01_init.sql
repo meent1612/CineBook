@@ -1,12 +1,8 @@
--- CineBook Database Schema
--- Milestone 1: users, movies, halls, screenings
+
 
 CREATE DATABASE IF NOT EXISTS cinebook_db;
 USE cinebook_db;
 
--- --------------------------------------------------------
--- Table: users
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -19,9 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- --------------------------------------------------------
--- Table: movies
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS movies (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -39,9 +32,6 @@ CREATE TABLE IF NOT EXISTS movies (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- --------------------------------------------------------
--- Table: halls
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS halls (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -50,9 +40,6 @@ CREATE TABLE IF NOT EXISTS halls (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- --------------------------------------------------------
--- Table: screenings
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS screenings (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     movie_id BIGINT UNSIGNED NOT NULL,
@@ -65,22 +52,3 @@ CREATE TABLE IF NOT EXISTS screenings (
     FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
     FOREIGN KEY (hall_id) REFERENCES halls(id) ON DELETE CASCADE
 );
-
--- --------------------------------------------------------
--- Seed: Admin user
--- Password is 'admin123' (bcrypt hashed)
--- --------------------------------------------------------
-INSERT INTO users (name, email, password, role) VALUES (
-    'Admin',
-    'admin@cinebook.com',
-    '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
-    'admin'
-);
-
--- --------------------------------------------------------
--- Seed: Halls
--- --------------------------------------------------------
-INSERT INTO halls (name, capacity) VALUES
-    ('Hall 1', 100),
-    ('Hall 2', 80),
-    ('Hall 3', 120);
