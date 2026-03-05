@@ -1,6 +1,6 @@
 USE cinebook_db;
 
--- Admin user (password: 'password')
+
 INSERT INTO users (name, email, password, role) VALUES (
     'Admin',
     'admin@cinebook.com',
@@ -8,13 +8,13 @@ INSERT INTO users (name, email, password, role) VALUES (
     'admin'
 );
 
--- Halls
+
 INSERT INTO halls (name, capacity) VALUES
     ('Hall 1', 100),
     ('Hall 2', 80),
     ('Hall 3', 120);
 
--- Movies
+
 INSERT INTO movies (title, description, genre, category, language, duration_mins, release_date, poster_url, rating, status, is_active) VALUES
 (
     'Avatar: Fire and Ash',

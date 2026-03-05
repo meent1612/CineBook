@@ -1,5 +1,4 @@
--- CineBook Database Schema
--- Milestone 1: users, movies, halls, screenings
+
 
 CREATE DATABASE IF NOT EXISTS cinebook_db;
 USE cinebook_db;
