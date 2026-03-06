@@ -1,134 +1,247 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import "../CSSfiles/UserDashboard.css";
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import "../CSSfiles/UserDashboard.css"
 
-const BOOKED_TICKETS = [
-  {
-    id: 1,
-    movie: "Avatar: Fire and Ash",
-    poster: "https://image.tmdb.org/t/p/w1280/cKtDJiU5zjcnDnRTzYpQ5xScKvU.jpg",
-    date: "24 Jan 2026",
-    time: "06:30pm",
-    hall: "Hall 3",
-    seats: ["G4", "G5"],
-    type: "Premium",
-    total: 1630,
-    status: "upcoming",
-  },
-  {
-    id: 2,
-    movie: "Mufasa: The Lion King",
-    poster: "https://image.tmdb.org/t/p/w185/lurEK87kukWNaHd0zYnsi3yzJrs.jpg",
-    date: "18 Jan 2026",
-    time: "03:00pm",
-    hall: "Hall 1",
-    seats: ["C7"],
-    type: "Semi-recliner",
-    total: 615,
-    status: "watched",
-  },
-  {
-    id: 3,
-    movie: "Moana 2",
-    poster: "https://image.tmdb.org/t/p/w185/yh64qqGbTi9zQMNiKSCEBNBqkUl.jpg",
-    date: "10 Jan 2026",
-    time: "12:15pm",
-    hall: "Hall 2",
-    seats: ["D3", "D4", "D5"],
-    type: "Premium",
-    total: 2445,
-    status: "watched",
-  },
-];
+// ── Types ──────────────────────────────────────────────────────────────────
+interface Booking {
+  id: number
+  movie_title: string
+  movie_poster: string | null
+  show_date: string
+  start_time: string
+  hall_name: string
+  seats: string[]
+  total_price: number
+  status: "upcoming" | "watched" | "cancelled"
+}
 
-const TABS = ["Overview", "My Tickets", "Profile"];
+interface ProfileData {
+  name: string
+  email: string
+  mobile_number: string
+  gender: string
+  created_at?: string
+}
 
+// ── Constants ──────────────────────────────────────────────────────────────
+const TABS       = ["Overview", "My Tickets", "Profile"] as const
+type Tab         = typeof TABS[number]
+
+const API_URL    = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND    = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+
+const posterSrc  = (url: string | null): string => {
+  if (!url) return ""
+  return url.startsWith("/") ? `${BACKEND}${url}` : url
+}
+
+const formatTime = (time: string): string => {
+  const [h, m] = time.split(":")
+  const hour   = parseInt(h)
+  const ampm   = hour >= 12 ? "pm" : "am"
+  const hour12 = hour % 12 || 12
+  return `${String(hour12).padStart(2, "0")}:${m}${ampm}`
+}
+
+const formatDate = (date: string): string =>
+  new Date(date).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  })
+
+// ── Ticket Poster with fallback ────────────────────────────────────────────
+function TicketPoster({ title, poster, className }: { title: string; poster: string | null; className: string }) {
+  const [failed, setFailed] = useState(false)
+  const src = posterSrc(poster)
+
+  if (!src || failed) {
+    return (
+      <div className={`${className} ticket-poster-fallback`}>
+        <span>🎬</span>
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt={title}
+      className={className}
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
+// ── Ticket Card ────────────────────────────────────────────────────────────
+function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: boolean }) {
+  return (
+    <div className={`ud-ticket-card ${booking.status}`}>
+      <TicketPoster
+        title={booking.movie_title}
+        poster={booking.movie_poster}
+        className="ud-ticket-poster"
+      />
+      <div className="ud-ticket-info">
+        <div className="ud-ticket-title">{booking.movie_title}</div>
+        <div className="ud-ticket-meta">
+          <span>📅 {formatDate(booking.show_date)}</span>
+          <span>🕐 {formatTime(booking.start_time)}</span>
+          <span>🎭 {booking.hall_name}</span>
+        </div>
+        <div className="ud-ticket-meta">
+          <span>💺 {Array.isArray(booking.seats) ? booking.seats.join(", ") : booking.seats}</span>
+        </div>
+      </div>
+      <div className="ud-ticket-right">
+        {showStatus && (
+          <span className={`ud-status-badge ${booking.status}`}>
+            {booking.status === "upcoming" ? "Upcoming" : booking.status === "watched" ? "Watched" : "Cancelled"}
+          </span>
+        )}
+        <div className="ud-ticket-total">
+          {booking.total_price.toLocaleString()} BDT
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────
 export default function UserDashboard() {
-  const { user, token, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, token, logout } = useAuth()
+  const navigate                = useNavigate()
 
-  const [activeTab, setActiveTab] = useState("Overview");
-  const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>("Overview")
 
-  const [profile, setProfile] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    mobile_number: user?.mobile_number || "",
-    gender: user?.gender || "",
-  });
+  // ── Profile state ──
+  const [profile, setProfile]   = useState<ProfileData>({
+    name:          user?.name          || "",
+    email:         user?.email         || "",
+    mobile_number: (user as any)?.mobile_number || "",
+    gender:        (user as any)?.gender        || "",
+    created_at:    (user as any)?.created_at    || "",
+  })
+  const [editMode, setEditMode] = useState(false)
+  const [saving,   setSaving]   = useState(false)
+  const [profErr,  setProfErr]  = useState("")
 
-  const totalSpent = BOOKED_TICKETS.reduce((s, t) => s + t.total, 0);
-  const upcoming = BOOKED_TICKETS.filter((t) => t.status === "upcoming");
-  const watched = BOOKED_TICKETS.filter((t) => t.status === "watched");
+  // ── Bookings state ──
+  const [bookings,       setBookings]       = useState<Booking[]>([])
+  const [loadingBooks,   setLoadingBooks]   = useState(true)
+  const [bookingsError,  setBookingsError]  = useState("")
 
-  // Get initials for avatar
+  // ── Fetch profile from API ──
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.message)
+        setProfile({
+          name:          data.user.name          || "",
+          email:         data.user.email         || "",
+          mobile_number: data.user.mobile_number || "",
+          gender:        data.user.gender        || "",
+          created_at:    data.user.created_at    || "",
+        })
+      } catch {
+        // fallback to AuthContext values already set above
+      }
+    }
+    fetchProfile()
+  }, [token])
+
+  // ── Fetch bookings from API ──
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoadingBooks(true)
+      setBookingsError("")
+      try {
+        const res  = await fetch(`${API_URL}/bookings`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (!data.success) throw new Error(data.message)
+        setBookings(data.bookings)
+      } catch (err: any) {
+        setBookingsError(err.message || "Failed to load bookings.")
+      } finally {
+        setLoadingBooks(false)
+      }
+    }
+    fetchBookings()
+  }, [token])
+
+  // ── Derived data ──
+  const upcoming    = bookings.filter(b => b.status === "upcoming")
+  const watched     = bookings.filter(b => b.status === "watched")
+  const totalSpent  = bookings.reduce((sum, b) => sum + b.total_price, 0)
+
   const initials = profile.name
     .split(" ")
-    .map((n) => n[0])
+    .map(n => n[0])
     .join("")
     .toUpperCase()
-    .substring(0, 2);
+    .substring(0, 2) || "?"
 
-  // Member since from user created_at
-  const memberSince = user
-    ? new Date((user as any).created_at).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
+  const memberSince = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString("en-US", {
+        month: "long", year: "numeric",
       })
-    : "";
+    : ""
 
+  // ── Save profile ──
   const handleSave = async () => {
-    setSaving(true);
-    setError("");
+    setSaving(true)
+    setProfErr("")
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_ENDPOINT}/api/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: profile.name,
-            mobile_number: profile.mobile_number,
-            gender: profile.gender,
-          }),
-        }
-      );
-      const data = await response.json();
-      if (!data.success) throw new Error(data.message);
-      setEditMode(false);
+      const res  = await fetch(`${API_URL}/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:  `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name:          profile.name,
+          mobile_number: profile.mobile_number,
+          gender:        profile.gender,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setEditMode(false)
     } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+      setProfErr(err.message || "Failed to update profile.")
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+    logout()
+    navigate("/")
+  }
 
   return (
     <div className="ud-wrapper">
-      {/* Sidebar */}
+
+      {/* ── Sidebar ── */}
       <aside className="ud-sidebar">
         <div className="ud-avatar">{initials}</div>
-        <div className="ud-sidebar-name">{profile.name}</div>
+        <div className="ud-sidebar-name">{profile.name || "User"}</div>
         <div className="ud-sidebar-email">{profile.email}</div>
-        <div className="ud-sidebar-badge">Member since {memberSince}</div>
+        {memberSince && (
+          <div className="ud-sidebar-badge">Member since {memberSince}</div>
+        )}
 
         <nav className="ud-nav">
-          {TABS.map((tab) => (
+          {TABS.map(tab => (
             <button
               key={tab}
               className={`ud-nav-btn ${activeTab === tab ? "active" : ""}`}
               onClick={() => setActiveTab(tab)}
+              aria-current={activeTab === tab ? "page" : undefined}
             >
               <span className="ud-nav-icon">
                 {tab === "Overview" ? "📊" : tab === "My Tickets" ? "🎟️" : "👤"}
@@ -143,17 +256,19 @@ export default function UserDashboard() {
         </button>
       </aside>
 
-      {/* Main Content */}
+      {/* ── Main ── */}
       <main className="ud-main">
+
         {/* OVERVIEW */}
         {activeTab === "Overview" && (
           <div className="ud-section">
             <h2 className="ud-section-title">
-              Good to see you, {profile.name.split(" ")[0]} 👋
+              Good to see you, {profile.name.split(" ")[0] || "there"} 👋
             </h2>
+
             <div className="ud-stats-row">
               <div className="ud-stat-card">
-                <div className="ud-stat-value">{BOOKED_TICKETS.length}</div>
+                <div className="ud-stat-value">{bookings.length}</div>
                 <div className="ud-stat-label">Total Bookings</div>
               </div>
               <div className="ud-stat-card">
@@ -170,28 +285,30 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            <h3 className="ud-sub-title">Upcoming Booking</h3>
-            {upcoming.length === 0 ? (
+            {/* Upcoming */}
+            <h3 className="ud-sub-title">Upcoming Bookings</h3>
+            {loadingBooks && <p className="ud-state-msg">Loading…</p>}
+            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
+            {!loadingBooks && upcoming.length === 0 && (
               <div className="ud-empty">No upcoming bookings.</div>
-            ) : (
-              upcoming.map((t) => <TicketCard key={t.id} ticket={t} />)
             )}
+            {upcoming.map(b => <TicketCard key={b.id} booking={b} />)}
 
+            {/* Recently Watched */}
             <h3 className="ud-sub-title">Recently Watched</h3>
+            {!loadingBooks && watched.length === 0 && (
+              <div className="ud-empty">No watched movies yet.</div>
+            )}
             <div className="ud-recent-row">
-              {watched.map((t) => (
-                <div key={t.id} className="ud-recent-card">
-                  <img
-                    src={t.poster}
-                    alt={t.movie}
+              {watched.map(b => (
+                <div key={b.id} className="ud-recent-card">
+                  <TicketPoster
+                    title={b.movie_title}
+                    poster={b.movie_poster}
                     className="ud-recent-poster"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://via.placeholder.com/80x115/2a2a2a/white?text=M";
-                    }}
                   />
-                  <div className="ud-recent-title">{t.movie}</div>
-                  <div className="ud-recent-date">{t.date}</div>
+                  <div className="ud-recent-title">{b.movie_title}</div>
+                  <div className="ud-recent-date">{formatDate(b.show_date)}</div>
                 </div>
               ))}
             </div>
@@ -202,17 +319,18 @@ export default function UserDashboard() {
         {activeTab === "My Tickets" && (
           <div className="ud-section">
             <h2 className="ud-section-title">My Tickets</h2>
+
             <div className="ud-ticket-filter-row">
-              <span className="ud-filter-badge upcoming">
-                {upcoming.length} Upcoming
-              </span>
-              <span className="ud-filter-badge watched">
-                {watched.length} Watched
-              </span>
+              <span className="ud-filter-badge upcoming">{upcoming.length} Upcoming</span>
+              <span className="ud-filter-badge watched">{watched.length} Watched</span>
             </div>
-            {BOOKED_TICKETS.map((t) => (
-              <TicketCard key={t.id} ticket={t} showStatus />
-            ))}
+
+            {loadingBooks && <p className="ud-state-msg">Loading tickets…</p>}
+            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
+            {!loadingBooks && bookings.length === 0 && (
+              <div className="ud-empty">You haven't booked any tickets yet.</div>
+            )}
+            {bookings.map(b => <TicketCard key={b.id} booking={b} showStatus />)}
           </div>
         )}
 
@@ -223,74 +341,58 @@ export default function UserDashboard() {
               <h2 className="ud-section-title">My Profile</h2>
               <button
                 className="ud-edit-btn"
-                onClick={() => (editMode ? handleSave() : setEditMode(true))}
+                onClick={() => editMode ? handleSave() : setEditMode(true)}
                 disabled={saving}
               >
-                {saving ? "Saving..." : editMode ? "✓ Save" : "✏️ Edit"}
+                {saving ? "Saving…" : editMode ? "✓ Save" : "✏️ Edit"}
               </button>
             </div>
 
-            {error && (
-              <p style={{ color: "red", marginBottom: "10px" }}>{error}</p>
-            )}
+            {profErr && <p className="ud-state-msg ud-state-error">{profErr}</p>}
 
             <div className="ud-profile-card">
               <div className="ud-profile-avatar">{initials}</div>
               <div className="ud-profile-fields">
 
-                {/* Full Name - editable */}
                 <div className="ud-field">
                   <label className="ud-field-label">Full Name</label>
                   {editMode ? (
                     <input
                       className="ud-field-input"
                       value={profile.name}
-                      onChange={(e) =>
-                        setProfile((p) => ({ ...p, name: e.target.value }))
-                      }
+                      onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
                     />
                   ) : (
-                    <div className="ud-field-value">{profile.name}</div>
+                    <div className="ud-field-value">{profile.name || "—"}</div>
                   )}
                 </div>
 
-                {/* Email - always read only */}
                 <div className="ud-field">
                   <label className="ud-field-label">Email</label>
-                  <div className="ud-field-value">{profile.email}</div>
+                  <div className="ud-field-value ud-field-readonly">{profile.email}</div>
                 </div>
 
-                {/* Mobile - editable */}
                 <div className="ud-field">
                   <label className="ud-field-label">Mobile</label>
                   {editMode ? (
                     <input
                       className="ud-field-input"
                       value={profile.mobile_number}
-                      onChange={(e) =>
-                        setProfile((p) => ({
-                          ...p,
-                          mobile_number: e.target.value,
-                        }))
-                      }
+                      placeholder="e.g. 01XXXXXXXXX"
+                      onChange={e => setProfile(p => ({ ...p, mobile_number: e.target.value }))}
                     />
                   ) : (
-                    <div className="ud-field-value">
-                      {profile.mobile_number || "—"}
-                    </div>
+                    <div className="ud-field-value">{profile.mobile_number || "—"}</div>
                   )}
                 </div>
 
-                {/* Gender - editable */}
                 <div className="ud-field">
                   <label className="ud-field-label">Gender</label>
                   {editMode ? (
                     <select
                       className="ud-field-input"
                       value={profile.gender}
-                      onChange={(e) =>
-                        setProfile((p) => ({ ...p, gender: e.target.value }))
-                      }
+                      onChange={e => setProfile(p => ({ ...p, gender: e.target.value }))}
                     >
                       <option value="">Select</option>
                       <option value="Male">Male</option>
@@ -302,53 +404,19 @@ export default function UserDashboard() {
                   )}
                 </div>
 
+                {memberSince && (
+                  <div className="ud-field">
+                    <label className="ud-field-label">Member Since</label>
+                    <div className="ud-field-value ud-field-readonly">{memberSince}</div>
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
         )}
+
       </main>
     </div>
-  );
-}
-
-function TicketCard({
-  ticket,
-  showStatus,
-}: {
-  ticket: (typeof BOOKED_TICKETS)[0];
-  showStatus?: boolean;
-}) {
-  return (
-    <div className={`ud-ticket-card ${ticket.status}`}>
-      <img
-        src={ticket.poster}
-        alt={ticket.movie}
-        className="ud-ticket-poster"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src =
-            "https://via.placeholder.com/60x85/2a2a2a/white?text=M";
-        }}
-      />
-      <div className="ud-ticket-info">
-        <div className="ud-ticket-title">{ticket.movie}</div>
-        <div className="ud-ticket-meta">
-          <span>📅 {ticket.date}</span>
-          <span>🕐 {ticket.time}</span>
-          <span>🎭 {ticket.hall}</span>
-        </div>
-        <div className="ud-ticket-meta">
-          <span>💺 {ticket.seats.join(", ")}</span>
-          <span>🏷️ {ticket.type}</span>
-        </div>
-      </div>
-      <div className="ud-ticket-right">
-        {showStatus && (
-          <span className={`ud-status-badge ${ticket.status}`}>
-            {ticket.status === "upcoming" ? "Upcoming" : "Watched"}
-          </span>
-        )}
-        <div className="ud-ticket-total">{ticket.total.toLocaleString()} BDT</div>
-      </div>
-    </div>
-  );
+  )
 }

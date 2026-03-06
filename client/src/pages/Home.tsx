@@ -19,19 +19,17 @@ interface Movie {
 }
 
 // ── Constants ──────────────────────────────────────────
-const TABS = ["Now Showing", "Coming Soon"] as const
-type Tab = typeof TABS[number]
+const TABS    = ["Now Showing", "Coming Soon"] as const
+type Tab      = typeof TABS[number]
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
-const API_URL  = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
-const BACKEND  = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-
-// Prepend backend host for relative poster paths (same fix as AdminDashboard)
 const posterSrc = (url: string | null): string => {
   if (!url) return ""
   return url.startsWith("/") ? `${BACKEND}${url}` : url
 }
 
-// ── Poster with CSS fallback ───────────────────────────
+// ── Poster with fallback ───────────────────────────────
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
 function MoviePoster({ movie }: { movie: Movie }) {
@@ -47,7 +45,6 @@ function MoviePoster({ movie }: { movie: Movie }) {
       </div>
     )
   }
-
   return (
     <img
       src={src}
@@ -60,14 +57,15 @@ function MoviePoster({ movie }: { movie: Movie }) {
 
 // ── Main Component ─────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab]   = useState<Tab>("Now Showing")
-  const [heroIdx,   setHeroIdx]     = useState(0)
-  const [movieList, setMovieList]   = useState<Movie[]>([])
-  const [loading,   setLoading]     = useState(true)
-  const [error,     setError]       = useState("")
-  const navigate  = useNavigate()
-  const { user }  = useAuth()
-  const isAdmin   = user?.role === "admin"
+  const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
+  const [heroIdx,   setHeroIdx]   = useState(0)
+  const [movieList, setMovieList] = useState<Movie[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState("")
+
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin  = user?.role === "admin"
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -90,15 +88,17 @@ export default function Home() {
   const nowShowing = movieList.filter(m => m.status === "now_showing" && m.is_active)
   const comingSoon = movieList.filter(m => m.status === "coming_soon"  && m.is_active)
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
-
-  // Hero uses movies from the active tab; cycle with dots
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies[heroIdx % heroMovies.length] ?? null
 
-  // Reset hero index when tab changes
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
     setHeroIdx(0)
+  }
+
+  // Navigate to /admin and pass the movieId so AdminDashboard auto-opens the edit modal
+  const handleEditMovie = (movieId: number) => {
+    navigate("/admin", { state: { editMovieId: movieId } })
   }
 
   return (
@@ -111,30 +111,38 @@ export default function Home() {
             src={posterSrc(heroMovie.poster_url)}
             alt={heroMovie.title}
             className="hero-img"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+            onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
           />
         ) : (
           <div className="hero-img-placeholder" />
         )}
         <div className="hero-overlay" />
 
-        {/* Hero text */}
         {heroMovie && (
           <div className="hero-text">
             <h2 className="hero-title">{heroMovie.title}</h2>
             <p className="hero-meta">
-              {heroMovie.genre || ""}{heroMovie.duration_mins ? ` • ${heroMovie.duration_mins} min` : ""}
+              {heroMovie.genre || ""}
+              {heroMovie.duration_mins ? ` • ${heroMovie.duration_mins} min` : ""}
             </p>
-            <button
-              className={`hero-tickets-btn ${isAdmin ? "hero-edit-btn" : ""}`}
-              onClick={() => navigate(isAdmin ? "/admin" : `/book/${heroMovie.id}`)}
-            >
-              {isAdmin ? "✏️ Edit Movie" : "Get Tickets"}
-            </button>
+            {isAdmin ? (
+              <button
+                className="hero-tickets-btn hero-edit-btn"
+                onClick={() => handleEditMovie(heroMovie.id)}
+              >
+                ✏️ Edit Movie
+              </button>
+            ) : (
+              <button
+                className="hero-tickets-btn"
+                onClick={() => navigate(`/book/${heroMovie.id}`)}
+              >
+                Get Tickets
+              </button>
+            )}
           </div>
         )}
 
-        {/* Dots */}
         {heroMovies.length > 1 && (
           <div className="hero-dots">
             {heroMovies.map((_, i) => (
@@ -152,7 +160,7 @@ export default function Home() {
       {/* ── Content Area ── */}
       <div className="content-area">
 
-        {/* Tabs + View All */}
+        {/* Tabs */}
         <div className="tabs-bar">
           <div className="tabs-list">
             {TABS.map(tab => (
@@ -165,12 +173,11 @@ export default function Home() {
               </button>
             ))}
           </div>
-          <button className="view-all-btn" onClick={() => navigate("/showtimes")}>
+          <button className="view-all-btn" onClick={() => navigate("/showmovies")}>
             View All →
           </button>
         </div>
 
-        {/* States */}
         {loading && <p className="home-state-msg">Loading movies…</p>}
         {error   && <p className="home-state-msg home-state-error">{error}</p>}
         {!loading && !error && displayed.length === 0 && (
@@ -186,19 +193,24 @@ export default function Home() {
                 <div className="movie-card-overlay">
                   <div className="movie-card-category">{movie.category}</div>
                   <div className="movie-title">
-                    {movie.title.length > 22
-                      ? movie.title.substring(0, 22) + "…"
-                      : movie.title}
+                    {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
                   </div>
-                  {movie.genre && (
-                    <div className="movie-genre">{movie.genre}</div>
+                  {movie.genre && <div className="movie-genre">{movie.genre}</div>}
+                  {isAdmin ? (
+                    <button
+                      className="get-tickets-btn edit-movie-btn"
+                      onClick={() => handleEditMovie(movie.id)}
+                    >
+                      ✏️ Edit Movie
+                    </button>
+                  ) : (
+                    <button
+                      className="get-tickets-btn"
+                      onClick={() => navigate(`/book/${movie.id}`)}
+                    >
+                      Get Tickets
+                    </button>
                   )}
-                  <button
-                    className={`get-tickets-btn ${isAdmin ? "edit-movie-btn" : ""}`}
-                    onClick={() => navigate(isAdmin ? "/admin" : `/book/${movie.id}`)}
-                  >
-                    {isAdmin ? "✏️ Edit Movie" : "Get Tickets"}
-                  </button>
                 </div>
               </div>
             ))}

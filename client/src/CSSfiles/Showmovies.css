@@ -1,0 +1,290 @@
+/* ══════════════════════════════════════════
+   Showtimes.css — CineBook color palette
+   ══════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --crimson:      #6B1829;
+  --crimson-deep: #4e0f1a;
+  --crimson-soft: #8c2235;
+  --gold:         #c9a84c;
+  --gold-light:   #e2c47a;
+  --dark-bg:      #0d0d0d;
+  --dark-card:    #141414;
+  --dark-surface: #1a1a1a;
+  --white:        #ffffff;
+  --gray-300:     #d1d0d3;
+  --gray-500:     #8e8b90;
+  --font-serif:   'Playfair Display', Georgia, serif;
+  --font-sans:    'DM Sans', sans-serif;
+  --radius-sm:    6px;
+  --radius-md:    10px;
+}
+
+/* ── Wrapper ─────────────────────────────── */
+.st-wrapper {
+  min-height: 100vh;
+  background: var(--dark-bg);
+  font-family: var(--font-sans);
+  color: var(--white);
+  padding-bottom: 3rem;
+}
+
+/* ── Page Header ─────────────────────────── */
+.st-header {
+  background: linear-gradient(135deg, var(--crimson-deep) 0%, var(--crimson) 60%, #1a0a10 100%);
+  padding: 3rem 4rem 2.5rem;
+  border-bottom: 2px solid rgba(201,168,76,0.25);
+}
+
+.st-header-title {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin: 0 0 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+.st-header-sub {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+  margin: 0;
+}
+
+/* ── Tabs ────────────────────────────────── */
+.st-tabs-bar {
+  display: flex;
+  gap: 0;
+  padding: 1.25rem 4rem 0;
+  background: var(--dark-bg);
+  border-bottom: 2px solid rgba(255,255,255,0.07);
+}
+
+.st-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  padding: 0.6rem 1.5rem 0.8rem;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+  margin-bottom: -2px; /* align with border-bottom of tabs-bar */
+}
+
+.st-tab-btn:hover { color: var(--white); }
+
+.st-tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+/* ── State messages ──────────────────────── */
+.st-state-msg {
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  padding: 3rem 0;
+  font-size: 0.9rem;
+}
+
+.st-state-error { color: #f87171; }
+
+/* ── Grid ────────────────────────────────── */
+.st-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1.25rem;
+  padding: 2rem 4rem;
+}
+
+/* ── Poster Card ─────────────────────────── */
+.st-card {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.22s, box-shadow 0.22s;
+}
+
+.st-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
+
+.st-card-poster {
+  aspect-ratio: 2/3;
+  background: var(--dark-surface);
+}
+
+.st-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.st-poster-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.st-poster-fallback-icon  { font-size: 2.5rem; }
+.st-poster-fallback-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Hover overlay on poster card — shows Get Tickets button */
+.st-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem;
+  background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, transparent 100%);
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* ── Info Card (expanded) ────────────────── */
+.st-card-info {
+  aspect-ratio: 2/3;
+  background: linear-gradient(145deg, var(--crimson-deep) 0%, #200810 100%);
+  border: 1.5px solid rgba(201,168,76,0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  cursor: default;
+}
+
+.st-card-info:hover { transform: none; box-shadow: 0 0 0 2px var(--gold); }
+
+/* Play button at top */
+.st-info-top {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 0.5rem;
+}
+
+.st-play-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 1.5rem;
+  text-decoration: none;
+  transition: background 0.18s, border-color 0.18s;
+}
+
+.st-play-btn:hover { background: var(--crimson-soft); border-color: var(--gold); color: var(--gold); }
+.st-play-btn-disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+
+/* Info body */
+.st-info-body { flex: 1; padding: 0.5rem 0; }
+
+.st-info-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.st-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.st-info-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.st-info-value {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.8);
+  word-break: break-word;
+}
+
+/* Buttons at bottom of info card */
+.st-info-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Buttons ─────────────────────────────── */
+.st-ticket-btn {
+  background: var(--crimson);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s;
+  white-space: nowrap;
+}
+
+.st-ticket-btn:hover { background: var(--crimson-soft); }
+
+.st-details-btn {
+  background: rgba(255,255,255,0.12);
+  color: var(--white);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.18s;
+  white-space: nowrap;
+}
+
+.st-details-btn:hover { background: rgba(255,255,255,0.22); }
+
+/* ── Footer ──────────────────────────────── */
+.st-footer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.25);
+  padding: 2rem 0 1rem;
+}
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 900px) {
+  .st-header    { padding: 2rem 1.5rem 1.5rem; }
+  .st-tabs-bar  { padding: 1rem 1.5rem 0; }
+  .st-grid      { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); padding: 1.5rem; }
+}
+
+@media (max-width: 600px) {
+  .st-header-title { font-size: 1.5rem; }
+  .st-grid { grid-template-columns: repeat(2, 1fr); padding: 1rem; gap: 0.75rem; }
+}

@@ -1,52 +1,46 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import "../CSSfiles/AdminDashboard.css";
+import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import "../CSSfiles/AdminDashboard.css"
 
+// ── Constants ──────────────────────────────────────────────────────────────
 const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
-];
+]
 
+const API_URL       = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND       = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+const POSTER_COLORS = ["#6B1829","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00","#1f4040"]
+
+// ── Types ──────────────────────────────────────────────────────────────────
 interface Movie {
-  id: number;
-  title: string;
-  description: string | null;
-  genre: string | null;
-  category: string;
-  language: string | null;
-  duration_mins: number | null;
-  release_date: string | null;
-  poster_url: string | null;
-  trailer_url: string | null;
-  status: "now_showing" | "coming_soon";
-  is_active: boolean;
+  id: number
+  title: string
+  description: string | null
+  genre: string | null
+  category: string
+  language: string | null
+  duration_mins: number | null
+  release_date: string | null
+  poster_url: string | null
+  trailer_url: string | null
+  status: "now_showing" | "coming_soon"
+  is_active: boolean
 }
 
 interface Hall {
-  id: number;
-  name: string;
-  capacity: number;
+  id: number
+  name: string
+  capacity: number
 }
 
-const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`;
-
-// ── Poster colours for CSS fallback ──
-const POSTER_COLORS = ["#6B1829","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00","#1f4040"];
-
-// ── Poster component — lives outside AdminDashboard so useState is stable ──
-const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-
+// ── Poster component ───────────────────────────────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
-  const bg = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
-
-  // Build the full src: relative paths (e.g. /posters/avatar.jpg) get the
-  // backend host prepended so the browser fetches them directly — <img> tags
-  // don't enforce CORS so this always works regardless of proxy config.
+  const bg  = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
   const src = movie.poster_url
-    ? movie.poster_url.startsWith("/")
-      ? `${BACKEND}${movie.poster_url}`
-      : movie.poster_url
+    ? movie.poster_url.startsWith("/") ? `${BACKEND}${movie.poster_url}` : movie.poster_url
     : null
 
   if (!src || failed) {
@@ -58,15 +52,11 @@ function MoviePoster({ movie }: { movie: Movie }) {
     )
   }
   return (
-    <img
-      src={src}
-      alt={movie.title}
-      className="movie-card-img"
-      onError={() => setFailed(true)}
-    />
+    <img src={src} alt={movie.title} className="movie-card-img" onError={() => setFailed(true)} />
   )
 }
 
+// ── Movie card ─────────────────────────────────────────────────────────────
 interface MovieCardProps {
   movie: Movie
   onDelete: (id: number) => void
@@ -74,7 +64,6 @@ interface MovieCardProps {
   onEdit: (movie: Movie) => void
 }
 
-// ── Movie card — lives outside AdminDashboard ──
 function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) {
   return (
     <div className="movie-card">
@@ -95,7 +84,6 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
           </div>
         )}
 
-        {/* Active toggle */}
         <div className="movie-toggle-row">
           <span className={`movie-toggle-label ${movie.is_active ? "label-active" : "label-inactive"}`}>
             {movie.is_active ? "Active" : "Inactive"}
@@ -104,105 +92,109 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
             className={`toggle-switch ${movie.is_active ? "toggle-on" : "toggle-off"}`}
             onClick={() => onToggleActive(movie)}
             aria-label={`Mark movie as ${movie.is_active ? "inactive" : "active"}`}
-            title={`Click to mark as ${movie.is_active ? "inactive" : "active"}`}
           >
             <span className="toggle-thumb" />
           </button>
         </div>
 
-        {/* Action buttons */}
         <div className="movie-card-actions">
-          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
-            ✏️ Edit
-          </button>
-          <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
-            🗑 Delete
-          </button>
+          <button className="movie-edit-btn"   onClick={() => onEdit(movie)}>✏️ Edit</button>
+          <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>🗑 Delete</button>
         </div>
       </div>
     </div>
   )
 }
 
+// ── Empty movie template ───────────────────────────────────────────────────
 const EMPTY_MOVIE = {
-  title: "",
-  description: "",
-  genre: "",
-  category: "2D",
-  language: "English",
-  duration_mins: "",
-  release_date: "",
-  poster_url: "",
-  trailer_url: "",
-  status: "now_showing",
-  is_active: true,
-};
+  title: "", description: "", genre: "", category: "2D",
+  language: "English", duration_mins: "", release_date: "",
+  poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
+}
 
+// ── Main Component ─────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const { token } = useAuth();
-  const [selectedMonth, setSelectedMonth] = useState("March");
+  const { token }   = useAuth()
+  const location    = useLocation()
 
-  const [movieList, setMovieList]       = useState<Movie[]>([]);
-  const [loadingMovies, setLoadingMovies] = useState(true);
-  const [movieError, setMovieError]     = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("December")
 
-  const [hallList, setHallList] = useState<Hall[]>([]);
+  const [movieList,     setMovieList]     = useState<Movie[]>([])
+  const [loadingMovies, setLoadingMovies] = useState(true)
+  const [movieError,    setMovieError]    = useState("")
 
-  const [showAddMovie, setShowAddMovie]   = useState(false);
-  const [addingMovie, setAddingMovie]     = useState(false);
-  const [newMovie, setNewMovie]           = useState({ ...EMPTY_MOVIE });
+  const [hallList, setHallList] = useState<Hall[]>([])
 
-  const [showAddScreening, setShowAddScreening] = useState(false);
-  const [newScreening, setNewScreening] = useState({
-    movie_id: "",
-    hall_id: "",
-    show_date: "",
-    start_time: "",
-    available_seats: "",
-  });
+  // Add movie
+  const [showAddMovie, setShowAddMovie] = useState(false)
+  const [addingMovie,  setAddingMovie]  = useState(false)
+  const [newMovie,     setNewMovie]     = useState({ ...EMPTY_MOVIE })
 
-  // ── Edit movie state ──
-  const [showEditMovie, setShowEditMovie]   = useState(false);
-  const [editingMovie, setEditingMovie]     = useState(false);
-  const [editMovie, setEditMovie]           = useState({ ...EMPTY_MOVIE, id: 0 });
+  // Edit movie
+  const [showEditMovie, setShowEditMovie] = useState(false)
+  const [editingMovie,  setEditingMovie]  = useState(false)
+  const [editMovie,     setEditMovie]     = useState({ ...EMPTY_MOVIE, id: 0 })
 
+  // Add screening
+  const [showAddScreening, setShowAddScreening] = useState(false)
+  const [newScreening,     setNewScreening]     = useState({
+    movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "",
+  })
+
+  // ── On mount: fetch data ──
   useEffect(() => {
-    fetchMovies();
-    fetchHalls();
-  }, []);
+    fetchMovies()
+    fetchHalls()
+  }, [])
 
+  // ── Auto-open edit modal when navigated from Home with editMovieId ──
+  // Waits for movieList to be populated, then finds the movie and opens the modal
+  useEffect(() => {
+    const editId = (location.state as any)?.editMovieId
+    if (!editId || movieList.length === 0) return
+
+    const target = movieList.find(m => m.id === editId)
+    if (!target) return
+
+    handleOpenEdit(target)
+
+    // Clear the state so refreshing the page doesn't re-open the modal
+    window.history.replaceState({}, "")
+  }, [location.state, movieList])
+
+  // ── API calls ──────────────────────────────────────────────────────────
   const fetchMovies = async () => {
-    setLoadingMovies(true);
-    setMovieError("");
+    setLoadingMovies(true)
+    setMovieError("")
     try {
       const res  = await fetch(`${API_URL}/admin/movies`, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      setMovieList(data.movies);
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setMovieList(data.movies)
     } catch (err: any) {
-      setMovieError(err.message || "Failed to load movies.");
+      setMovieError(err.message || "Failed to load movies.")
     } finally {
-      setLoadingMovies(false);
+      setLoadingMovies(false)
     }
-  };
+  }
 
   const fetchHalls = async () => {
     try {
-      const res  = await fetch(`${API_URL}/halls`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      setHallList(data.halls);
+      const res  = await fetch(`${API_URL}/halls`)
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setHallList(data.halls)
     } catch (err: any) {
-      console.error("Failed to load halls:", err.message);
+      console.error("Failed to load halls:", err.message)
     }
-  };
+  }
 
-  // ── Add movie ──
   const handleAddMovie = async () => {
-    if (!newMovie.title) return;
-    setAddingMovie(true);
+    if (!newMovie.title) return
+    setAddingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies`, {
         method: "POST",
@@ -220,55 +212,52 @@ export default function AdminDashboard() {
           status:        newMovie.status,
           is_active:     newMovie.is_active,
         }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      await fetchMovies();
-      setNewMovie({ ...EMPTY_MOVIE });
-      setShowAddMovie(false);
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      await fetchMovies()
+      setNewMovie({ ...EMPTY_MOVIE })
+      setShowAddMovie(false)
     } catch (err: any) {
-      alert(err.message || "Failed to add movie.");
+      alert(err.message || "Failed to add movie.")
     } finally {
-      setAddingMovie(false);
+      setAddingMovie(false)
     }
-  };
+  }
 
-  // ── Delete movie ──
   const handleDeleteMovie = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this movie?")) return;
+    if (!confirm("Are you sure you want to delete this movie?")) return
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      await fetchMovies();
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      await fetchMovies()
     } catch (err: any) {
-      alert(err.message || "Failed to delete movie.");
+      alert(err.message || "Failed to delete movie.")
     }
-  };
+  }
 
-  // ── Open edit modal pre-filled ──
   const handleOpenEdit = (movie: Movie) => {
     setEditMovie({
-      id:           movie.id,
-      title:        movie.title,
-      description:  movie.description  || "",
-      genre:        movie.genre        || "",
-      category:     movie.category,
-      language:     movie.language     || "",
+      id:            movie.id,
+      title:         movie.title,
+      description:   movie.description  || "",
+      genre:         movie.genre        || "",
+      category:      movie.category,
+      language:      movie.language     || "",
       duration_mins: movie.duration_mins?.toString() || "",
-      release_date: movie.release_date || "",
-      poster_url:   movie.poster_url   || "",
-      trailer_url:  movie.trailer_url  || "",
-      status:       movie.status,
-      is_active:    movie.is_active,
+      release_date:  movie.release_date || "",
+      poster_url:    movie.poster_url   || "",
+      trailer_url:   movie.trailer_url  || "",
+      status:        movie.status,
+      is_active:     movie.is_active,
     })
     setShowEditMovie(true)
   }
 
-  // ── Submit edit via PUT ──
   const handleEditMovie = async () => {
     if (!editMovie.title) return
     setEditingMovie(true)
@@ -301,48 +290,35 @@ export default function AdminDashboard() {
     }
   }
 
-  const setEditField =
-    (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
-        ? e.target.checked
-        : e.target.value
-      setEditMovie(prev => ({ ...prev, [field]: value }))
-    }
   const handleToggleActive = async (movie: Movie) => {
-    // Optimistically flip the value in the UI immediately
-    setMovieList(prev =>
-      prev.map(m => m.id === movie.id ? { ...m, is_active: !m.is_active } : m)
-    );
+    // Optimistic update
+    setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: !m.is_active } : m))
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${movie.id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ is_active: !movie.is_active }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
     } catch (err: any) {
       // Revert on failure
-      setMovieList(prev =>
-        prev.map(m => m.id === movie.id ? { ...m, is_active: movie.is_active } : m)
-      );
-      alert(err.message || "Failed to update active status.");
+      setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: movie.is_active } : m))
+      alert(err.message || "Failed to update active status.")
     }
-  };
+  }
 
-  // ── Add screening ──
   const handleAddScreening = async () => {
-    const { movie_id, hall_id, show_date, start_time } = newScreening;
+    const { movie_id, hall_id, show_date, start_time } = newScreening
     if (!movie_id || !hall_id || !show_date || !start_time) {
-      alert("Please fill in all required fields.");
-      return;
+      alert("Please fill in all required fields.")
+      return
     }
     try {
-      const selectedHall = hallList.find(h => h.id === parseInt(hall_id));
+      const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
       const seats = newScreening.available_seats
         ? parseInt(newScreening.available_seats)
-        : selectedHall?.capacity || 100;
+        : selectedHall?.capacity || 100
 
       const res  = await fetch(`${API_URL}/admin/screenings`, {
         method: "POST",
@@ -354,26 +330,33 @@ export default function AdminDashboard() {
           start_time,
           available_seats: seats,
         }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-      alert("Screening added successfully!");
-      setNewScreening({ movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "" });
-      setShowAddScreening(false);
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      alert("Screening added successfully!")
+      setNewScreening({ movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "" })
+      setShowAddScreening(false)
     } catch (err: any) {
-      alert(err.message || "Failed to add screening.");
+      alert(err.message || "Failed to add screening.")
     }
-  };
+  }
 
-  const setMovieField =
-    (field: string) =>
+  // Generic field change helpers
+  const setMovieField = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
-        ? e.target.checked
-        : e.target.value;
-      setNewMovie(prev => ({ ...prev, [field]: value }));
-    };
+        ? e.target.checked : e.target.value
+      setNewMovie(prev => ({ ...prev, [field]: value }))
+    }
 
+  const setEditField = (field: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
+        ? e.target.checked : e.target.value
+      setEditMovie(prev => ({ ...prev, [field]: value }))
+    }
+
+  // ── Derived ────────────────────────────────────────────────────────────
   const nowShowing   = movieList.filter(m => m.status === "now_showing")
   const comingSoon   = movieList.filter(m => m.status === "coming_soon")
   const activeMovies = movieList.filter(m => m.is_active)
@@ -384,18 +367,19 @@ export default function AdminDashboard() {
     { label: "Active Movies",     value: activeMovies.length.toString() },
     { label: "Revenue",           value: "40M BDT" },
     { label: "Active Screenings", value: "500" },
-  ];
+  ]
 
   const mgmt = [
     { label: "Movie\nManagement",     icon: "🎬", action: () => setShowAddMovie(true) },
     { label: "Screening\nManagement", icon: "📽️",  action: () => setShowAddScreening(true) },
     { label: "Inbox",                 icon: "📬",  action: () => {} },
-  ];
+  ]
 
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="admin-wrapper">
 
-      {/* Admin Header */}
+      {/* Header */}
       <div className="admin-header">
         <div className="admin-header-top">
           <div>
@@ -404,14 +388,13 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Month Selector + Stats */}
         <div className="admin-month-section">
           <div className="admin-month-row">
             <span className="admin-month-label">For the month of:</span>
             <select
               className="admin-month-select"
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              onChange={e => setSelectedMonth(e.target.value)}
             >
               {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -431,7 +414,14 @@ export default function AdminDashboard() {
       {/* Management Cards */}
       <div className="admin-mgmt-row">
         {mgmt.map(m => (
-          <div key={m.label} className="admin-mgmt-card" onClick={m.action} role="button" tabIndex={0}>
+          <div
+            key={m.label}
+            className="admin-mgmt-card"
+            onClick={m.action}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => e.key === "Enter" && m.action()}
+          >
             <div className="admin-mgmt-icon">{m.icon}</div>
             <div className="admin-mgmt-label">{m.label}</div>
           </div>
@@ -441,11 +431,10 @@ export default function AdminDashboard() {
       {/* Movie Sections */}
       <div className="admin-movies-area">
         {loadingMovies && <p className="admin-loading">Loading movies…</p>}
-        {movieError   && <p className="admin-error">{movieError}</p>}
+        {movieError    && <p className="admin-error">{movieError}</p>}
 
         {!loadingMovies && (
           <>
-            {/* Now Showing */}
             <section className="movie-section">
               <div className="movie-section-header">
                 <span className="movie-section-badge now-showing-badge">● Now Showing</span>
@@ -455,13 +444,18 @@ export default function AdminDashboard() {
                 ? <p className="admin-empty">No movies currently showing.</p>
                 : (
                   <div className="movie-grid">
-                    {nowShowing.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />)}
+                    {nowShowing.map(m => (
+                      <MovieCard key={m.id} movie={m}
+                        onDelete={handleDeleteMovie}
+                        onToggleActive={handleToggleActive}
+                        onEdit={handleOpenEdit}
+                      />
+                    ))}
                   </div>
                 )
               }
             </section>
 
-            {/* Coming Soon */}
             <section className="movie-section">
               <div className="movie-section-header">
                 <span className="movie-section-badge coming-soon-badge">◎ Coming Soon</span>
@@ -471,7 +465,13 @@ export default function AdminDashboard() {
                 ? <p className="admin-empty">No upcoming movies.</p>
                 : (
                   <div className="movie-grid">
-                    {comingSoon.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />)}
+                    {comingSoon.map(m => (
+                      <MovieCard key={m.id} movie={m}
+                        onDelete={handleDeleteMovie}
+                        onToggleActive={handleToggleActive}
+                        onEdit={handleOpenEdit}
+                      />
+                    ))}
                   </div>
                 )
               }
@@ -485,7 +485,6 @@ export default function AdminDashboard() {
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">🎬 Add New Movie</h3>
-
             <div className="modal-grid">
               <div className="modal-col">
                 <label className="modal-label">Title *</label>
@@ -522,29 +521,19 @@ export default function AdminDashboard() {
                 <input type="date" value={newMovie.release_date} onChange={setMovieField("release_date")} className="modal-input" />
 
                 <label className="modal-label">Poster URL</label>
-                <input type="text" placeholder="https://…" value={newMovie.poster_url} onChange={setMovieField("poster_url")} className="modal-input" />
+                <input type="text" placeholder="/posters/movie.jpg" value={newMovie.poster_url} onChange={setMovieField("poster_url")} className="modal-input" />
 
                 <label className="modal-label">Trailer URL</label>
                 <input type="text" placeholder="https://youtube.com/…" value={newMovie.trailer_url} onChange={setMovieField("trailer_url")} className="modal-input" />
 
-                {/* is_active checkbox */}
                 <div className="modal-checkbox-row">
-                  <input
-                    type="checkbox"
-                    id="is_active_check"
-                    checked={newMovie.is_active as boolean}
-                    onChange={setMovieField("is_active")}
-                    className="modal-checkbox"
-                  />
-                  <label htmlFor="is_active_check" className="modal-checkbox-label">
-                    Set as Active
-                  </label>
+                  <input type="checkbox" id="is_active_check" checked={newMovie.is_active as boolean} onChange={setMovieField("is_active")} className="modal-checkbox" />
+                  <label htmlFor="is_active_check" className="modal-checkbox-label">Set as Active</label>
                 </div>
               </div>
             </div>
-
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowAddMovie(false)}>Cancel</button>
+              <button className="modal-cancel-btn"  onClick={() => setShowAddMovie(false)}>Cancel</button>
               <button className="modal-confirm-btn" onClick={handleAddMovie} disabled={addingMovie}>
                 {addingMovie ? "Adding…" : "Add Movie"}
               </button>
@@ -560,53 +549,31 @@ export default function AdminDashboard() {
             <h3 className="modal-title">📽️ Add New Screening</h3>
 
             <label className="modal-label">Movie *</label>
-            <select
-              className="modal-input"
-              value={newScreening.movie_id}
-              onChange={e => setNewScreening(prev => ({ ...prev, movie_id: e.target.value }))}
-            >
+            <select className="modal-input" value={newScreening.movie_id} onChange={e => setNewScreening(p => ({ ...p, movie_id: e.target.value }))}>
               <option value="" disabled>Select Movie</option>
               {movieList.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
             </select>
 
             <label className="modal-label">Hall *</label>
-            <select
-              className="modal-input"
-              value={newScreening.hall_id}
-              onChange={e => setNewScreening(prev => ({ ...prev, hall_id: e.target.value }))}
-            >
+            <select className="modal-input" value={newScreening.hall_id} onChange={e => setNewScreening(p => ({ ...p, hall_id: e.target.value }))}>
               <option value="" disabled>Select Hall</option>
               {hallList.map(h => <option key={h.id} value={h.id}>{h.name} (cap: {h.capacity})</option>)}
             </select>
 
             <label className="modal-label">Show Date *</label>
-            <input
-              type="date"
-              value={newScreening.show_date}
-              onChange={e => setNewScreening(prev => ({ ...prev, show_date: e.target.value }))}
-              className="modal-input"
-            />
+            <input type="date" value={newScreening.show_date} onChange={e => setNewScreening(p => ({ ...p, show_date: e.target.value }))} className="modal-input" />
 
             <label className="modal-label">Start Time *</label>
-            <input
-              type="time"
-              value={newScreening.start_time}
-              onChange={e => setNewScreening(prev => ({ ...prev, start_time: e.target.value }))}
-              className="modal-input"
-            />
+            <input type="time" value={newScreening.start_time} onChange={e => setNewScreening(p => ({ ...p, start_time: e.target.value }))} className="modal-input" />
 
-            <label className="modal-label">Available Seats <span style={{ color:"#aaa", fontWeight:400 }}>(leave blank to use hall capacity)</span></label>
-            <input
-              type="number"
-              placeholder="e.g. 120"
-              value={newScreening.available_seats}
-              onChange={e => setNewScreening(prev => ({ ...prev, available_seats: e.target.value }))}
-              className="modal-input"
-              min={1}
-            />
+            <label className="modal-label">
+              Available Seats{" "}
+              <span style={{ color: "#aaa", fontWeight: 400 }}>(leave blank to use hall capacity)</span>
+            </label>
+            <input type="number" placeholder="e.g. 120" value={newScreening.available_seats} onChange={e => setNewScreening(p => ({ ...p, available_seats: e.target.value }))} className="modal-input" min={1} />
 
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowAddScreening(false)}>Cancel</button>
+              <button className="modal-cancel-btn"  onClick={() => setShowAddScreening(false)}>Cancel</button>
               <button className="modal-confirm-btn" onClick={handleAddScreening}>Add Screening</button>
             </div>
           </div>
@@ -618,7 +585,6 @@ export default function AdminDashboard() {
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
             <h3 className="modal-title">✏️ Edit Movie</h3>
-
             <div className="modal-grid">
               <div className="modal-col">
                 <label className="modal-label">Title *</label>
@@ -661,22 +627,13 @@ export default function AdminDashboard() {
                 <input type="text" placeholder="https://youtube.com/…" value={editMovie.trailer_url as string} onChange={setEditField("trailer_url")} className="modal-input" />
 
                 <div className="modal-checkbox-row">
-                  <input
-                    type="checkbox"
-                    id="edit_is_active_check"
-                    checked={editMovie.is_active as boolean}
-                    onChange={setEditField("is_active")}
-                    className="modal-checkbox"
-                  />
-                  <label htmlFor="edit_is_active_check" className="modal-checkbox-label">
-                    Set as Active
-                  </label>
+                  <input type="checkbox" id="edit_is_active_check" checked={editMovie.is_active as boolean} onChange={setEditField("is_active")} className="modal-checkbox" />
+                  <label htmlFor="edit_is_active_check" className="modal-checkbox-label">Set as Active</label>
                 </div>
               </div>
             </div>
-
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowEditMovie(false)}>Cancel</button>
+              <button className="modal-cancel-btn"  onClick={() => setShowEditMovie(false)}>Cancel</button>
               <button className="modal-confirm-btn" onClick={handleEditMovie} disabled={editingMovie}>
                 {editingMovie ? "Saving…" : "Save Changes"}
               </button>
@@ -689,5 +646,5 @@ export default function AdminDashboard() {
         Copyright© 2026 CineBook Limited. All Rights Reserved.
       </div>
     </div>
-  );
+  )
 }

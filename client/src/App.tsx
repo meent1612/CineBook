@@ -6,11 +6,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ShowTimes from "./pages/Showtimes";
 import TicketPrice from "./pages/TicketPrice";
-import BookTicket from "./pages/Bookticket";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import AboutUs from "./pages/AboutUs";
 import Contacts from "./pages/Contacts";
+import Showmovies from "./pages/Showmovies";
 
 export default function App() {
   return (
@@ -25,13 +25,8 @@ export default function App() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<Contacts />} />
         <Route path="/ticket-price" element={<TicketPrice />} />
-
-        {/* Protected: login required */}
-        <Route path="/book/:id" element={
-          <ProtectedRoute>
-            <BookTicket />
-          </ProtectedRoute>
-        } />
+        <Route path="/showmovies" element={<Showmovies />} />
+        
 
         {/* Protected: user only */}
         <Route path="/user" element={

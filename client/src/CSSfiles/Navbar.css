@@ -128,3 +128,9 @@
   font-size: 0.9rem;
   text-decoration: none;
 }
+.nav-username {
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
