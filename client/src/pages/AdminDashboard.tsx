@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { movies as initialMovies, Movie } from "../data/movies";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 import "../CSSfiles/AdminDashboard.css";
 
 const MONTHS = [
@@ -8,80 +7,195 @@ const MONTHS = [
   "July","August","September","October","November","December",
 ];
 
-interface Screening {
+interface Movie {
   id: number;
-  movie: string;
-  hall: string;
-  date: string;
-  time: string;
+  title: string;
+  genre: string | null;
+  category: string;
+  language: string | null;
+  poster_url: string | null;
+  status: string;
+  is_active: boolean;
 }
 
-export default function AdminDashboard() {
-  const [selectedMonth, setSelectedMonth] = useState("December");
-  const [movieList, setMovieList] = useState<Movie[]>(initialMovies);
-  const [showAddMovie, setShowAddMovie] = useState(false);
-  const [newMovieTitle, setNewMovieTitle] = useState("");
+interface Hall {
+  id: number;
+  name: string;
+  capacity: number;
+}
 
-  const [showAddScreening, setShowAddScreening] = useState(false);
-  const [screenings, setScreenings] = useState<Screening[]>([]);
-  const [newScreening, setNewScreening] = useState({
-    movie: "",
-    hall: "",
-    date: "",
-    time: "",
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`;
+
+export default function AdminDashboard() {
+  const { token } = useAuth();
+  const [selectedMonth, setSelectedMonth] = useState("December");
+
+  // ── Movies state ──
+  const [movieList, setMovieList] = useState<Movie[]>([]);
+  const [loadingMovies, setLoadingMovies] = useState(true);
+  const [movieError, setMovieError] = useState("");
+
+  // ── Halls state ──
+  const [hallList, setHallList] = useState<Hall[]>([]);
+
+  // ── Add movie modal state ──
+  const [showAddMovie, setShowAddMovie] = useState(false);
+  const [addingMovie, setAddingMovie] = useState(false);
+  const [newMovie, setNewMovie] = useState({
+    title: "",
+    genre: "",
+    category: "2D",
+    language: "English",
+    poster_url: "",
   });
 
-  const navigate = useNavigate();
+  // ── Add screening modal state ──
+  const [showAddScreening, setShowAddScreening] = useState(false);
+  const [newScreening, setNewScreening] = useState({
+    movie_id: "",
+    hall_id: "",
+    show_date: "",
+    start_time: "",
+  });
+
+  // ── Load movies and halls on mount ──
+  useEffect(() => {
+    fetchMovies();
+    fetchHalls();
+  }, []);
+
+  const fetchMovies = async () => {
+    setLoadingMovies(true);
+    setMovieError("");
+    try {
+      const response = await fetch(`${API_URL}/admin/movies`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      setMovieList(data.movies);
+    } catch (err: any) {
+      setMovieError(err.message || "Failed to load movies.");
+    } finally {
+      setLoadingMovies(false);
+    }
+  };
+
+  const fetchHalls = async () => {
+    try {
+      const response = await fetch(`${API_URL}/halls`);
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      setHallList(data.halls);
+    } catch (err: any) {
+      console.error("Failed to load halls:", err.message);
+    }
+  };
+
+  // ── Add movie via API ──
+  const handleAddMovie = async () => {
+    if (!newMovie.title) return;
+    setAddingMovie(true);
+    try {
+      const response = await fetch(`${API_URL}/admin/movies`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title:      newMovie.title,
+          genre:      newMovie.genre      || null,
+          category:   newMovie.category,
+          language:   newMovie.language   || null,
+          poster_url: newMovie.poster_url || null,
+          status:     "now_showing",
+        }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      await fetchMovies();
+      setNewMovie({ title: "", genre: "", category: "2D", language: "English", poster_url: "" });
+      setShowAddMovie(false);
+    } catch (err: any) {
+      alert(err.message || "Failed to add movie.");
+    } finally {
+      setAddingMovie(false);
+    }
+  };
+
+  // ── Delete movie via API ──
+  const handleDeleteMovie = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this movie?")) return;
+    try {
+      const response = await fetch(`${API_URL}/admin/movies/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      await fetchMovies();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete movie.");
+    }
+  };
+
+  // ── Add screening via API ──
+  const handleAddScreening = async () => {
+    const { movie_id, hall_id, show_date, start_time } = newScreening;
+    if (!movie_id || !hall_id || !show_date || !start_time) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    try {
+      const selectedHall = hallList.find(h => h.id === parseInt(hall_id));
+      const response = await fetch(`${API_URL}/admin/screenings`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          movie_id:        parseInt(movie_id),
+          hall_id:         parseInt(hall_id),
+          show_date:       show_date,
+          start_time:      start_time,
+          available_seats: selectedHall?.capacity || 100,
+        }),
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error(data.message);
+      alert("Screening added successfully!");
+      setNewScreening({ movie_id: "", hall_id: "", show_date: "", start_time: "" });
+      setShowAddScreening(false);
+    } catch (err: any) {
+      alert(err.message || "Failed to add screening.");
+    }
+  };
+
+  const setMovieField =
+    (field: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setNewMovie((prev) => ({ ...prev, [field]: e.target.value }));
 
   const stats = [
-    { label: "Tickets Sold", value: "15,000" },
-    { label: "Active Movies", value: movieList.length.toString() },
-    { label: "Revenue", value: "40M BDT" },
-    { label: "Active Screening", value: (500 + screenings.length).toString() },
+    { label: "Tickets Sold",      value: "15,000" },
+    { label: "Active Movies",     value: movieList.length.toString() },
+    { label: "Revenue",           value: "40M BDT" },
+    { label: "Active Screenings", value: "500" },
   ];
 
   const mgmt = [
-    { label: "Movie\nManagement", icon: "🎬", path: "/admin/movies" },
-    { label: "Screening\nManagement", icon: "📽️", path: "/admin/screenings" },
-    { label: "Inbox", icon: "📬", path: "/admin/inbox" },
+    { label: "Movie\nManagement",     icon: "🎬" },
+    { label: "Screening\nManagement", icon: "📽️" },
+    { label: "Inbox",                 icon: "📬" },
   ];
-
-  const handleAddMovie = () => {
-    if (newMovieTitle) {
-      setMovieList((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          title: newMovieTitle,
-          genre: "Unknown",
-          category: "2D",
-          language: "English",
-          releaseDate: "2026-01-01",
-          poster: "https://via.placeholder.com/150x220/6B1829/white?text=New",
-          showtimes: {},
-        },
-      ]);
-      setNewMovieTitle("");
-      setShowAddMovie(false);
-    }
-  };
-
-  const handleAddScreening = () => {
-    const { movie, hall, date, time } = newScreening;
-    if (movie && hall && date && time) {
-      setScreenings((prev) => [
-        ...prev,
-        { id: Date.now(), movie, hall, date, time },
-      ]);
-      setNewScreening({ movie: "", hall: "", date: "", time: "" });
-      setShowAddScreening(false);
-    }
-  };
-
-  const setScreeningField =
-    (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setNewScreening((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
     <div className="admin-wrapper">
@@ -133,11 +247,83 @@ export default function AdminDashboard() {
       {/* Management Cards */}
       <div className="admin-mgmt-row">
         {mgmt.map((m) => (
-          <div key={m.label} className="admin-mgmt-card" onClick={() => {}}>
+          <div key={m.label} className="admin-mgmt-card">
             <div className="admin-mgmt-icon">{m.icon}</div>
             <div className="admin-mgmt-label">{m.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Movie List */}
+      <div style={{ padding: "1rem 2rem 5rem" }}>
+        <h3 style={{ marginBottom: "1rem", fontFamily: "'Playfair Display', serif" }}>
+          Movies ({movieList.length})
+        </h3>
+
+        {loadingMovies && (
+          <p style={{ color: "#888" }}>Loading movies...</p>
+        )}
+
+        {movieError && (
+          <p style={{ color: "red" }}>{movieError}</p>
+        )}
+
+        {!loadingMovies && movieList.length === 0 && (
+          <p style={{ color: "#888" }}>No movies found. Add one!</p>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+          {movieList.map((movie) => (
+            <div
+              key={movie.id}
+              style={{
+                background: "white",
+                borderRadius: "10px",
+                padding: "1rem",
+                width: "180px",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              }}
+            >
+              <img
+                src={movie.poster_url || `https://via.placeholder.com/150x200/6B1829/white?text=${encodeURIComponent(movie.title)}`}
+                alt={movie.title}
+                style={{
+                  width: "100%",
+                  height: "200px",
+                  objectFit: "cover",
+                  borderRadius: "6px",
+                  marginBottom: "0.5rem",
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    `https://via.placeholder.com/150x200/6B1829/white?text=${encodeURIComponent(movie.title)}`;
+                }}
+              />
+              <div style={{ fontWeight: 700, fontSize: "0.82rem", marginBottom: "0.25rem" }}>
+                {movie.title}
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: "0.5rem" }}>
+                {movie.genre || "—"} • {movie.category}
+              </div>
+              <button
+                onClick={() => handleDeleteMovie(movie.id)}
+                style={{
+                  width: "100%",
+                  padding: "0.35rem",
+                  background: "#fee2e2",
+                  color: "#dc2626",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                🗑 Delete
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Add Movie Modal */}
@@ -145,19 +331,62 @@ export default function AdminDashboard() {
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>Add New Movie</h3>
+
             <input
               type="text"
-              placeholder="Movie Title"
-              value={newMovieTitle}
-              onChange={(e) => setNewMovieTitle(e.target.value)}
+              placeholder="Title *"
+              value={newMovie.title}
+              onChange={setMovieField("title")}
               className="modal-input"
             />
+
+            <input
+              type="text"
+              placeholder="Genre (e.g. Action, Drama)"
+              value={newMovie.genre}
+              onChange={setMovieField("genre")}
+              className="modal-input"
+            />
+
+            <select
+              className="modal-input"
+              value={newMovie.category}
+              onChange={setMovieField("category")}
+            >
+              <option value="2D">2D</option>
+              <option value="3D">3D</option>
+              <option value="IMAX">IMAX</option>
+            </select>
+
+            <input
+              type="text"
+              placeholder="Language (e.g. English, Bangla)"
+              value={newMovie.language}
+              onChange={setMovieField("language")}
+              className="modal-input"
+            />
+
+            <input
+              type="text"
+              placeholder="Poster URL (optional)"
+              value={newMovie.poster_url}
+              onChange={setMovieField("poster_url")}
+              className="modal-input"
+            />
+
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowAddMovie(false)}>
+              <button
+                className="modal-cancel-btn"
+                onClick={() => setShowAddMovie(false)}
+              >
                 Cancel
               </button>
-              <button className="modal-confirm-btn" onClick={handleAddMovie}>
-                Add Movie
+              <button
+                className="modal-confirm-btn"
+                onClick={handleAddMovie}
+                disabled={addingMovie}
+              >
+                {addingMovie ? "Adding..." : "Add Movie"}
               </button>
             </div>
           </div>
@@ -172,42 +401,51 @@ export default function AdminDashboard() {
 
             <select
               className="modal-input"
-              value={newScreening.movie}
-              onChange={setScreeningField("movie")}
+              value={newScreening.movie_id}
+              onChange={(e) => setNewScreening(prev => ({ ...prev, movie_id: e.target.value }))}
             >
               <option value="" disabled>Select Movie</option>
               {movieList.map((m) => (
-                <option key={m.id} value={m.title}>{m.title}</option>
+                <option key={m.id} value={m.id}>{m.title}</option>
+              ))}
+            </select>
+
+            <select
+              className="modal-input"
+              value={newScreening.hall_id}
+              onChange={(e) => setNewScreening(prev => ({ ...prev, hall_id: e.target.value }))}
+            >
+              <option value="" disabled>Select Hall</option>
+              {hallList.map((h) => (
+                <option key={h.id} value={h.id}>{h.name}</option>
               ))}
             </select>
 
             <input
-              type="text"
-              placeholder="Hall (e.g. Hall 1)"
-              value={newScreening.hall}
-              onChange={setScreeningField("hall")}
-              className="modal-input"
-            />
-
-            <input
               type="date"
-              value={newScreening.date}
-              onChange={setScreeningField("date")}
+              value={newScreening.show_date}
+              onChange={(e) => setNewScreening(prev => ({ ...prev, show_date: e.target.value }))}
               className="modal-input"
             />
 
             <input
               type="time"
-              value={newScreening.time}
-              onChange={setScreeningField("time")}
+              value={newScreening.start_time}
+              onChange={(e) => setNewScreening(prev => ({ ...prev, start_time: e.target.value }))}
               className="modal-input"
             />
 
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowAddScreening(false)}>
+              <button
+                className="modal-cancel-btn"
+                onClick={() => setShowAddScreening(false)}
+              >
                 Cancel
               </button>
-              <button className="modal-confirm-btn" onClick={handleAddScreening}>
+              <button
+                className="modal-confirm-btn"
+                onClick={handleAddScreening}
+              >
                 Add Screening
               </button>
             </div>
@@ -216,7 +454,7 @@ export default function AdminDashboard() {
       )}
 
       <div className="admin-footer">
-        Copyright© 2026 CineBook Limited . All Rights Reserved.
+        Copyright© 2026 CineBook Limited. All Rights Reserved.
       </div>
     </div>
   );
