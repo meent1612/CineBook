@@ -15,17 +15,17 @@ INSERT INTO halls (name, capacity) VALUES
     ('Hall 3', 120);
 
 
-INSERT INTO movies (title, description, genre, category, language, duration_mins, release_date, poster_url, rating, status, is_active) VALUES
+INSERT INTO movies (title, description, genre, category, language, duration_mins, release_date, poster_url,trailer_url, status, is_active) VALUES
 (
     'Avatar: Fire and Ash',
     'The next chapter in the Avatar saga.',
     'Action, Fantasy, Adventure',
     '2D',
     'English',
-    150,
+     150,
     '2025-12-19',
-    'https://image.tmdb.org/t/p/w1280/cKtDJiU5zjcnDnRTzYpQ5xScKvU.jpg',
-    'PG-13',
+    '/posters/avatar.jpg',
+    'https://youtu.be/nb_fFj_0rq8?si=yNL5337zQUzm7Q3J',
     'now_showing',
     true
 ),
@@ -35,10 +35,10 @@ INSERT INTO movies (title, description, genre, category, language, duration_mins
     'Action, Fantasy, Adventure',
     '3D',
     'English',
-    150,
+     150,
     '2025-12-19',
-    'https://image.tmdb.org/t/p/w1280/cKtDJiU5zjcnDnRTzYpQ5xScKvU.jpg',
-    'PG-13',
+    '/posters/avatar.jpg',
+    'https://youtu.be/nb_fFj_0rq8?si=yNL5337zQUzm7Q3J',
     'now_showing',
     true
 ),
@@ -48,10 +48,10 @@ INSERT INTO movies (title, description, genre, category, language, duration_mins
     'Action, Horror, Adventure',
     '2D',
     'English',
-    120,
+     120,
     '2025-01-25',
-    'https://image.tmdb.org/t/p/w1280/AnKpSxBVQSMNFkCELMXLfJMoGj.jpg',
-    'R',
+    '/posters/anaconda.jpg',
+    'https://youtu.be/az8M5Mai0X4?si=VzV9ghsMMP_BOm8b',
     'now_showing',
     true
 ),
@@ -61,10 +61,10 @@ INSERT INTO movies (title, description, genre, category, language, duration_mins
     'Drama',
     '2D',
     'Bangla',
-    130,
+     130,
     '2026-01-16',
-    '',
-    NULL,
+    '/posters/rajnoitik.jpeg',
+    'https://youtu.be/pHHttaMky2o?si=fJkZQ1k3fsQ6zCFh',
     'now_showing',
     true
 ),
@@ -74,10 +74,10 @@ INSERT INTO movies (title, description, genre, category, language, duration_mins
     'Drama, Animation',
     '2D',
     'English',
-    110,
+     110,
     '2026-01-10',
-    '',
-    NULL,
+    '/posters/sultana.jpg',
+    'https://youtu.be/B0ObVv3QYag?si=f9v8EB_htD5Lx205',
     'now_showing',
     true
 ),
@@ -87,10 +87,10 @@ INSERT INTO movies (title, description, genre, category, language, duration_mins
     'Animation, Comedy, Adventure',
     '2D',
     'English',
-    95,
+     95,
     '2025-12-25',
-    '',
-    NULL,
+    '/posters/spongebob.jpg',
+    'https://youtu.be/XdPt8QWTypI?si=2QXY_D87awvZEoJ5',
     'now_showing',
     true
 );
