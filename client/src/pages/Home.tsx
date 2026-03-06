@@ -1,119 +1,226 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { movies } from "../data/movies";
-import "../CSSfiles/Home.css";
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import "../CSSfiles/Home.css"
 
-const TABS = ["Now Showing", "Coming Soon", "Buy Tickets", "Show Times"];
+// ── Types ──────────────────────────────────────────────
+interface Movie {
+  id: number
+  title: string
+  genre: string | null
+  category: string
+  language: string | null
+  duration_mins: number | null
+  release_date: string | null
+  poster_url: string | null
+  trailer_url: string | null
+  status: "now_showing" | "coming_soon"
+  is_active: boolean
+}
 
-const heroMovies = [
-  {
-    title: "Avatar: Fire and Ash",
-    bg: "linear-gradient(135deg, #0f2744 0%, #1a3a6b 50%, #0d1f33 100%)",
-    img: "https://image.tmdb.org/t/p/w1280/cKtDJiU5zjcnDnRTzYpQ5xScKvU.jpg",
-  },
-  {
-    title: "Sultana's Dream",
-    bg: "linear-gradient(135deg, #2d1b2e 0%, #4a2040 50%, #1a0f1e 100%)",
-    img: "",
-  },
-];
+// ── Constants ──────────────────────────────────────────
+const TABS    = ["Now Showing", "Coming Soon"] as const
+type Tab      = typeof TABS[number]
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
+const posterSrc = (url: string | null): string => {
+  if (!url) return ""
+  return url.startsWith("/") ? `${BACKEND}${url}` : url
+}
+
+// ── Poster with fallback ───────────────────────────────
+const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
+
+function MoviePoster({ movie }: { movie: Movie }) {
+  const [failed, setFailed] = useState(false)
+  const src = posterSrc(movie.poster_url)
+  const bg  = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
+
+  if (!src || failed) {
+    return (
+      <div className="home-poster-fallback" style={{ background: bg }}>
+        <span className="home-poster-fallback-icon">🎬</span>
+        <span className="home-poster-fallback-title">{movie.title}</span>
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt={movie.title}
+      className="movie-poster"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
+// ── Main Component ─────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("Now Showing");
-  const [heroIdx, setHeroIdx] = useState(0);
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
+  const [heroIdx,   setHeroIdx]   = useState(0)
+  const [movieList, setMovieList] = useState<Movie[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState("")
+
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin  = user?.role === "admin"
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const res  = await fetch(`${API_URL}/movies`)
+        const data = await res.json()
+        if (!data.success) throw new Error(data.message)
+        setMovieList(data.movies)
+      } catch (err: any) {
+        setError(err.message || "Failed to load movies.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchMovies()
+  }, [])
+
+  const nowShowing = movieList.filter(m => m.status === "now_showing" && m.is_active)
+  const comingSoon = movieList.filter(m => m.status === "coming_soon"  && m.is_active)
+  const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
+  const heroMovies = displayed.length > 0 ? displayed : movieList
+  const heroMovie  = heroMovies[heroIdx % heroMovies.length] ?? null
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab)
+    setHeroIdx(0)
+  }
+
+  // Navigate to /admin and pass the movieId so AdminDashboard auto-opens the edit modal
+  const handleEditMovie = (movieId: number) => {
+    navigate("/admin", { state: { editMovieId: movieId } })
+  }
 
   return (
     <div className="home-wrapper">
-      {/* Hero Banner */}
-      <div
-        className="hero-banner"
-        style={{ background: heroMovies[heroIdx].bg }}
-      >
-        <img
-          src={
-            heroMovies[heroIdx].img ||
-            "https://image.tmdb.org/t/p/w1280/cKtDJiU5zjcnDnRTzYpQ5xScKvU.jpg"
-          }
-          alt="hero"
-          className="hero-img"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+
+      {/* ── Hero Banner ── */}
+      <div className="hero-banner">
+        {heroMovie && posterSrc(heroMovie.poster_url) ? (
+          <img
+            src={posterSrc(heroMovie.poster_url)}
+            alt={heroMovie.title}
+            className="hero-img"
+            onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
+          />
+        ) : (
+          <div className="hero-img-placeholder" />
+        )}
         <div className="hero-overlay" />
 
-        {/* Dots */}
-        <div className="hero-dots">
-          {heroMovies.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setHeroIdx(i)}
-              className={`hero-dot ${i === heroIdx ? "active" : "inactive"}`}
-            />
-          ))}
-        </div>
+        {heroMovie && (
+          <div className="hero-text">
+            <h2 className="hero-title">{heroMovie.title}</h2>
+            <p className="hero-meta">
+              {heroMovie.genre || ""}
+              {heroMovie.duration_mins ? ` • ${heroMovie.duration_mins} min` : ""}
+            </p>
+            {isAdmin ? (
+              <button
+                className="hero-tickets-btn hero-edit-btn"
+                onClick={() => handleEditMovie(heroMovie.id)}
+              >
+                ✏️ Edit Movie
+              </button>
+            ) : (
+              <button
+                className="hero-tickets-btn"
+                onClick={() => navigate(`/book/${heroMovie.id}`)}
+              >
+                Get Tickets
+              </button>
+            )}
+          </div>
+        )}
+
+        {heroMovies.length > 1 && (
+          <div className="hero-dots">
+            {heroMovies.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setHeroIdx(i)}
+                className={`hero-dot ${i === heroIdx % heroMovies.length ? "active" : "inactive"}`}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Content Area */}
+      {/* ── Content Area ── */}
       <div className="content-area">
-        {/* Tabs + View All */}
+
+        {/* Tabs */}
         <div className="tabs-bar">
           <div className="tabs-list">
-            {TABS.map((tab) => (
+            {TABS.map(tab => (
               <button
                 key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  if (tab === "Show Times") navigate("/showtimes");
-                  if (tab === "Buy Tickets") navigate("/showtimes");
-                }}
+                onClick={() => handleTabChange(tab)}
                 className={`tab-btn ${activeTab === tab ? "active" : ""}`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          <button className="view-all-btn" onClick={() => navigate("/showtimes")}>
-            View All Movies
+          <button className="view-all-btn" onClick={() => navigate("/showmovies")}>
+            View All →
           </button>
         </div>
 
-        {/* Movie Grid */}
-        <div className="movie-grid">
-          {movies.map((movie) => (
-            <div key={movie.id} className="movie-card">
-              <img
-                src={movie.poster}
-                alt={movie.title}
-                className="movie-poster"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://via.placeholder.com/150x220/2a2a2a/white?text=${encodeURIComponent(
-                    movie.title.substring(0, 10)
-                  )}`;
-                }}
-              />
-              <div className="movie-card-overlay">
-                <div className="movie-title">
-                  {movie.title.length > 20
-                    ? movie.title.substring(0, 20) + "…"
-                    : movie.title}
-                </div>
-                <button
-                  className="get-tickets-btn"
-                  onClick={() => navigate(`/book/${movie.id}`)}
-                >
-                  Get Tickets
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        {loading && <p className="home-state-msg">Loading movies…</p>}
+        {error   && <p className="home-state-msg home-state-error">{error}</p>}
+        {!loading && !error && displayed.length === 0 && (
+          <p className="home-state-msg">No movies available right now.</p>
+        )}
 
-        <div className="footer">
-          Copyright© 2026 CineBook Limited . All Rights Reserved.
+        {/* Movie Grid */}
+        {!loading && !error && displayed.length > 0 && (
+          <div className="movie-grid">
+            {displayed.map(movie => (
+              <div key={movie.id} className="movie-card">
+                <MoviePoster movie={movie} />
+                <div className="movie-card-overlay">
+                  <div className="movie-card-category">{movie.category}</div>
+                  <div className="movie-title">
+                    {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
+                  </div>
+                  {movie.genre && <div className="movie-genre">{movie.genre}</div>}
+                  {isAdmin ? (
+                    <button
+                      className="get-tickets-btn edit-movie-btn"
+                      onClick={() => handleEditMovie(movie.id)}
+                    >
+                      ✏️ Edit Movie
+                    </button>
+                  ) : (
+                    <button
+                      className="get-tickets-btn"
+                      onClick={() => navigate(`/book/${movie.id}`)}
+                    >
+                      Get Tickets
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="home-footer">
+          Copyright© 2026 CineBook Limited. All Rights Reserved.
         </div>
       </div>
     </div>
-  );
+  )
 }
