@@ -26,7 +26,7 @@ class Handler extends ExceptionHandler
 
     public function render($request, Throwable $exception)
     {
-        // Handle validation errors — return each field's error message
+        // Handle validation errors
         if ($exception instanceof ValidationException) {
             return response()->json([
                 'success' => false,
@@ -35,7 +35,7 @@ class Handler extends ExceptionHandler
             ], 422);
         }
 
-        // Handle model not found errors
+        // Handle model not found
         if ($exception instanceof ModelNotFoundException) {
             return response()->json([
                 'success' => false,

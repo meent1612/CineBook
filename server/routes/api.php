@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\ScreeningController;
+use App\Http\Controllers\HallController;
 
 // ── Public Auth Routes ────────────────────────────────
 Route::post('/register', [AuthController::class, 'register']);
@@ -14,6 +15,8 @@ Route::get('/movies',          [MovieController::class, 'index']);
 Route::get('/movies/{id}',     [MovieController::class, 'show']);
 Route::get('/screenings',      [ScreeningController::class, 'index']);
 Route::get('/screenings/{id}', [ScreeningController::class, 'show']);
+Route::get('/halls',           [HallController::class, 'index']);
+Route::get('/halls/{id}',      [HallController::class, 'show']);
 
 // ── Protected Routes (login required) ─────────────────
 Route::middleware('auth:api')->group(function () {

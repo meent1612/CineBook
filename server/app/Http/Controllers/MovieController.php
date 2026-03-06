@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Movie;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class MovieController extends Controller
 {
-    // ── PUBLIC ──────────────────────────────────────────
-
     // GET /api/movies — everyone can see active movies
     public function index()
     {
@@ -45,8 +44,6 @@ class MovieController extends Controller
         }
     }
 
-    // ── ADMIN ONLY ───────────────────────────────────────
-
     // GET /api/admin/movies — admin sees all movies
     public function adminIndex()
     {
@@ -69,7 +66,7 @@ class MovieController extends Controller
     public function store(Request $request)
     {
         try {
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'title'         => 'required|string|max:255',
                 'description'   => 'nullable|string',
                 'genre'         => 'nullable|string|max:255',
@@ -83,6 +80,14 @@ class MovieController extends Controller
                 'is_active'     => 'nullable|boolean',
             ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
             $movie = Movie::create($request->all());
 
             return response()->json([
@@ -90,6 +95,7 @@ class MovieController extends Controller
                 'message' => 'Movie created successfully.',
                 'movie'   => $movie,
             ], 201);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -104,7 +110,7 @@ class MovieController extends Controller
         try {
             $movie = Movie::findOrFail($id);
 
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'title'         => 'sometimes|string|max:255',
                 'description'   => 'sometimes|nullable|string',
                 'genre'         => 'sometimes|nullable|string|max:255',
@@ -118,6 +124,14 @@ class MovieController extends Controller
                 'is_active'     => 'sometimes|nullable|boolean',
             ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors'  => $validator->errors(),
+                ], 422);
+            }
+
             $movie->update($request->all());
 
             return response()->json([
@@ -125,6 +139,7 @@ class MovieController extends Controller
                 'message' => 'Movie updated successfully.',
                 'movie'   => $movie,
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -144,6 +159,7 @@ class MovieController extends Controller
                 'success' => true,
                 'message' => 'Movie deleted successfully.',
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
