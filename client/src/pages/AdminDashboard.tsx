@@ -71,10 +71,11 @@ interface MovieCardProps {
   movie: Movie
   onDelete: (id: number) => void
   onToggleActive: (movie: Movie) => void
+  onEdit: (movie: Movie) => void
 }
 
 // ── Movie card — lives outside AdminDashboard ──
-function MovieCard({ movie, onDelete, onToggleActive }: MovieCardProps) {
+function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) {
   return (
     <div className="movie-card">
       <div className="movie-card-img-wrap">
@@ -109,9 +110,15 @@ function MovieCard({ movie, onDelete, onToggleActive }: MovieCardProps) {
           </button>
         </div>
 
-        <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
-          🗑 Delete
-        </button>
+        {/* Action buttons */}
+        <div className="movie-card-actions">
+          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
+            ✏️ Edit
+          </button>
+          <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
+            🗑 Delete
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -133,7 +140,7 @@ const EMPTY_MOVIE = {
 
 export default function AdminDashboard() {
   const { token } = useAuth();
-  const [selectedMonth, setSelectedMonth] = useState("December");
+  const [selectedMonth, setSelectedMonth] = useState("March");
 
   const [movieList, setMovieList]       = useState<Movie[]>([]);
   const [loadingMovies, setLoadingMovies] = useState(true);
@@ -153,6 +160,11 @@ export default function AdminDashboard() {
     start_time: "",
     available_seats: "",
   });
+
+  // ── Edit movie state ──
+  const [showEditMovie, setShowEditMovie]   = useState(false);
+  const [editingMovie, setEditingMovie]     = useState(false);
+  const [editMovie, setEditMovie]           = useState({ ...EMPTY_MOVIE, id: 0 });
 
   useEffect(() => {
     fetchMovies();
@@ -237,7 +249,66 @@ export default function AdminDashboard() {
     }
   };
 
-  // ── Toggle is_active (optimistic update — reverts on failure) ──
+  // ── Open edit modal pre-filled ──
+  const handleOpenEdit = (movie: Movie) => {
+    setEditMovie({
+      id:           movie.id,
+      title:        movie.title,
+      description:  movie.description  || "",
+      genre:        movie.genre        || "",
+      category:     movie.category,
+      language:     movie.language     || "",
+      duration_mins: movie.duration_mins?.toString() || "",
+      release_date: movie.release_date || "",
+      poster_url:   movie.poster_url   || "",
+      trailer_url:  movie.trailer_url  || "",
+      status:       movie.status,
+      is_active:    movie.is_active,
+    })
+    setShowEditMovie(true)
+  }
+
+  // ── Submit edit via PUT ──
+  const handleEditMovie = async () => {
+    if (!editMovie.title) return
+    setEditingMovie(true)
+    try {
+      const res  = await fetch(`${API_URL}/admin/movies/${editMovie.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:         editMovie.title,
+          description:   editMovie.description   || null,
+          genre:         editMovie.genre         || null,
+          category:      editMovie.category,
+          language:      editMovie.language      || null,
+          duration_mins: editMovie.duration_mins ? parseInt(editMovie.duration_mins as string) : null,
+          release_date:  editMovie.release_date  || null,
+          poster_url:    editMovie.poster_url    || null,
+          trailer_url:   editMovie.trailer_url   || null,
+          status:        editMovie.status,
+          is_active:     editMovie.is_active,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      await fetchMovies()
+      setShowEditMovie(false)
+    } catch (err: any) {
+      alert(err.message || "Failed to update movie.")
+    } finally {
+      setEditingMovie(false)
+    }
+  }
+
+  const setEditField =
+    (field: string) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
+        ? e.target.checked
+        : e.target.value
+      setEditMovie(prev => ({ ...prev, [field]: value }))
+    }
   const handleToggleActive = async (movie: Movie) => {
     // Optimistically flip the value in the UI immediately
     setMovieList(prev =>
@@ -303,12 +374,14 @@ export default function AdminDashboard() {
       setNewMovie(prev => ({ ...prev, [field]: value }));
     };
 
-  const nowShowing  = movieList.filter(m => m.status === "now_showing");
-  const comingSoon  = movieList.filter(m => m.status === "coming_soon");
+  const nowShowing   = movieList.filter(m => m.status === "now_showing")
+  const comingSoon   = movieList.filter(m => m.status === "coming_soon")
+  const activeMovies = movieList.filter(m => m.is_active)
 
   const stats = [
     { label: "Tickets Sold",      value: "15,000" },
-    { label: "Active Movies",     value: movieList.length.toString() },
+    { label: "Total Movies",      value: movieList.length.toString() },
+    { label: "Active Movies",     value: activeMovies.length.toString() },
     { label: "Revenue",           value: "40M BDT" },
     { label: "Active Screenings", value: "500" },
   ];
@@ -382,7 +455,7 @@ export default function AdminDashboard() {
                 ? <p className="admin-empty">No movies currently showing.</p>
                 : (
                   <div className="movie-grid">
-                    {nowShowing.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} />)}
+                    {nowShowing.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />)}
                   </div>
                 )
               }
@@ -398,7 +471,7 @@ export default function AdminDashboard() {
                 ? <p className="admin-empty">No upcoming movies.</p>
                 : (
                   <div className="movie-grid">
-                    {comingSoon.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} />)}
+                    {comingSoon.map(m => <MovieCard key={m.id} movie={m} onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />)}
                   </div>
                 )
               }
@@ -535,6 +608,78 @@ export default function AdminDashboard() {
             <div className="modal-actions">
               <button className="modal-cancel-btn" onClick={() => setShowAddScreening(false)}>Cancel</button>
               <button className="modal-confirm-btn" onClick={handleAddScreening}>Add Screening</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Movie Modal ── */}
+      {showEditMovie && (
+        <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
+          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">✏️ Edit Movie</h3>
+
+            <div className="modal-grid">
+              <div className="modal-col">
+                <label className="modal-label">Title *</label>
+                <input type="text" placeholder="e.g. Oppenheimer" value={editMovie.title} onChange={setEditField("title")} className="modal-input" />
+
+                <label className="modal-label">Description</label>
+                <textarea placeholder="Short synopsis…" value={editMovie.description as string} onChange={setEditField("description")} className="modal-input modal-textarea" rows={3} />
+
+                <label className="modal-label">Genre</label>
+                <input type="text" placeholder="e.g. Action, Drama" value={editMovie.genre as string} onChange={setEditField("genre")} className="modal-input" />
+
+                <label className="modal-label">Language</label>
+                <input type="text" placeholder="e.g. English, Bangla" value={editMovie.language as string} onChange={setEditField("language")} className="modal-input" />
+              </div>
+
+              <div className="modal-col">
+                <label className="modal-label">Category</label>
+                <select className="modal-input" value={editMovie.category} onChange={setEditField("category")}>
+                  <option value="2D">2D</option>
+                  <option value="3D">3D</option>
+                  <option value="IMAX">IMAX</option>
+                </select>
+
+                <label className="modal-label">Status</label>
+                <select className="modal-input" value={editMovie.status} onChange={setEditField("status")}>
+                  <option value="now_showing">Now Showing</option>
+                  <option value="coming_soon">Coming Soon</option>
+                </select>
+
+                <label className="modal-label">Duration (mins)</label>
+                <input type="number" placeholder="e.g. 148" value={editMovie.duration_mins as string} onChange={setEditField("duration_mins")} className="modal-input" min={1} />
+
+                <label className="modal-label">Release Date</label>
+                <input type="date" value={editMovie.release_date as string} onChange={setEditField("release_date")} className="modal-input" />
+
+                <label className="modal-label">Poster URL</label>
+                <input type="text" placeholder="/posters/movie.jpg" value={editMovie.poster_url as string} onChange={setEditField("poster_url")} className="modal-input" />
+
+                <label className="modal-label">Trailer URL</label>
+                <input type="text" placeholder="https://youtube.com/…" value={editMovie.trailer_url as string} onChange={setEditField("trailer_url")} className="modal-input" />
+
+                <div className="modal-checkbox-row">
+                  <input
+                    type="checkbox"
+                    id="edit_is_active_check"
+                    checked={editMovie.is_active as boolean}
+                    onChange={setEditField("is_active")}
+                    className="modal-checkbox"
+                  />
+                  <label htmlFor="edit_is_active_check" className="modal-checkbox-label">
+                    Set as Active
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="modal-cancel-btn" onClick={() => setShowEditMovie(false)}>Cancel</button>
+              <button className="modal-confirm-btn" onClick={handleEditMovie} disabled={editingMovie}>
+                {editingMovie ? "Saving…" : "Save Changes"}
+              </button>
             </div>
           </div>
         </div>

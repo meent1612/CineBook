@@ -123,7 +123,7 @@
 /* ── Stat Cards ── */
 .admin-stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
 }
 
@@ -430,6 +430,29 @@
   cursor: pointer;
 }
 
+/* ── Card Action Buttons ── */
+.movie-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.movie-edit-btn {
+  padding: 0.4rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.18s;
+}
+
+.movie-edit-btn:hover { background: #dbeafe; }
+
 /* ── Delete Button ── */
 .movie-delete-btn {
   width: 100%;
@@ -606,7 +629,7 @@
    RESPONSIVE
    ══════════════════════════════════════════ */
 @media (max-width: 900px) {
-  .admin-stats-row   { grid-template-columns: repeat(2, 1fr); }
+  .admin-stats-row   { grid-template-columns: repeat(3, 1fr); }
   .admin-mgmt-row    { grid-template-columns: repeat(3, 1fr); }
   .modal-grid        { grid-template-columns: 1fr; }
   .modal-wide        { max-width: 95vw; }
