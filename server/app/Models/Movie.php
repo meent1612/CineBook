@@ -20,7 +20,7 @@ class Movie extends Model
         'duration_mins',
         'release_date',
         'poster_url',
-        'rating',
+        'trailer_url',
         'status',
         'is_active',
     ];
