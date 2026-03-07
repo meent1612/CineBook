@@ -41,7 +41,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
   if (!src || failed) {
     return (
       <div className="home-poster-fallback" style={{ background: bg }}>
-        <span className="home-poster-fallback-icon">🎬</span>
+        <span className="home-poster-fallback-icon"><i className="fas fa-film"></i></span>
         <span className="home-poster-fallback-title">{movie.title}</span>
       </div>
     )
