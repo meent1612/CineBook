@@ -100,6 +100,17 @@
   letter-spacing: 0.02em;
 }
 
+.nav-username-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-username-btn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
 .hamburger {
   background: none;
   border: none;
@@ -134,3 +145,4 @@
   font-weight: 600;
   white-space: nowrap;
 }
+

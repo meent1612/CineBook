@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Home.css"
@@ -23,6 +23,7 @@ const TABS    = ["Now Showing", "Coming Soon"] as const
 type Tab      = typeof TABS[number]
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+const CAROUSEL_INTERVAL_MS = 4000  // auto-advance every 4 seconds
 
 const posterSrc = (url: string | null): string => {
   if (!url) return ""
@@ -63,9 +64,10 @@ export default function Home() {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState("")
 
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const isAdmin  = user?.role === "admin"
+  const navigate     = useNavigate()
+  const { user }     = useAuth()
+  const isAdmin      = user?.role === "admin"
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -89,14 +91,36 @@ export default function Home() {
   const comingSoon = movieList.filter(m => m.status === "coming_soon"  && m.is_active)
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
   const heroMovies = displayed.length > 0 ? displayed : movieList
-  const heroMovie  = heroMovies[heroIdx % heroMovies.length] ?? null
+  const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
+
+  // ── Auto-advance carousel ──────────────────────────
+  // Restarts whenever heroMovies list changes (tab switch or data load)
+  useEffect(() => {
+    if (heroMovies.length <= 1) return   // nothing to cycle
+
+    intervalRef.current = setInterval(() => {
+      setHeroIdx(prev => (prev + 1) % heroMovies.length)
+    }, CAROUSEL_INTERVAL_MS)
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [heroMovies.length, activeTab])
+
+  // Manual dot click resets the timer so it doesn't jump immediately after click
+  const handleDotClick = (i: number) => {
+    setHeroIdx(i)
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => {
+      setHeroIdx(prev => (prev + 1) % heroMovies.length)
+    }, CAROUSEL_INTERVAL_MS)
+  }
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
     setHeroIdx(0)
   }
 
-  // Navigate to /admin and pass the movieId so AdminDashboard auto-opens the edit modal
   const handleEditMovie = (movieId: number) => {
     navigate("/admin", { state: { editMovieId: movieId } })
   }
@@ -104,13 +128,14 @@ export default function Home() {
   return (
     <div className="home-wrapper">
 
-      {/* ── Hero Banner ── */}
+      {/* ── Hero Banner / Carousel ── */}
       <div className="hero-banner">
         {heroMovie && posterSrc(heroMovie.poster_url) ? (
           <img
+            key={heroMovie.id}              /* key forces img re-render + CSS fade */
             src={posterSrc(heroMovie.poster_url)}
             alt={heroMovie.title}
-            className="hero-img"
+            className="hero-img hero-img-fade"
             onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
           />
         ) : (
@@ -143,12 +168,13 @@ export default function Home() {
           </div>
         )}
 
+        {/* Dots */}
         {heroMovies.length > 1 && (
           <div className="hero-dots">
             {heroMovies.map((_, i) => (
               <button
                 key={i}
-                onClick={() => setHeroIdx(i)}
+                onClick={() => handleDotClick(i)}
                 className={`hero-dot ${i === heroIdx % heroMovies.length ? "active" : "inactive"}`}
                 aria-label={`Go to slide ${i + 1}`}
               />
