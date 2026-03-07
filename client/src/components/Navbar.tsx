@@ -24,6 +24,8 @@ export default function Navbar() {
       { to: "/about",        label: "ABOUT US" },
       { to: "/contact",      label: "CONTACTS" },
       { to: "/ticket-price", label: "TICKET PRICE" },
+    ] : []),
+    ...(user?.role === "user" ? [
       { to: "/user",         label: "USER DASHBOARD" },
     ] : []),
      ...(user?.role === "admin" ? [
