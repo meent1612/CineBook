@@ -20,9 +20,11 @@ export default function Navbar() {
   const navLinks = [
     { to: "/",             label: "HOME" },
     { to: "/showtimes",    label: "SHOW TIMES" },
-    { to: "/about",        label: "ABOUT US" },
-    { to: "/contact",      label: "CONTACTS" },
-    { to: "/ticket-price", label: "TICKET PRICE" },
+    ...(user?.role !== "admin" ? [
+      { to: "/about",        label: "ABOUT US" },
+      { to: "/contact",      label: "CONTACTS" },
+      { to: "/ticket-price", label: "TICKET PRICE" },
+    ] : []),
   ]
 
   return (
