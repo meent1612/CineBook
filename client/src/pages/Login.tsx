@@ -1,37 +1,34 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import "../CSSfiles/Login.css";
+import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import "../CSSfiles/Login.css"
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email,    setEmail]    = useState("")
+  const [password, setPassword] = useState("")
+  const [showPass, setShowPass] = useState(false)
+  const [error,    setError]    = useState("")
+  const [loading,  setLoading]  = useState(false)
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login } = useAuth()
+  const navigate  = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    e.preventDefault()
+    setError("")
+    setLoading(true)
 
     try {
-      await login(email, password);
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/user");
-      }
+      await login(email, password)
+      const user = JSON.parse(localStorage.getItem("user") || "{}")
+      if (user.role === "admin") navigate("/admin")
+      else navigate("/user")
     } catch (err: any) {
-      setError(err.message || "Login failed. Please try again.");
+      setError(err.message || "Login failed. Please try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="login-wrapper">
@@ -55,7 +52,7 @@ export default function Login() {
               type="email"
               placeholder="Email*"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               required
               className="login-input"
             />
@@ -70,7 +67,7 @@ export default function Login() {
                 type={showPass ? "text" : "password"}
                 placeholder="Password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 required
                 className="login-input with-icon"
               />
@@ -78,8 +75,9 @@ export default function Login() {
                 type="button"
                 onClick={() => setShowPass(!showPass)}
                 className="toggle-pass-btn"
+                aria-label={showPass ? "Hide password" : "Show password"}
               >
-                {showPass ? "🙈" : "👁"}
+                <i className={`fa-regular ${showPass ? "fa-eye-slash" : "fa-eye"}`} />
               </button>
             </div>
           </div>
@@ -95,5 +93,5 @@ export default function Login() {
         </form>
       </div>
     </div>
-  );
+  )
 }

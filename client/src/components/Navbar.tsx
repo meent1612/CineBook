@@ -12,21 +12,26 @@ export default function Navbar() {
     navigate("/")
   }
 
+  const handleUsernameClick = () => {
+    if (user?.role === "admin") navigate("/admin")
+    else navigate("/user")
+  }
+
   const navLinks = [
-    { to: "/",            label: "HOME" },
-    { to: "/showtimes",   label: "SHOW TIMES" },
-    { to: "/about",       label: "ABOUT US" },
-    { to: "/contact",     label: "CONTACTS" },
-    { to: "/ticket-price",label: "TICKET PRICE" },
-    ...(user?.role === "admin" ? [{ to: "/admin", label: "ADMIN DASHBOARD" }] : []),
-    ...(user?.role === "user"  ? [{ to: "/user",  label: "USER DASHBOARD"  }] : []),
+    { to: "/",             label: "HOME" },
+    { to: "/showtimes",    label: "SHOW TIMES" },
+    { to: "/about",        label: "ABOUT US" },
+    { to: "/contact",      label: "CONTACTS" },
+    { to: "/ticket-price", label: "TICKET PRICE" },
   ]
 
   return (
     <nav className="nav">
       {/* Logo */}
       <Link to="/" className="logo">
-        <div className="logo-icon">🎬</div>
+        <div className="logo-icon">
+          <i className="fa-solid fa-film" />
+        </div>
         <div>
           <div className="logo-text">CineBook</div>
           <div className="logo-sub">CINEMATIC</div>
@@ -49,20 +54,26 @@ export default function Navbar() {
       {/* Right side */}
       <div className="nav-right">
         <div className="location-area">
-          <span>📍</span>
+          <i className="fa-solid fa-location-dot" />
           <span>Tejgaon</span>
         </div>
 
         {user ? (
           <>
-            <span className="nav-username">👤 {user.name}</span>
+            <button
+              className="nav-username nav-username-btn"
+              onClick={handleUsernameClick}
+              title={`Go to ${user.role === "admin" ? "Admin" : "User"} Dashboard`}
+            >
+              <i className="fa-solid fa-user" /> {user.name}
+            </button>
             <button className="login-btn" onClick={handleLogout}>
               Logout
             </button>
           </>
         ) : (
           <button className="login-btn" onClick={() => navigate("/login")}>
-            👤 Login
+            <i className="fa-solid fa-user" /> Login
           </button>
         )}
       </div>

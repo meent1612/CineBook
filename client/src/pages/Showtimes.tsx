@@ -95,7 +95,6 @@ const MOVIES = [
   },
 ]
 
-// Show this week's days starting from today
 const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
 const WEEK_DAYS = Array.from({ length: 7 }, (_, i) => {
@@ -108,7 +107,6 @@ const WEEK_DAYS = Array.from({ length: 7 }, (_, i) => {
   }
 })
 
-// ── Poster with fallback ───────────────────────────────
 const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const FALLBACK_COLORS = ["#4e0f1a","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00"]
 
@@ -131,7 +129,6 @@ function Poster({ title, url }: { title: string; url: string }) {
   )
 }
 
-// ── Main Component ─────────────────────────────────────
 export default function ShowTimes() {
   const navigate = useNavigate()
 
@@ -142,9 +139,13 @@ export default function ShowTimes() {
       <div className="location-bar">
         <div>
           <div className="location-label">Weekly Showtime</div>
-          <div className="location-name">[Love Road, Tejgaon]</div>
+          <div className="location-name">
+            <i className="fa-solid fa-location-dot" /> Love Road, Tejgaon
+          </div>
         </div>
-        <button className="change-location-btn">Change Location 🔄</button>
+        <button className="change-location-btn">
+          <i className="fa-solid fa-rotate" /> Change Location
+        </button>
       </div>
 
       {/* Movie Rows */}
@@ -161,16 +162,16 @@ export default function ShowTimes() {
                     className="poster-thumb-fallback"
                     style={{ background: FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length], display: "none" }}
                   >
-                    🎬
+                    <i className="fa-solid fa-film" />
                   </div>
                 </div>
                 <div>
                   <div className="movie-info-title">{movie.title}</div>
                   <div className="movie-info-details">
-                    <div>Category: {movie.category}</div>
-                    <div>Genre: {movie.genre}</div>
-                    <div>Release: {movie.release}</div>
-                    <div>Language: {movie.language}</div>
+                    <div><i className="fa-solid fa-layer-group" /> {movie.category}</div>
+                    <div><i className="fa-solid fa-masks-theater" /> {movie.genre}</div>
+                    <div><i className="fa-solid fa-calendar-days" /> {movie.release}</div>
+                    <div><i className="fa-solid fa-language" /> {movie.language}</div>
                   </div>
                 </div>
               </div>
@@ -191,7 +192,9 @@ export default function ShowTimes() {
                           <div className="no-show">—</div>
                         ) : (
                           slots.map(time => (
-                            <button key={time} className="showtime-btn">{time}</button>
+                            <button key={time} className="showtime-btn">
+                              <i className="fa-regular fa-clock" /> {time}
+                            </button>
                           ))
                         )}
 
@@ -200,7 +203,7 @@ export default function ShowTimes() {
                             className="get-tickets-btn"
                             onClick={() => navigate(`/book/${movie.id}`)}
                           >
-                            Get Tickets
+                            <i className="fa-solid fa-ticket" /> Get Tickets
                           </button>
                         )}
                       </div>

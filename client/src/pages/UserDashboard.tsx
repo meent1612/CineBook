@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/UserDashboard.css"
 
-// ── Types ──────────────────────────────────────────────────────────────────
 interface Booking {
   id: number
   movie_title: string
@@ -24,14 +23,12 @@ interface ProfileData {
   created_at?: string
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────
-const TABS       = ["Overview", "My Tickets", "Profile"] as const
-type Tab         = typeof TABS[number]
+const TABS    = ["Overview", "My Tickets", "Profile"] as const
+type Tab      = typeof TABS[number]
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
-const API_URL    = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
-const BACKEND    = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-
-const posterSrc  = (url: string | null): string => {
+const posterSrc = (url: string | null): string => {
   if (!url) return ""
   return url.startsWith("/") ? `${BACKEND}${url}` : url
 }
@@ -49,7 +46,6 @@ const formatDate = (date: string): string =>
     day: "2-digit", month: "short", year: "numeric",
   })
 
-// ── Ticket Poster with fallback ────────────────────────────────────────────
 function TicketPoster({ title, poster, className }: { title: string; poster: string | null; className: string }) {
   const [failed, setFailed] = useState(false)
   const src = posterSrc(poster)
@@ -57,21 +53,15 @@ function TicketPoster({ title, poster, className }: { title: string; poster: str
   if (!src || failed) {
     return (
       <div className={`${className} ticket-poster-fallback`}>
-        <span>🎬</span>
+        <i className="fa-solid fa-film" />
       </div>
     )
   }
   return (
-    <img
-      src={src}
-      alt={title}
-      className={className}
-      onError={() => setFailed(true)}
-    />
+    <img src={src} alt={title} className={className} onError={() => setFailed(true)} />
   )
 }
 
-// ── Ticket Card ────────────────────────────────────────────────────────────
 function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: boolean }) {
   return (
     <div className={`ud-ticket-card ${booking.status}`}>
@@ -83,12 +73,15 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
       <div className="ud-ticket-info">
         <div className="ud-ticket-title">{booking.movie_title}</div>
         <div className="ud-ticket-meta">
-          <span>📅 {formatDate(booking.show_date)}</span>
-          <span>🕐 {formatTime(booking.start_time)}</span>
-          <span>🎭 {booking.hall_name}</span>
+          <span><i className="fa-regular fa-calendar" /> {formatDate(booking.show_date)}</span>
+          <span><i className="fa-regular fa-clock" /> {formatTime(booking.start_time)}</span>
+          <span><i className="fa-solid fa-masks-theater" /> {booking.hall_name}</span>
         </div>
         <div className="ud-ticket-meta">
-          <span>💺 {Array.isArray(booking.seats) ? booking.seats.join(", ") : booking.seats}</span>
+          <span>
+            <i className="fa-solid fa-couch" />{" "}
+            {Array.isArray(booking.seats) ? booking.seats.join(", ") : booking.seats}
+          </span>
         </div>
       </div>
       <div className="ud-ticket-right">
@@ -105,17 +98,15 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
   )
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const { user, token, logout } = useAuth()
   const navigate                = useNavigate()
 
   const [activeTab, setActiveTab] = useState<Tab>("Overview")
 
-  // ── Profile state ──
-  const [profile, setProfile]   = useState<ProfileData>({
-    name:          user?.name          || "",
-    email:         user?.email         || "",
+  const [profile, setProfile] = useState<ProfileData>({
+    name:          user?.name               || "",
+    email:         user?.email              || "",
     mobile_number: (user as any)?.mobile_number || "",
     gender:        (user as any)?.gender        || "",
     created_at:    (user as any)?.created_at    || "",
@@ -124,18 +115,14 @@ export default function UserDashboard() {
   const [saving,   setSaving]   = useState(false)
   const [profErr,  setProfErr]  = useState("")
 
-  // ── Bookings state ──
-  const [bookings,       setBookings]       = useState<Booking[]>([])
-  const [loadingBooks,   setLoadingBooks]   = useState(true)
-  const [bookingsError,  setBookingsError]  = useState("")
+  const [bookings,      setBookings]      = useState<Booking[]>([])
+  const [loadingBooks,  setLoadingBooks]  = useState(true)
+  const [bookingsError, setBookingsError] = useState("")
 
-  // ── Fetch profile from API ──
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res  = await fetch(`${API_URL}/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res  = await fetch(`${API_URL}/profile`, { headers: { Authorization: `Bearer ${token}` } })
         const data = await res.json()
         if (!data.success) throw new Error(data.message)
         setProfile({
@@ -145,22 +132,17 @@ export default function UserDashboard() {
           gender:        data.user.gender        || "",
           created_at:    data.user.created_at    || "",
         })
-      } catch {
-        // fallback to AuthContext values already set above
-      }
+      } catch { /* fallback to AuthContext */ }
     }
     fetchProfile()
   }, [token])
 
-  // ── Fetch bookings from API ──
   useEffect(() => {
     const fetchBookings = async () => {
       setLoadingBooks(true)
       setBookingsError("")
       try {
-        const res  = await fetch(`${API_URL}/bookings`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res  = await fetch(`${API_URL}/bookings`, { headers: { Authorization: `Bearer ${token}` } })
         const data = await res.json()
         if (!data.success) throw new Error(data.message)
         setBookings(data.bookings)
@@ -173,40 +155,25 @@ export default function UserDashboard() {
     fetchBookings()
   }, [token])
 
-  // ── Derived data ──
-  const upcoming    = bookings.filter(b => b.status === "upcoming")
-  const watched     = bookings.filter(b => b.status === "watched")
-  const totalSpent  = bookings.reduce((sum, b) => sum + b.total_price, 0)
+  const upcoming   = bookings.filter(b => b.status === "upcoming")
+  const watched    = bookings.filter(b => b.status === "watched")
+  const totalSpent = bookings.reduce((sum, b) => sum + b.total_price, 0)
 
   const initials = profile.name
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .toUpperCase()
-    .substring(0, 2) || "?"
+    .split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2) || "?"
 
   const memberSince = profile.created_at
-    ? new Date(profile.created_at).toLocaleDateString("en-US", {
-        month: "long", year: "numeric",
-      })
+    ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : ""
 
-  // ── Save profile ──
   const handleSave = async () => {
     setSaving(true)
     setProfErr("")
     try {
       const res  = await fetch(`${API_URL}/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:  `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name:          profile.name,
-          mobile_number: profile.mobile_number,
-          gender:        profile.gender,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: profile.name, mobile_number: profile.mobile_number, gender: profile.gender }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
@@ -218,22 +185,24 @@ export default function UserDashboard() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate("/")
+  const handleLogout = () => { logout(); navigate("/") }
+
+  // Tab icon map
+  const tabIcon = (tab: Tab) => {
+    if (tab === "Overview")   return "fa-chart-bar"
+    if (tab === "My Tickets") return "fa-ticket"
+    return "fa-user"
   }
 
   return (
     <div className="ud-wrapper">
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside className="ud-sidebar">
         <div className="ud-avatar">{initials}</div>
         <div className="ud-sidebar-name">{profile.name || "User"}</div>
         <div className="ud-sidebar-email">{profile.email}</div>
-        {memberSince && (
-          <div className="ud-sidebar-badge">Member since {memberSince}</div>
-        )}
+        {memberSince && <div className="ud-sidebar-badge">Member since {memberSince}</div>}
 
         <nav className="ud-nav">
           {TABS.map(tab => (
@@ -244,7 +213,7 @@ export default function UserDashboard() {
               aria-current={activeTab === tab ? "page" : undefined}
             >
               <span className="ud-nav-icon">
-                {tab === "Overview" ? "📊" : tab === "My Tickets" ? "🎟️" : "👤"}
+                <i className={`fa-solid ${tabIcon(tab)}`} />
               </span>
               {tab}
             </button>
@@ -252,18 +221,19 @@ export default function UserDashboard() {
         </nav>
 
         <button className="ud-logout-btn" onClick={handleLogout}>
-          ← Back to Home
+          <i className="fa-solid fa-arrow-left" /> Back to Home
         </button>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main */}
       <main className="ud-main">
 
         {/* OVERVIEW */}
         {activeTab === "Overview" && (
           <div className="ud-section">
             <h2 className="ud-section-title">
-              Good to see you, {profile.name.split(" ")[0] || "there"} 👋
+              Good to see you, {profile.name.split(" ")[0] || "there"}
+              <i className="fa-solid fa-hand-wave" style={{ marginLeft: "0.4rem" }} />
             </h2>
 
             <div className="ud-stats-row">
@@ -285,28 +255,18 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Upcoming */}
             <h3 className="ud-sub-title">Upcoming Bookings</h3>
             {loadingBooks && <p className="ud-state-msg">Loading…</p>}
-            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
-            {!loadingBooks && upcoming.length === 0 && (
-              <div className="ud-empty">No upcoming bookings.</div>
-            )}
-            {upcoming.map(b => <TicketCard key={b.id} booking={b} />)}
+            {/*bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>*/}
+            {!loadingBooks && upcoming.length === 0 && <div className="ud-empty">No upcoming bookings.</div>}
+            {/*upcoming.map(b => <TicketCard key={b.id} booking={b} />)*/}
 
-            {/* Recently Watched */}
             <h3 className="ud-sub-title">Recently Watched</h3>
-            {!loadingBooks && watched.length === 0 && (
-              <div className="ud-empty">No watched movies yet.</div>
-            )}
+            {!loadingBooks && watched.length === 0 && <div className="ud-empty">No watched movies yet.</div>}
             <div className="ud-recent-row">
               {watched.map(b => (
                 <div key={b.id} className="ud-recent-card">
-                  <TicketPoster
-                    title={b.movie_title}
-                    poster={b.movie_poster}
-                    className="ud-recent-poster"
-                  />
+                  <TicketPoster title={b.movie_title} poster={b.movie_poster} className="ud-recent-poster" />
                   <div className="ud-recent-title">{b.movie_title}</div>
                   <div className="ud-recent-date">{formatDate(b.show_date)}</div>
                 </div>
@@ -319,18 +279,16 @@ export default function UserDashboard() {
         {activeTab === "My Tickets" && (
           <div className="ud-section">
             <h2 className="ud-section-title">My Tickets</h2>
-
             <div className="ud-ticket-filter-row">
               <span className="ud-filter-badge upcoming">{upcoming.length} Upcoming</span>
               <span className="ud-filter-badge watched">{watched.length} Watched</span>
             </div>
-
-            {loadingBooks && <p className="ud-state-msg">Loading tickets…</p>}
-            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
+            {loadingBooks  && <p className="ud-state-msg">Loading tickets…</p>}
+            {/*bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>*/}
             {!loadingBooks && bookings.length === 0 && (
               <div className="ud-empty">You haven't booked any tickets yet.</div>
             )}
-            {bookings.map(b => <TicketCard key={b.id} booking={b} showStatus />)}
+            {/*bookings.map(b => <TicketCard key={b.id} booking={b} showStatus />)*/}
           </div>
         )}
 
@@ -344,7 +302,13 @@ export default function UserDashboard() {
                 onClick={() => editMode ? handleSave() : setEditMode(true)}
                 disabled={saving}
               >
-                {saving ? "Saving…" : editMode ? "✓ Save" : "✏️ Edit"}
+                {saving ? (
+                  "Saving…"
+                ) : editMode ? (
+                  <><i className="fa-solid fa-check" /> Save</>
+                ) : (
+                  <><i className="fa-solid fa-pen" /> Edit</>
+                )}
               </button>
             </div>
 
@@ -357,11 +321,8 @@ export default function UserDashboard() {
                 <div className="ud-field">
                   <label className="ud-field-label">Full Name</label>
                   {editMode ? (
-                    <input
-                      className="ud-field-input"
-                      value={profile.name}
-                      onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
-                    />
+                    <input className="ud-field-input" value={profile.name}
+                      onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
                   ) : (
                     <div className="ud-field-value">{profile.name || "—"}</div>
                   )}
@@ -375,12 +336,9 @@ export default function UserDashboard() {
                 <div className="ud-field">
                   <label className="ud-field-label">Mobile</label>
                   {editMode ? (
-                    <input
-                      className="ud-field-input"
-                      value={profile.mobile_number}
+                    <input className="ud-field-input" value={profile.mobile_number}
                       placeholder="e.g. 01XXXXXXXXX"
-                      onChange={e => setProfile(p => ({ ...p, mobile_number: e.target.value }))}
-                    />
+                      onChange={e => setProfile(p => ({ ...p, mobile_number: e.target.value }))} />
                   ) : (
                     <div className="ud-field-value">{profile.mobile_number || "—"}</div>
                   )}
@@ -389,11 +347,8 @@ export default function UserDashboard() {
                 <div className="ud-field">
                   <label className="ud-field-label">Gender</label>
                   {editMode ? (
-                    <select
-                      className="ud-field-input"
-                      value={profile.gender}
-                      onChange={e => setProfile(p => ({ ...p, gender: e.target.value }))}
-                    >
+                    <select className="ud-field-input" value={profile.gender}
+                      onChange={e => setProfile(p => ({ ...p, gender: e.target.value }))}>
                       <option value="">Select</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
