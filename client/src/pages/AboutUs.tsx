@@ -1,8 +1,8 @@
 export default function AboutUs() {
   const team = [
-    { name: "Shayma Sarmin", role: "CEO & Founder", icon: "fa-solid fa-user" },
+    { name: "Shayma Sarmeen", role: "CEO & Founder", icon: "fa-solid fa-user" },
     { name: "Zumaina Tahsin", role: "Head of Operations", icon: "fa-solid fa-user" },
-    { name: "Rahnuma Arza", role: "Lead Developer", icon: "fa-solid fa-user" },
+    { name: "Rahnuma Azra Mahajabin", role: "Lead Developer", icon: "fa-solid fa-user" },
     { name: "Farzana Mim", role: "Marketing Director", icon: "fa-solid fa-user" },
   ];
 
@@ -15,7 +15,7 @@ export default function AboutUs() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f0f0f0" }}>
-      {/* Hero */}
+      
       <div
         style={{
           background: "#6B1829",
@@ -35,7 +35,7 @@ export default function AboutUs() {
         </p>
       </div>
 
-      {/* Stats Bar */}
+      
       <div style={{ background: "#1a1a1a", display: "flex", justifyContent: "center" }}>
         {stats.map((s, i) => (
           <div key={s.label} style={{ padding: "1.25rem 2.5rem", textAlign: "center", borderRight: i < stats.length - 1 ? "1px solid #333" : "none" }}>
@@ -45,7 +45,7 @@ export default function AboutUs() {
         ))}
       </div>
 
-      {/* Mission */}
+    
       <div style={{ maxWidth: "800px", margin: "3rem auto", padding: "0 2rem" }}>
         <div style={{ background: "white", borderRadius: "12px", padding: "2.5rem", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: "2rem" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", color: "#6B1829", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -59,7 +59,7 @@ export default function AboutUs() {
           </p>
         </div>
 
-        {/* Values */}
+        
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
           {[
             { icon: "fa-solid fa-star", title: "Quality First", desc: "Only the best cinema experiences, curated for you." },
@@ -74,7 +74,7 @@ export default function AboutUs() {
           ))}
         </div>
 
-        {/* Team */}
+        
         <div style={{ background: "white", borderRadius: "12px", padding: "2rem", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", color: "#6B1829", marginBottom: "1.5rem", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem" }}>
             <i className="fa-solid fa-users" /> Meet the Team

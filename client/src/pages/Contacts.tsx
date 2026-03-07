@@ -30,7 +30,7 @@ export default function Contacts() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f0f0f0" }}>
-      {/* Hero */}
+      
       <div style={{ background: "#6B1829", padding: "3rem 2rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 40px)" }} />
         <i className="fa-solid fa-paper-plane" style={{ fontSize: "2.5rem", color: "rgba(255,255,255,0.9)", marginBottom: "0.75rem", display: "block" }} />
@@ -42,9 +42,9 @@ export default function Contacts() {
         </p>
       </div>
 
-      {/* Content */}
+      
       <div style={{ maxWidth: "900px", margin: "2.5rem auto", padding: "0 1.5rem", display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
-        {/* Left: Info */}
+       
         <div style={{ width: "280px", flexShrink: 0 }}>
           <div style={{ background: "white", borderRadius: "12px", padding: "1.75rem", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", marginBottom: "1rem" }}>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", color: "#6B1829", marginBottom: "1.25rem" }}>
@@ -61,7 +61,7 @@ export default function Contacts() {
             ))}
           </div>
 
-          {/* Social */}
+          
           <div style={{ background: "white", borderRadius: "12px", padding: "1.25rem 1.75rem", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
             <div style={{ fontSize: "0.75rem", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.85rem" }}>Follow Us</div>
             <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -86,7 +86,7 @@ export default function Contacts() {
           </div>
         </div>
 
-        {/* Right: Form */}
+        
         <div style={{ flex: 1 }}>
           <div style={{ background: "white", borderRadius: "12px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
             <div style={{ background: "#6B1829", padding: "1rem 1.75rem" }}>
@@ -139,7 +139,7 @@ export default function Contacts() {
         </div>
       </div>
 
-      {/* Map placeholder */}
+      
       <div style={{ maxWidth: "900px", margin: "0 auto 2.5rem", padding: "0 1.5rem" }}>
         <div style={{ background: "#ddd", borderRadius: "12px", height: "180px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
           <div style={{ textAlign: "center" }}>

@@ -27,13 +27,13 @@ class User extends Model implements AuthenticatableContract, JWTSubject
         'password',
     ];
 
-    // Required for JWT
+    
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    // Required for JWT
+   
     public function getJWTCustomClaims(): array
     {
         return [];

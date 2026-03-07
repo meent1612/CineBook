@@ -132,7 +132,7 @@ export default function UserDashboard() {
           gender:        data.user.gender        || "",
           created_at:    data.user.created_at    || "",
         })
-      } catch { /* fallback to AuthContext */ }
+      } catch { }
     }
     fetchProfile()
   }, [token])
@@ -187,7 +187,7 @@ export default function UserDashboard() {
 
   const handleLogout = () => { logout(); navigate("/") }
 
-  // Tab icon map
+  
   const tabIcon = (tab: Tab) => {
     if (tab === "Overview")   return "fa-chart-bar"
     if (tab === "My Tickets") return "fa-ticket"
@@ -197,7 +197,7 @@ export default function UserDashboard() {
   return (
     <div className="ud-wrapper">
 
-      {/* Sidebar */}
+     
       <aside className="ud-sidebar">
         <div className="ud-avatar">{initials}</div>
         <div className="ud-sidebar-name">{profile.name || "User"}</div>
@@ -225,10 +225,10 @@ export default function UserDashboard() {
         </button>
       </aside>
 
-      {/* Main */}
+      
       <main className="ud-main">
 
-        {/* OVERVIEW */}
+        
         {activeTab === "Overview" && (
           <div className="ud-section">
             <h2 className="ud-section-title">
@@ -275,7 +275,7 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* MY TICKETS */}
+        
         {activeTab === "My Tickets" && (
           <div className="ud-section">
             <h2 className="ud-section-title">My Tickets</h2>
@@ -292,7 +292,7 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {/* PROFILE */}
+       
         {activeTab === "Profile" && (
           <div className="ud-section">
             <div className="ud-profile-header">
