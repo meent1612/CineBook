@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Validator;
 
 class MovieController extends Controller
 {
-    
     public function index()
     {
         try {
@@ -26,7 +25,6 @@ class MovieController extends Controller
         }
     }
 
-    
     public function show($id)
     {
         try {
@@ -44,7 +42,6 @@ class MovieController extends Controller
         }
     }
 
-   
     public function adminIndex()
     {
         try {
@@ -62,7 +59,6 @@ class MovieController extends Controller
         }
     }
 
-   
     public function store(Request $request)
     {
         try {
@@ -70,12 +66,12 @@ class MovieController extends Controller
                 'title'         => 'required|string|max:255',
                 'description'   => 'nullable|string',
                 'genre'         => 'nullable|string|max:255',
-                'category'      => 'nullable|in:2D,3D,IMAX',
+                'category'      => 'nullable|in:2D,3D',
                 'language'      => 'nullable|string|max:100',
                 'duration_mins' => 'nullable|integer',
                 'release_date'  => 'nullable|date',
                 'poster_url'    => 'nullable|string|max:500',
-                'rating'        => 'nullable|string|max:10',
+                'trailer_url'   => 'nullable|string|max:500',
                 'status'        => 'nullable|in:now_showing,coming_soon',
                 'is_active'     => 'nullable|boolean',
             ]);
@@ -104,7 +100,6 @@ class MovieController extends Controller
         }
     }
 
-    
     public function update(Request $request, $id)
     {
         try {
@@ -114,12 +109,12 @@ class MovieController extends Controller
                 'title'         => 'sometimes|string|max:255',
                 'description'   => 'sometimes|nullable|string',
                 'genre'         => 'sometimes|nullable|string|max:255',
-                'category'      => 'sometimes|nullable|in:2D,3D,IMAX',
+                'category'      => 'sometimes|nullable|in:2D,3D',
                 'language'      => 'sometimes|nullable|string|max:100',
                 'duration_mins' => 'sometimes|nullable|integer',
                 'release_date'  => 'sometimes|nullable|date',
                 'poster_url'    => 'sometimes|nullable|string|max:500',
-                'rating'        => 'sometimes|nullable|string|max:10',
+                'trailer_url'   => 'sometimes|nullable|string|max:500',
                 'status'        => 'sometimes|nullable|in:now_showing,coming_soon',
                 'is_active'     => 'sometimes|nullable|boolean',
             ]);
@@ -148,7 +143,6 @@ class MovieController extends Controller
         }
     }
 
-    
     public function destroy($id)
     {
         try {
