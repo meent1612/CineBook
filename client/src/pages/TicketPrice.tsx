@@ -37,9 +37,9 @@ export default function TicketPrice() {
   return (
     <div style={{ minHeight: "100vh", background: "#0f0f0f", fontFamily: "'Georgia', serif" }}>
 
-      {/* Hero */}
+      
       <div style={{ background: "linear-gradient(160deg, #1a0008 0%, #6B1829 50%, #1a0008 100%)", padding: "4rem 2rem 5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        {/* Film strip top */}
+        
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "18px", background: "repeating-linear-gradient(90deg, #000 0px, #000 18px, #1a0008 18px, #1a0008 36px)" }} />
 
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.03) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255,200,100,0.04) 0%, transparent 50%)" }} />
@@ -57,11 +57,11 @@ export default function TicketPrice() {
           From everyday screenings to luxury lounges — find the perfect seat for every occasion.
         </p>
 
-        {/* Film strip bottom */}
+        
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "18px", background: "repeating-linear-gradient(90deg, #000 0px, #000 18px, #0f0f0f 18px, #0f0f0f 36px)" }} />
       </div>
 
-      {/* Cards */}
+     
       <div style={{ display: "flex", gap: "1.25rem", justifyContent: "center", flexWrap: "wrap", padding: "3.5rem 2rem", maxWidth: "1100px", margin: "0 auto" }}>
         {prices.map(p => (
           <div
@@ -92,7 +92,7 @@ export default function TicketPrice() {
               el.style.boxShadow = p.highlight ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)" : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)";
             }}
           >
-            {/* Most Popular badge */}
+           
             {p.highlight && (
               <div style={{ background: "#f5c842", color: "#1a0008", fontSize: "0.65rem", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", textAlign: "center", padding: "0.35rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
                 <i className="fa-solid fa-star" style={{ fontSize: "0.6rem" }} /> Most Popular

@@ -16,7 +16,7 @@ class Hall extends Model
         'capacity',
     ];
 
-    // A hall has many screenings
+    
     public function screenings()
     {
         return $this->hasMany(Screening::class);

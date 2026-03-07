@@ -25,7 +25,7 @@ class Movie extends Model
         'is_active',
     ];
 
-    // A movie has many screenings
+    
     public function screenings()
     {
         return $this->hasMany(Screening::class);

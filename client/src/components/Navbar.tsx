@@ -24,12 +24,16 @@ export default function Navbar() {
       { to: "/about",        label: "ABOUT US" },
       { to: "/contact",      label: "CONTACTS" },
       { to: "/ticket-price", label: "TICKET PRICE" },
+      { to: "/user",         label: "USER DASHBOARD" },
+    ] : []),
+     ...(user?.role === "admin" ? [
+       { to: "/admin",       label: "ADMIN DASHBOARD" },
     ] : []),
   ]
-
+ 
   return (
     <nav className="nav">
-      {/* Logo */}
+      
       <Link to="/" className="logo">
         <div className="logo-icon">
           <i className="fa-solid fa-film" />
@@ -40,7 +44,7 @@ export default function Navbar() {
         </div>
       </Link>
 
-      {/* Nav links */}
+      
       <div className="nav-links">
         {navLinks.map(l => (
           <Link
@@ -53,7 +57,7 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* Right side */}
+      
       <div className="nav-right">
         <div className="location-area">
           <i className="fa-solid fa-location-dot" />

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Validator;
 
 class MovieController extends Controller
 {
-    // GET /api/movies — everyone can see active movies
+    
     public function index()
     {
         try {
@@ -26,7 +26,7 @@ class MovieController extends Controller
         }
     }
 
-    // GET /api/movies/{id} — everyone can see a single movie
+    
     public function show($id)
     {
         try {
@@ -44,7 +44,7 @@ class MovieController extends Controller
         }
     }
 
-    // GET /api/admin/movies — admin sees all movies
+   
     public function adminIndex()
     {
         try {
@@ -62,7 +62,7 @@ class MovieController extends Controller
         }
     }
 
-    // POST /api/admin/movies — admin creates a movie
+   
     public function store(Request $request)
     {
         try {
@@ -104,7 +104,7 @@ class MovieController extends Controller
         }
     }
 
-    // PUT /api/admin/movies/{id} — admin updates a movie
+    
     public function update(Request $request, $id)
     {
         try {
@@ -148,7 +148,7 @@ class MovieController extends Controller
         }
     }
 
-    // DELETE /api/admin/movies/{id} — admin deletes a movie
+    
     public function destroy($id)
     {
         try {

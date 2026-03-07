@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Home.css"
 
-// ── Types ──────────────────────────────────────────────
+
 interface Movie {
   id: number
   title: string
@@ -18,19 +18,19 @@ interface Movie {
   is_active: boolean
 }
 
-// ── Constants ──────────────────────────────────────────
+
 const TABS    = ["Now Showing", "Coming Soon"] as const
 type Tab      = typeof TABS[number]
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-const CAROUSEL_INTERVAL_MS = 4000  // auto-advance every 4 seconds
+const CAROUSEL_INTERVAL_MS = 4000  
 
 const posterSrc = (url: string | null): string => {
   if (!url) return ""
   return url.startsWith("/") ? `${BACKEND}${url}` : url
 }
 
-// ── Poster with fallback ───────────────────────────────
+
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
 function MoviePoster({ movie }: { movie: Movie }) {
@@ -56,7 +56,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
   )
 }
 
-// ── Main Component ─────────────────────────────────────
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
   const [heroIdx,   setHeroIdx]   = useState(0)
@@ -93,10 +93,9 @@ export default function Home() {
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
 
-  // ── Auto-advance carousel ──────────────────────────
-  // Restarts whenever heroMovies list changes (tab switch or data load)
+  
   useEffect(() => {
-    if (heroMovies.length <= 1) return   // nothing to cycle
+    if (heroMovies.length <= 1) return  
 
     intervalRef.current = setInterval(() => {
       setHeroIdx(prev => (prev + 1) % heroMovies.length)
@@ -107,7 +106,7 @@ export default function Home() {
     }
   }, [heroMovies.length, activeTab])
 
-  // Manual dot click resets the timer so it doesn't jump immediately after click
+ 
   const handleDotClick = (i: number) => {
     setHeroIdx(i)
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -128,11 +127,11 @@ export default function Home() {
   return (
     <div className="home-wrapper">
 
-      {/* ── Hero Banner / Carousel ── */}
+      
       <div className="hero-banner">
         {heroMovie && posterSrc(heroMovie.poster_url) ? (
           <img
-            key={heroMovie.id}              /* key forces img re-render + CSS fade */
+            key={heroMovie.id}              
             src={posterSrc(heroMovie.poster_url)}
             alt={heroMovie.title}
             className="hero-img hero-img-fade"
@@ -155,7 +154,7 @@ export default function Home() {
                 className="hero-tickets-btn hero-edit-btn"
                 onClick={() => handleEditMovie(heroMovie.id)}
               >
-                ✏️ Edit Movie
+                <i className="fa-solid fa-pencil"></i> Edit Movie
               </button>
             ) : (
               <button
@@ -168,7 +167,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Dots */}
+        
         {heroMovies.length > 1 && (
           <div className="hero-dots">
             {heroMovies.map((_, i) => (
@@ -183,10 +182,10 @@ export default function Home() {
         )}
       </div>
 
-      {/* ── Content Area ── */}
+     
       <div className="content-area">
 
-        {/* Tabs */}
+        
         <div className="tabs-bar">
           <div className="tabs-list">
             {TABS.map(tab => (
@@ -210,7 +209,7 @@ export default function Home() {
           <p className="home-state-msg">No movies available right now.</p>
         )}
 
-        {/* Movie Grid */}
+       
         {!loading && !error && displayed.length > 0 && (
           <div className="movie-grid">
             {displayed.map(movie => (
@@ -227,7 +226,7 @@ export default function Home() {
                       className="get-tickets-btn edit-movie-btn"
                       onClick={() => handleEditMovie(movie.id)}
                     >
-                      ✏️ Edit Movie
+                      <i className="fa-solid fa-pencil"></i> Edit Movie
                     </button>
                   ) : (
                     <button

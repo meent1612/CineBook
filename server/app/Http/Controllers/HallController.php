@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 class HallController extends Controller
 {
-    // GET /api/halls — everyone can see halls
+    
     public function index()
     {
         try {
@@ -25,7 +25,7 @@ class HallController extends Controller
         }
     }
 
-    // GET /api/halls/{id} — everyone can see a single hall
+    
     public function show($id)
     {
         try {

@@ -17,7 +17,7 @@ export default function App() {
     <BrowserRouter>
       <Navbar />
       <Routes>
-        {/* Public routes */}
+       
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -28,14 +28,14 @@ export default function App() {
         <Route path="/showmovies" element={<Showmovies />} />
         
 
-        {/* Protected: user only */}
+        
         <Route path="/user" element={
           <ProtectedRoute requiredRole="user">
             <UserDashboard />
           </ProtectedRoute>
         } />
 
-        {/* Protected: admin only */}
+       
         <Route path="/admin" element={
           <ProtectedRoute requiredRole="admin">
             <AdminDashboard />

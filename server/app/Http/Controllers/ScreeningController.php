@@ -9,22 +9,18 @@ use Illuminate\Http\Request;
 
 class ScreeningController extends Controller
 {
-    // ── PUBLIC ──────────────────────────────────────────
-
-    // GET /api/screenings — everyone can see screenings
+    
     public function index(Request $request)
     {
         try {
             $query = Screening::with(['movie', 'hall']);
 
-            // Filter by movie_id if provided
-            // Example: GET /api/screenings?movie_id=1
+            
             if ($request->has('movie_id')) {
                 $query->where('movie_id', $request->movie_id);
             }
 
-            // Filter by date if provided
-            // Example: GET /api/screenings?date=2026-03-06
+            
             if ($request->has('date')) {
                 $query->where('show_date', $request->date);
             }
@@ -43,7 +39,7 @@ class ScreeningController extends Controller
         }
     }
 
-    // GET /api/screenings/{id} — everyone can see a single screening
+    
     public function show($id)
     {
         try {
@@ -61,9 +57,7 @@ class ScreeningController extends Controller
         }
     }
 
-    // ── ADMIN ONLY ───────────────────────────────────────
-
-    // GET /api/admin/screenings — admin sees all screenings
+    
     public function adminIndex()
     {
         try {
@@ -81,7 +75,7 @@ class ScreeningController extends Controller
         }
     }
 
-    // POST /api/admin/screenings — admin creates a screening
+    
     public function store(Request $request)
     {
         try {
@@ -95,7 +89,7 @@ class ScreeningController extends Controller
 
             $screening = Screening::create($request->all());
 
-            // Load movie and hall info in response
+            
             $screening->load(['movie', 'hall']);
 
             return response()->json([
@@ -111,7 +105,7 @@ class ScreeningController extends Controller
         }
     }
 
-    // PUT /api/admin/screenings/{id} — admin updates a screening
+   
     public function update(Request $request, $id)
     {
         try {
@@ -141,7 +135,7 @@ class ScreeningController extends Controller
         }
     }
 
-    // DELETE /api/admin/screenings/{id} — admin deletes a screening
+    
     public function destroy($id)
     {
         try {

@@ -118,7 +118,7 @@ export default function AdminDashboard() {
   const { token }   = useAuth()
   const location    = useLocation()
 
-  const [selectedMonth, setSelectedMonth] = useState("December")
+  const [selectedMonth, setSelectedMonth] = useState("March")
   const [movieList,     setMovieList]     = useState<Movie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(true)
   const [movieError,    setMovieError]    = useState("")
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
   const activeMovies = movieList.filter(m => m.is_active)
 
   const stats = [
-    { label: "Tickets Sold",      value: "15,000",                        icon: "fa-ticket" },
+    { label: "Tickets Sold",      value: "15,000",                         icon: "fa-ticket" },
     { label: "Total Movies",      value: movieList.length.toString(),      icon: "fa-film" },
     { label: "Active Movies",     value: activeMovies.length.toString(),   icon: "fa-circle-play" },
     { label: "Revenue",           value: "40M BDT",                        icon: "fa-sack-dollar" },
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-wrapper">
 
-      {/* Header */}
+      
       <div className="admin-header">
         <div className="admin-header-top">
           <div>
@@ -391,7 +391,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Management Cards */}
+      
       <div className="admin-mgmt-row">
         {mgmt.map(m => (
           <div
@@ -410,7 +410,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Movie Sections */}
+      
       <div className="admin-movies-area">
         {loadingMovies && <p className="admin-loading">Loading movies…</p>}
         {movieError    && <p className="admin-error">{movieError}</p>}
@@ -466,7 +466,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ── Add Movie Modal ── */}
+      
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -489,7 +489,6 @@ export default function AdminDashboard() {
                 <select className="modal-input" value={newMovie.category} onChange={setMovieField("category")}>
                   <option value="2D">2D</option>
                   <option value="3D">3D</option>
-                  <option value="IMAX">IMAX</option>
                 </select>
                 <label className="modal-label">Status</label>
                 <select className="modal-input" value={newMovie.status} onChange={setMovieField("status")}>
@@ -520,7 +519,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Add Screening Modal ── */}
+      
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => setShowAddScreening(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -553,7 +552,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Edit Movie Modal ── */}
+     
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -576,7 +575,6 @@ export default function AdminDashboard() {
                 <select className="modal-input" value={editMovie.category} onChange={setEditField("category")}>
                   <option value="2D">2D</option>
                   <option value="3D">3D</option>
-                  <option value="IMAX">IMAX</option>
                 </select>
                 <label className="modal-label">Status</label>
                 <select className="modal-input" value={editMovie.status} onChange={setEditField("status")}>

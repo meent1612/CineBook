@@ -20,13 +20,13 @@ class Handler extends ExceptionHandler
     public function register()
     {
         $this->reportable(function (Throwable $e) {
-            //
+            
         });
     }
 
     public function render($request, Throwable $exception)
     {
-        // Handle validation errors
+      
         if ($exception instanceof ValidationException) {
             return response()->json([
                 'success' => false,
@@ -35,7 +35,7 @@ class Handler extends ExceptionHandler
             ], 422);
         }
 
-        // Handle model not found
+        
         if ($exception instanceof ModelNotFoundException) {
             return response()->json([
                 'success' => false,
@@ -43,7 +43,7 @@ class Handler extends ExceptionHandler
             ], 404);
         }
 
-        // Handle everything else
+        
         return response()->json([
             'success' => false,
             'message' => $exception->getMessage() ?: 'An unexpected error occurred.',

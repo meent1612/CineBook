@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import "../CSSfiles/Showtimes.css"
 
-// ── Hardcoded movies from 02_seed.sql ──────────────────
+
 const MOVIES = [
   {
     id: 1,
@@ -135,7 +135,7 @@ export default function ShowTimes() {
   return (
     <div className="showtimes-wrapper">
 
-      {/* Location Bar */}
+      
       <div className="location-bar">
         <div>
           <div className="location-label">Weekly Showtime</div>
@@ -148,13 +148,13 @@ export default function ShowTimes() {
         </button>
       </div>
 
-      {/* Movie Rows */}
+      
       <div className="movie-rows">
         {MOVIES.map(movie => (
           <div key={movie.id} className="movie-row">
             <div className="movie-row-inner">
 
-              {/* Left: Movie Info */}
+              
               <div className="movie-info">
                 <div style={{ position: "relative" }}>
                   <Poster title={movie.title} url={movie.poster} />
@@ -176,7 +176,7 @@ export default function ShowTimes() {
                 </div>
               </div>
 
-              {/* Right: 7-day showtime grid */}
+              
               <div className="showtimes-grid-wrapper">
                 <div className="showtimes-grid">
                   {WEEK_DAYS.map(({ key, day, date }) => {

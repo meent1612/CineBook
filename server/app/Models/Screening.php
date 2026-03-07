@@ -19,13 +19,13 @@ class Screening extends Model
         'available_seats',
     ];
 
-    // A screening belongs to a movie
+   
     public function movie()
     {
         return $this->belongsTo(Movie::class);
     }
 
-    // A screening belongs to a hall
+    
     public function hall()
     {
         return $this->belongsTo(Hall::class);

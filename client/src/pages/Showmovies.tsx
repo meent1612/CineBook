@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Showmovies.css"
 
-// ── Types ──────────────────────────────────────────────
+
 interface Movie {
   id: number
   title: string
@@ -18,7 +18,7 @@ interface Movie {
   is_active: boolean
 }
 
-// ── Constants ──────────────────────────────────────────
+
 const TABS    = ["Now Showing", "Coming Soon"] as const
 type Tab      = typeof TABS[number]
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
@@ -31,7 +31,7 @@ const posterSrc = (url: string | null): string => {
 
 const FALLBACK_COLORS = ["#4e0f1a", "#1a3a5c", "#1a4d2e", "#3b1f5e", "#7a3b00", "#1f4040"]
 
-// ── Poster with fallback ───────────────────────────────
+
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const src = posterSrc(movie.poster_url)
@@ -55,7 +55,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
   )
 }
 
-// ── Main Component ─────────────────────────────────────
+
 export default function Showtimes() {
   const [activeTab,  setActiveTab]  = useState<Tab>("Now Showing")
   const [movieList,  setMovieList]  = useState<Movie[]>([])
@@ -95,7 +95,7 @@ export default function Showtimes() {
   }
 
   const handleCardClick = (movieId: number) => {
-    // Toggle expand: click same card closes it
+    
     setExpandedId(prev => prev === movieId ? null : movieId)
   }
 
@@ -110,13 +110,13 @@ export default function Showtimes() {
   return (
     <div className="st-wrapper">
 
-      {/* ── Page Header ── */}
+      
       <div className="st-header">
         <h1 className="st-header-title">View All Movies</h1>
         <p className="st-header-sub">View all the latest movies that are available at CineBook</p>
       </div>
 
-      {/* ── Tabs ── */}
+      
       <div className="st-tabs-bar">
         {TABS.map(tab => (
           <button
@@ -129,24 +129,24 @@ export default function Showtimes() {
         ))}
       </div>
 
-      {/* ── States ── */}
+     
       {loading && <p className="st-state-msg">Loading movies…</p>}
       {error   && <p className="st-state-msg st-state-error">{error}</p>}
       {!loading && !error && displayed.length === 0 && (
         <p className="st-state-msg">No movies available right now.</p>
       )}
 
-      {/* ── Movie Grid ── */}
+      
       {!loading && !error && displayed.length > 0 && (
         <div className="st-grid">
           {displayed.map(movie => {
             const isExpanded = expandedId === movie.id
 
-            // Expanded info card (like the "Mercy" card in the screenshot)
+           
             if (isExpanded) {
               return (
                 <div key={movie.id} className="st-card st-card-info">
-                  {/* Play / trailer icon */}
+                 
                   <div className="st-info-top">
                     {movie.trailer_url ? (
                       <a
@@ -202,7 +202,13 @@ export default function Showtimes() {
                       className="st-ticket-btn"
                       onClick={() => handleGetTickets(movie.id)}
                     >
-                      {isAdmin ? "✏️ Edit" : "Get Tickets"}
+                      {isAdmin ? (
+                        <>
+                          <i className="fa-solid fa-pencil"></i> Edit
+                        </>
+                      ) : (
+                        "Get Tickets"
+                      )}
                     </button>
                     <button
                       className="st-details-btn"
@@ -215,7 +221,7 @@ export default function Showtimes() {
               )
             }
 
-            // Normal poster card
+           
             return (
               <div
                 key={movie.id}
@@ -231,11 +237,17 @@ export default function Showtimes() {
                   <button
                     className="st-ticket-btn"
                     onClick={e => {
-                      e.stopPropagation() // don't expand card when clicking button
+                      e.stopPropagation() 
                       handleGetTickets(movie.id)
                     }}
                   >
-                    {isAdmin ? "✏️ Edit" : "Get Tickets"}
+                    {isAdmin ? (
+                      <>
+                        <i className="fa-solid fa-pencil"></i> Edit
+                      </>
+                    ) : (
+                      "Get Tickets"
+                    )}
                   </button>
                 </div>
               </div>
