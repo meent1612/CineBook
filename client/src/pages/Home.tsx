@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Home.css"
 
-
+// ── Types ──────────────────────────────────────────────
 interface Movie {
   id: number
   title: string
@@ -18,21 +18,21 @@ interface Movie {
   is_active: boolean
 }
 
-
-const TABS    = ["Now Showing", "Coming Soon"] as const
-type Tab      = typeof TABS[number]
-const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
-const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-const CAROUSEL_INTERVAL_MS = 4000  
+// ── Constants ──────────────────────────────────────────
+const TABS               = ["Now Showing", "Coming Soon"] as const
+type Tab                 = typeof TABS[number]
+const API_URL            = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND            = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+const CAROUSEL_INTERVAL_MS = 4000
 
 const posterSrc = (url: string | null): string => {
   if (!url) return ""
   return url.startsWith("/") ? `${BACKEND}${url}` : url
 }
 
-
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
+// ── Poster with fallback ───────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const src = posterSrc(movie.poster_url)
@@ -41,7 +41,9 @@ function MoviePoster({ movie }: { movie: Movie }) {
   if (!src || failed) {
     return (
       <div className="home-poster-fallback" style={{ background: bg }}>
-        <span className="home-poster-fallback-icon"><i className="fas fa-film"></i></span>
+        <span className="home-poster-fallback-icon">
+          <i className="fas fa-film" />
+        </span>
         <span className="home-poster-fallback-title">{movie.title}</span>
       </div>
     )
@@ -56,7 +58,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
   )
 }
 
-
+// ── Main Component ─────────────────────────────────────
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
   const [heroIdx,   setHeroIdx]   = useState(0)
@@ -64,10 +66,10 @@ export default function Home() {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState("")
 
-  const navigate     = useNavigate()
-  const { user }     = useAuth()
-  const isAdmin      = user?.role === "admin"
-  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const navigate    = useNavigate()
+  const { user }    = useAuth()
+  const isAdmin     = user?.role === "admin"
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -87,15 +89,16 @@ export default function Home() {
     fetchMovies()
   }, [])
 
-  const nowShowing = movieList.filter(m => m.status === "now_showing" && m.is_active)
-  const comingSoon = movieList.filter(m => m.status === "coming_soon"  && m.is_active)
+  // ── No is_active filter — show all movies ──────────────
+  const nowShowing = movieList.filter(m => m.status === "now_showing")
+  const comingSoon = movieList.filter(m => m.status === "coming_soon")
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
 
-  
+  // ── Auto-advance carousel ──────────────────────────────
   useEffect(() => {
-    if (heroMovies.length <= 1) return  
+    if (heroMovies.length <= 1) return
 
     intervalRef.current = setInterval(() => {
       setHeroIdx(prev => (prev + 1) % heroMovies.length)
@@ -106,7 +109,6 @@ export default function Home() {
     }
   }, [heroMovies.length, activeTab])
 
- 
   const handleDotClick = (i: number) => {
     setHeroIdx(i)
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -127,11 +129,11 @@ export default function Home() {
   return (
     <div className="home-wrapper">
 
-      
+      {/* ── Hero Banner / Carousel ── */}
       <div className="hero-banner">
         {heroMovie && posterSrc(heroMovie.poster_url) ? (
           <img
-            key={heroMovie.id}              
+            key={heroMovie.id}
             src={posterSrc(heroMovie.poster_url)}
             alt={heroMovie.title}
             className="hero-img hero-img-fade"
@@ -154,20 +156,20 @@ export default function Home() {
                 className="hero-tickets-btn hero-edit-btn"
                 onClick={() => handleEditMovie(heroMovie.id)}
               >
-                <i className="fa-solid fa-pencil"></i> Edit Movie
+                <i className="fa-solid fa-pen" /> Edit Movie
               </button>
             ) : (
               <button
                 className="hero-tickets-btn"
                 onClick={() => navigate(`/book/${heroMovie.id}`)}
               >
-                Get Tickets
+                <i className="fa-solid fa-ticket" /> Get Tickets
               </button>
             )}
           </div>
         )}
 
-        
+        {/* Dots */}
         {heroMovies.length > 1 && (
           <div className="hero-dots">
             {heroMovies.map((_, i) => (
@@ -182,10 +184,10 @@ export default function Home() {
         )}
       </div>
 
-     
+      {/* ── Content Area ── */}
       <div className="content-area">
 
-        
+        {/* Tabs */}
         <div className="tabs-bar">
           <div className="tabs-list">
             {TABS.map(tab => (
@@ -209,7 +211,7 @@ export default function Home() {
           <p className="home-state-msg">No movies available right now.</p>
         )}
 
-       
+        {/* Movie Grid */}
         {!loading && !error && displayed.length > 0 && (
           <div className="movie-grid">
             {displayed.map(movie => (
@@ -226,14 +228,14 @@ export default function Home() {
                       className="get-tickets-btn edit-movie-btn"
                       onClick={() => handleEditMovie(movie.id)}
                     >
-                      <i className="fa-solid fa-pencil"></i> Edit Movie
+                      <i className="fa-solid fa-pen" /> Edit Movie
                     </button>
                   ) : (
                     <button
                       className="get-tickets-btn"
                       onClick={() => navigate(`/book/${movie.id}`)}
                     >
-                      Get Tickets
+                      <i className="fa-solid fa-ticket" /> Get Tickets
                     </button>
                   )}
                 </div>
