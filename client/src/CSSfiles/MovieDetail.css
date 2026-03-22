@@ -1,0 +1,431 @@
+/* ── Wrapper ─────────────────────────────────────────── */
+.md-wrapper {
+  min-height: 100vh;
+  background: #0d0d0d;
+  color: #fff;
+}
+
+/* ── Loading / Error ─────────────────────────────────── */
+.md-loading,
+.md-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 60vh;
+  color: #aaa;
+  font-size: 1rem;
+}
+
+.md-error button {
+  background: #8b0000;
+  border: none;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* ── Hero ────────────────────────────────────────────── */
+.md-hero {
+  position: relative;
+  min-height: 480px;
+  background-size: cover;
+  background-position: center top;
+  background-color: #111;
+}
+
+.md-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(10, 10, 20, 0.7) 40%,
+    rgba(10, 10, 20, 0.97) 100%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.md-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 3rem;
+  padding: 3rem 4rem;
+  max-width: 1200px;
+}
+
+/* Poster */
+.md-poster-wrap {
+  flex-shrink: 0;
+  width: 280px;
+  height: 400px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+}
+
+.md-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.md-poster-fallback {
+  width: 100%;
+  height: 100%;
+  background: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #555;
+}
+
+/* Info */
+.md-info {
+  flex: 1;
+  padding-top: 1rem;
+}
+
+.md-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.8rem;
+  line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.md-description {
+  font-size: 0.9rem;
+  color: #bbb;
+  margin-bottom: 1.4rem;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.md-meta-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.md-meta-row {
+  display: grid;
+  grid-template-columns: 80px 12px 1fr;
+  gap: 0.3rem;
+  font-size: 0.92rem;
+}
+
+.md-meta-key {
+  color: #888;
+}
+
+.md-meta-sep {
+  color: #555;
+}
+
+.md-meta-val {
+  color: #eee;
+  font-weight: 500;
+}
+
+/* Action buttons */
+.md-action-btns {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.md-showtime-btn,
+.md-trailer-btn,
+.md-edit-btn {
+  padding: 0.65rem 1.4rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.1s;
+  border: none;
+}
+
+.md-showtime-btn {
+  background: #6b1829;
+  color: #fff;
+}
+
+.md-trailer-btn {
+  background: transparent;
+  border: 2px solid #fff !important;
+  color: #fff;
+}
+
+.md-edit-btn {
+  background: #c8a96e;
+  color: #111;
+}
+
+.md-showtime-btn:hover,
+.md-trailer-btn:hover,
+.md-edit-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+/* ── Showtime Section ────────────────────────────────── */
+.md-showtime-section {
+  background: #0f0f1a;
+  padding: 2.5rem 3rem;
+  border-top: 3px solid #7b1fa2;
+}
+
+.md-showtime-header {
+  margin-bottom: 1.5rem;
+}
+
+.md-showtime-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.md-showtime-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  padding-left: 0.8rem;
+  border-left: 4px solid #6b1829;
+}
+
+.md-location {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.md-location i {
+  color: #c8a96e;
+}
+
+.md-change-location-btn {
+  background: transparent;
+  border: 1px solid #444;
+  color: #bbb;
+  padding: 0.4rem 0.9rem;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.md-change-location-btn:hover {
+  border-color: #c8a96e;
+  color: #c8a96e;
+}
+
+/* Hall legend */
+.md-hall-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.md-hall-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #ccc;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.md-hall-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.md-no-screenings {
+  color: #666;
+  text-align: center;
+  padding: 3rem;
+}
+
+/* ── Schedule Grid ───────────────────────────────────── */
+.md-schedule-grid {
+  display: flex;
+  border: 1px solid #222;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.md-day-col {
+  flex: 1;
+  min-width: 160px;
+  border-right: 1px solid #1e1e1e;
+  display: flex;
+  flex-direction: column;
+}
+
+.md-day-col:last-child {
+  border-right: none;
+}
+
+/* Day header */
+.md-day-header {
+  background: #1a1a2e;
+  border-bottom: 1px solid #871f34;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+
+.md-day-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.md-day-date {
+  font-size: 0.72rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+/* Slots */
+.md-slots {
+  flex: 1;
+  padding: 1rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  background: #111827;
+}
+
+.md-no-show {
+  color: #333;
+  font-size: 1.4rem;
+  text-align: center;
+  padding: 1.5rem 0;
+  width: 100%;
+}
+
+.md-time-btn {
+  width: 100%;
+  padding: 0.5rem 0.4rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #111;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.3px;
+}
+
+.md-time-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
+
+.md-time-btn i {
+  font-size: 0.72rem;
+}
+
+/* Get Tickets button */
+.md-get-ticket-btn {
+  margin: 0 0.6rem 0.9rem;
+  padding: 0.65rem 0.5rem;
+  background: #6b1829;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.md-get-ticket-btn:hover {
+  background: #6b1829;
+}
+
+.md-admin-btn {
+  background: #c8a96e;
+  color: #111;
+}
+
+.md-admin-btn:hover {
+  background: #e0c080;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.md-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #444;
+  font-size: 0.82rem;
+  background: #0d0d0d;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .md-hero-content {
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    gap: 1.5rem;
+  }
+
+  .md-poster-wrap {
+    width: 200px;
+    height: 285px;
+  }
+
+  .md-title {
+    font-size: 1.6rem;
+  }
+
+  .md-action-btns {
+    justify-content: center;
+  }
+
+  .md-showtime-section {
+    padding: 1.5rem;
+  }
+
+  .md-day-col {
+    min-width: 130px;
+  }
+}

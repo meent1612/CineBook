@@ -12,7 +12,7 @@ import AboutUs from "./pages/AboutUs"
 import Contacts from "./pages/Contacts"
 import Showmovies from "./pages/Showmovies"
 import BookTicket from "./pages/Bookticket"
-//import MovieDetail from "./pages/MovieDetail"
+import MovieDetail from "./pages/MovieDetail"
 
 export default function App() {
   return (
@@ -27,7 +27,7 @@ export default function App() {
         <Route path="/contact"      element={<Contacts />} />
         <Route path="/ticket-price" element={<TicketPrice />} />
         <Route path="/showmovies"   element={<Showmovies />} />
-        {/* <Route path="/movie/:id"    element={<MovieDetail />} /> */}
+        <Route path="/movie/:id"    element={<MovieDetail />} />
         <Route path="/book/:id"     element={<BookTicket />} />
 
         <Route path="/user" element={
