@@ -1,150 +1,404 @@
-/* ShowTimes.css */
-
-/* ── Page Wrapper ── */
-.showtimes-wrapper {
+/* ── Wrapper ─────────────────────────────────────────── */
+.st-wrapper {
   min-height: 100vh;
-  background: #f0f0f0;
+  background: #111;
+  color: #fff;
+  padding-bottom: 3rem;
 }
 
-/* ── Location Bar ── */
-.location-bar {
-  background: #2a2a2a;
-  padding: 0.75rem 1.5rem;
+/* ── Page Header ─────────────────────────────────────── */
+.st-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 2.5rem 3rem 2rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.st-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.4rem;
+  letter-spacing: 0.5px;
+}
+
+.st-page-location {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.location-label {
+  gap: 0.5rem;
   color: #aaa;
-  font-size: 0.72rem;
-}
-
-.location-name {
-  color: white;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-.change-location-btn {
-  background: #6b1829;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-/* ── Movie Rows ── */
-.movie-rows {
-  padding: 1rem;
-}
-
-.movie-row {
-  background: white;
-  border-radius: 10px;
+  font-size: 0.95rem;
   margin-bottom: 1rem;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
-.movie-row-inner {
+.st-page-location i {
+  color: #c8a96e;
+}
+
+.st-change-location-btn {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s, border-color 0.2s;
 }
 
-/* ── Movie Info Panel ── */
-.movie-info {
-  min-width: 180px;
+.st-change-location-btn:hover {
+  background: #2a2a2a;
+  border-color: #c8a96e;
+  color: #c8a96e;
+}
+
+/* Hall legend */
+.st-hall-legend {
   display: flex;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-right: 1px solid #eee;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding-top: 0.5rem;
 }
 
-.movie-info-poster {
-  width: 60px;
-  height: 85px;
-  object-fit: cover;
-  border-radius: 4px;
+.st-hall-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #ccc;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.st-hall-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* ── State messages ──────────────────────────────────── */
+.st-state-msg {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #888;
+  font-size: 1rem;
+}
+
+.st-state-error {
+  color: #e57373;
+}
+
+/* ── Movie List ──────────────────────────────────────── */
+.st-movie-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Movie Row ───────────────────────────────────────── */
+.st-movie-row {
+  display: flex;
+  border-bottom: 1px solid #222;
+  background: #141414;
+  transition: background 0.2s;
+}
+
+.st-movie-row:hover {
+  background: #181818;
+}
+
+/* ── Left: Poster + Info ─────────────────────────────── */
+.st-movie-left {
+  display: flex;
+  gap: 1.2rem;
+  padding: 2rem 1.5rem 2rem 3rem;
+  min-width: 340px;
+  max-width: 340px;
+  border-right: 1px solid #222;
+}
+
+.st-poster-wrap {
   flex-shrink: 0;
+  width: 110px;
+  height: 155px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #222;
 }
 
-.movie-info-title {
-  font-weight: 700;
-  font-size: 0.8rem;
-  margin-bottom: 0.25rem;
-  color: #1a1a1a;
+.st-poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.movie-info-details {
-  font-size: 0.68rem;
+.st-poster-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.65rem;
+  color: #aaa;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.st-poster-fallback i {
+  font-size: 1.8rem;
   color: #555;
-  line-height: 1.5;
 }
 
-/* ── Showtimes Grid ── */
-.showtimes-grid-wrapper {
+/* Movie meta */
+.st-movie-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.st-movie-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.8rem;
+  line-height: 1.3;
+}
+
+.st-meta-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.st-meta-row {
+  display: grid;
+  grid-template-columns: 62px 12px 1fr;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.st-meta-key {
+  color: #888;
+}
+
+.st-meta-sep {
+  color: #555;
+}
+
+.st-meta-val {
+  color: #ddd;
+}
+
+/* Buttons */
+.st-movie-btns {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.st-details-btn,
+.st-trailer-btn {
+  padding: 0.4rem 0.9rem;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: opacity 0.2s;
+}
+
+.st-details-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #ccc;
+}
+
+.st-details-btn:hover {
+  border-color: #c8a96e;
+  color: #c8a96e;
+}
+
+.st-trailer-btn {
+  background: #c8a96e;
+  border: none;
+  color: #111;
+}
+
+.st-trailer-btn:hover {
+  opacity: 0.85;
+}
+
+/* ── Right: Schedule Grid ────────────────────────────── */
+.st-schedule-grid {
+  display: flex;
   flex: 1;
   overflow-x: auto;
 }
 
-.showtimes-grid {
-  display: flex;
-  min-width: 700px;
-}
-
-.day-column {
+.st-day-col {
   flex: 1;
-  border-right: 1px solid #eee;
-  padding: 0.5rem 0.4rem;
-  min-width: 100px;
+  min-width: 150px;
+  border-right: 1px solid #1e1e1e;
+  display: flex;
+  flex-direction: column;
 }
 
-.day-header {
-  background: #6b1829;
-  color: white;
-  border-radius: 4px;
-  padding: 0.2rem 0.3rem;
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  margin-bottom: 0.4rem;
+.st-day-col:last-child {
+  border-right: none;
 }
 
-.showtime-btn {
-  display: block;
-  width: 100%;
-  background: #e8f5e9;
-  border: 1px solid #a5d6a7;
-  color: #2e7d32;
-  border-radius: 4px;
-  padding: 0.2rem 0.3rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 0.25rem;
-  text-align: center;
-}
-
-.get-tickets-btn {
-  display: block;
-  width: 100%;
-  background: #6b1829;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.2rem 0.3rem;
-  font-size: 0.68rem;
-  cursor: pointer;
-  margin-top: 0.3rem;
-}
-
-/* ── Footer ── */
-.footer {
+/* Day header */
+.st-day-header {
   background: #1a1a1a;
-  color: #aaa;
+  border-bottom: 1px solid #222;
+  padding: 0.9rem 0.75rem 0.75rem;
   text-align: center;
-  padding: 1rem;
+}
+
+.st-day-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.st-day-date {
+  font-size: 0.72rem;
+  color: #888;
+  line-height: 1.3;
+}
+
+/* Slots */
+.st-slots {
+  flex: 1;
+  padding: 0.9rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.st-no-show {
+  color: #444;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 1rem 0;
+  width: 100%;
+}
+
+.st-time-btn {
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: none;
+  border-radius: 5px;
   font-size: 0.78rem;
+  font-weight: 700;
+  color: #111;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.3px;
+}
+
+.st-time-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
+
+.st-time-btn i {
+  font-size: 0.7rem;
+}
+
+/* Get Ticket button */
+.st-get-ticket-btn {
+  margin: 0 0.6rem 0.9rem;
+  padding: 0.6rem 0.5rem;
+  background: #8b0000;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.st-get-ticket-btn:hover {
+  background: #a00000;
+}
+
+.st-edit-btn {
+  background: #c8a96e;
+  color: #111;
+}
+
+.st-edit-btn:hover {
+  background: #e0c080;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.st-footer {
+  text-align: center;
+  padding: 2.5rem 1rem 1.5rem;
+  color: #555;
+  font-size: 0.82rem;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .st-movie-row {
+    flex-direction: column;
+  }
+
+  .st-movie-left {
+    max-width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid #222;
+    padding: 1.5rem;
+  }
+
+  .st-schedule-grid {
+    overflow-x: auto;
+  }
+
+  .st-day-col {
+    min-width: 130px;
+  }
+}
+
+@media (max-width: 600px) {
+  .st-page-header {
+    padding: 1.5rem;
+  }
+
+  .st-page-title {
+    font-size: 1.4rem;
+  }
+
+  .st-movie-left {
+    padding: 1rem;
+  }
 }
