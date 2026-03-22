@@ -19,10 +19,10 @@ interface Movie {
 }
 
 // ── Constants ──────────────────────────────────────────
-const TABS               = ["Now Showing", "Coming Soon"] as const
-type Tab                 = typeof TABS[number]
-const API_URL            = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
-const BACKEND            = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+const TABS                 = ["Now Showing", "Coming Soon"] as const
+type Tab                   = typeof TABS[number]
+const API_URL              = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND              = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const CAROUSEL_INTERVAL_MS = 4000
 
 const posterSrc = (url: string | null): string => {
@@ -89,7 +89,6 @@ export default function Home() {
     fetchMovies()
   }, [])
 
-  // ── No is_active filter — show all movies ──────────────
   const nowShowing = movieList.filter(m => m.status === "now_showing")
   const comingSoon = movieList.filter(m => m.status === "coming_soon")
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
@@ -122,8 +121,19 @@ export default function Home() {
     setHeroIdx(0)
   }
 
+  // Card click → movie detail page
+  const handleCardClick = (movieId: number) => {
+    navigate(`/movie/${movieId}`)
+  }
+
+  // Edit button → admin dashboard with pre-opened modal
   const handleEditMovie = (movieId: number) => {
     navigate("/admin", { state: { editMovieId: movieId } })
+  }
+
+  // Get Tickets → booking page
+  const handleGetTickets = (movieId: number) => {
+    navigate(`/book/${movieId}`)
   }
 
   return (
@@ -159,9 +169,10 @@ export default function Home() {
                 <i className="fa-solid fa-pen" /> Edit Movie
               </button>
             ) : (
+              // Hero "Get Tickets" → /book/:id directly
               <button
                 className="hero-tickets-btn"
-                onClick={() => navigate(`/book/${heroMovie.id}`)}
+                onClick={() => handleGetTickets(heroMovie.id)}
               >
                 <i className="fa-solid fa-ticket" /> Get Tickets
               </button>
@@ -215,7 +226,13 @@ export default function Home() {
         {!loading && !error && displayed.length > 0 && (
           <div className="movie-grid">
             {displayed.map(movie => (
-              <div key={movie.id} className="movie-card">
+              // Clicking the card → /movie/:id (detail page)
+              <div
+                key={movie.id}
+                className="movie-card"
+                onClick={() => !isAdmin && handleCardClick(movie.id)}
+                style={{ cursor: isAdmin ? "default" : "pointer" }}
+              >
                 <MoviePoster movie={movie} />
                 <div className="movie-card-overlay">
                   <div className="movie-card-category">{movie.category}</div>
@@ -223,17 +240,20 @@ export default function Home() {
                     {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
                   </div>
                   {movie.genre && <div className="movie-genre">{movie.genre}</div>}
+
                   {isAdmin ? (
+                    // Admin: Edit Movie button
                     <button
                       className="get-tickets-btn edit-movie-btn"
-                      onClick={() => handleEditMovie(movie.id)}
+                      onClick={e => { e.stopPropagation(); handleEditMovie(movie.id) }}
                     >
                       <i className="fa-solid fa-pen" /> Edit Movie
                     </button>
                   ) : (
+                    // User: Get Tickets → /book/:id
                     <button
                       className="get-tickets-btn"
-                      onClick={() => navigate(`/book/${movie.id}`)}
+                      onClick={e => { e.stopPropagation(); handleGetTickets(movie.id) }}
                     >
                       <i className="fa-solid fa-ticket" /> Get Tickets
                     </button>
