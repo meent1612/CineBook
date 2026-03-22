@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { useBranch } from "../context/BranchContext"
 import "../CSSfiles/Bookticket.css"
 
 // ── Types ──────────────────────────────────────────────
@@ -18,8 +19,8 @@ interface Movie {
 interface Screening {
   id: number
   movie_id: number
-  show_date: string    // "2026-03-22"
-  start_time: string   // "10:00:00"
+  show_date: string
+  start_time: string
   hall_name: string
   available_seats: number
 }
@@ -46,11 +47,10 @@ const LEGEND = [
 ]
 
 const PRICES: Record<string, number> = {
-  "Premium":      815,
+  "Premium":       815,
   "Semi-recliner": 615,
 }
 
-// ── Format "10:00:00" → "10:00 AM" ────────────────────
 const formatTime = (time: string): string => {
   const [h, m] = time.split(":")
   const hour   = parseInt(h)
@@ -59,7 +59,6 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
-// ── Format "2026-03-22" → "22 Mar, Sat" ───────────────
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
@@ -71,8 +70,6 @@ const formatDateLabel = (dateStr: string): { display: string; day: string } => {
   }
 }
 
-// ── Generate fresh seat map ────────────────────────────
-// Some seats are pre-taken for realism
 const generateSeats = (): Record<string, SeatStatus> => {
   const takenSeats = new Set([
     "A3","A4","B6","B7","C2","C8","D5","E9","F3","F4","F5",
@@ -88,7 +85,6 @@ const generateSeats = (): Record<string, SeatStatus> => {
   return map
 }
 
-// ── Poster with fallback ───────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const src = movie.poster_url
@@ -96,27 +92,13 @@ function MoviePoster({ movie }: { movie: Movie }) {
     : ""
 
   if (!src || failed) {
-    return (
-      <div className="summary-poster-fallback">
-        <i className="fa-solid fa-film" />
-      </div>
-    )
+    return <div className="summary-poster-fallback"><i className="fa-solid fa-film" /></div>
   }
-  return (
-    <img
-      src={src}
-      alt={movie.title}
-      className="summary-poster"
-      onError={() => setFailed(true)}
-    />
-  )
+  return <img src={src} alt={movie.title} className="summary-poster" onError={() => setFailed(true)} />
 }
 
-// ── Section wrapper ────────────────────────────────────
 function Section({ title, children, className }: {
-  title: string
-  children: React.ReactNode
-  className?: string
+  title: string; children: React.ReactNode; className?: string
 }) {
   return (
     <div className={`book-section${className ? ` ${className}` : ""}`}>
@@ -128,24 +110,21 @@ function Section({ title, children, className }: {
 
 // ── Main Component ─────────────────────────────────────
 export default function BookTicket() {
-  const { id }   = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id }              = useParams<{ id: string }>()
+  const navigate            = useNavigate()
+  const { selectedTheater } = useBranch()           // ← branch context
 
-  // ── API state ──
-  const [movie,      setMovie]      = useState<Movie | null>(null)
-  const [screenings, setScreenings] = useState<Screening[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState("")
-
-  // ── Booking state ──
-  const [selectedDate,     setSelectedDate]     = useState("")
+  const [movie,             setMovie]             = useState<Movie | null>(null)
+  const [screenings,        setScreenings]        = useState<Screening[]>([])
+  const [loading,           setLoading]           = useState(true)
+  const [error,             setError]             = useState("")
+  const [selectedDate,      setSelectedDate]      = useState("")
   const [selectedScreening, setSelectedScreening] = useState<Screening | null>(null)
-  const [seatType,         setSeatType]         = useState<"Premium" | "Semi-recliner">("Premium")
-  const [quantity,         setQuantity]         = useState(1)
-  const [seats,            setSeats]            = useState<Record<string, SeatStatus>>(generateSeats)
-  const [selectedSeats,    setSelectedSeats]    = useState<string[]>([])
+  const [seatType,          setSeatType]          = useState<"Premium" | "Semi-recliner">("Premium")
+  const [quantity,          setQuantity]          = useState(1)
+  const [seats,             setSeats]             = useState<Record<string, SeatStatus>>(generateSeats)
+  const [selectedSeats,     setSelectedSeats]     = useState<string[]>([])
 
-  // ── Fetch movie + screenings ───────────────────────
   useEffect(() => {
     if (!id) return
     const fetchData = async () => {
@@ -168,11 +147,9 @@ export default function BookTicket() {
         const movieScreenings: Screening[] = screeningsData.screenings.filter(
           (s: Screening) => s.movie_id === parseInt(id)
         )
-
         setMovie(found)
         setScreenings(movieScreenings)
 
-        // Auto-select first available date + screening
         if (movieScreenings.length > 0) {
           const sorted = [...movieScreenings].sort((a, b) =>
             a.show_date.localeCompare(b.show_date) || a.start_time.localeCompare(b.start_time)
@@ -189,11 +166,7 @@ export default function BookTicket() {
     fetchData()
   }, [id])
 
-  // ── Derived data ───────────────────────────────────
-  // Unique sorted dates from screenings
-  const availableDates = [...new Set(screenings.map(s => s.show_date))].sort()
-
-  // Screenings for the selected date
+  const availableDates    = [...new Set(screenings.map(s => s.show_date))].sort()
   const screeningsForDate = screenings
     .filter(s => s.show_date === selectedDate)
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -201,24 +174,23 @@ export default function BookTicket() {
   const PRICE = PRICES[seatType]
   const TOTAL = selectedSeats.length * PRICE
 
-  // ── Seat toggle — enforces max = quantity ──────────
+  // ── Location display from selected theater ──
+  const locationDisplay = selectedTheater ? selectedTheater.name : "—"
+  const locationAddress = selectedTheater ? selectedTheater.address : "—"
+
   const toggleSeat = (key: string) => {
     const status = seats[key]
     if (status === "taken") return
-
     if (status === "selected") {
-      // Always allow deselecting
       setSeats(prev => ({ ...prev, [key]: "available" }))
       setSelectedSeats(prev => prev.filter(k => k !== key))
     } else {
-      // Only allow selecting if under the quantity limit
       if (selectedSeats.length >= quantity) return
       setSeats(prev => ({ ...prev, [key]: "selected" }))
       setSelectedSeats(prev => [...prev, key])
     }
   }
 
-  // ── When quantity decreases, deselect excess seats ──
   const handleQuantityChange = (newQty: number) => {
     setQuantity(newQty)
     if (selectedSeats.length > newQty) {
@@ -233,7 +205,6 @@ export default function BookTicket() {
     }
   }
 
-  // ── When date changes, reset screenings + seats ────
   const handleDateChange = (date: string) => {
     setSelectedDate(date)
     const first = screenings
@@ -244,7 +215,6 @@ export default function BookTicket() {
     setSelectedSeats([])
   }
 
-  // ── When screening changes, reset seats ───────────
   const handleScreeningChange = (screening: Screening) => {
     setSelectedScreening(screening)
     setSeats(generateSeats())
@@ -252,33 +222,23 @@ export default function BookTicket() {
   }
 
   if (loading) return <div className="book-loading">Loading booking page…</div>
-  if (error)   return (
-    <div className="book-error">
-      {error}
-      <button onClick={() => navigate(-1)}>Go Back</button>
-    </div>
-  )
+  if (error)   return <div className="book-error">{error}<button onClick={() => navigate(-1)}>Go Back</button></div>
   if (!movie)  return null
 
   return (
     <div className="book-wrapper">
 
-      {/* Location Bar */}
+      {/* Location Bar — uses selected theater */}
       <div className="book-location-bar">
         <div className="book-location-label">
-          <i className="fa-solid fa-location-dot" /> Location
+          <i className="fa-solid fa-location-dot" /> {locationDisplay}
         </div>
-        <div className="book-location-name">Love Road, Tejgaon</div>
-        <button className="book-change-location-btn">
-          <i className="fa-solid fa-rotate" /> Change Location
-        </button>
+        <div className="book-location-name">{locationAddress}</div>
       </div>
 
       <div className="book-main">
-        {/* ── Left: Form ── */}
         <div className="book-left">
 
-          {/* Select Date */}
           <Section title="Select Date">
             {availableDates.length === 0 ? (
               <p className="book-empty">No dates available for this movie.</p>
@@ -287,11 +247,8 @@ export default function BookTicket() {
                 {availableDates.map(dateStr => {
                   const { display, day } = formatDateLabel(dateStr)
                   return (
-                    <button
-                      key={dateStr}
-                      onClick={() => handleDateChange(dateStr)}
-                      className={`date-btn ${selectedDate === dateStr ? "active" : ""}`}
-                    >
+                    <button key={dateStr} onClick={() => handleDateChange(dateStr)}
+                      className={`date-btn ${selectedDate === dateStr ? "active" : ""}`}>
                       <div className="date-btn-day">{day}</div>
                       <div>{display.split(" ")[0]}</div>
                       <div className="date-btn-month">{display.split(" ")[1]}</div>
@@ -302,7 +259,6 @@ export default function BookTicket() {
             )}
           </Section>
 
-          {/* Select Showtime */}
           <Section title="Select Showtime">
             {screeningsForDate.length === 0 ? (
               <p className="book-empty">No showtimes for this date.</p>
@@ -312,12 +268,9 @@ export default function BookTicket() {
                   <i className="fa-solid fa-building" /> {selectedScreening?.hall_name || "—"}
                 </div>
                 {screeningsForDate.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => handleScreeningChange(s)}
+                  <button key={s.id} onClick={() => handleScreeningChange(s)}
                     className={`showtime-btn ${selectedScreening?.id === s.id ? "active" : ""}`}
-                    title={`${s.available_seats} seats available`}
-                  >
+                    title={`${s.available_seats} seats available`}>
                     {formatTime(s.start_time)}
                   </button>
                 ))}
@@ -325,16 +278,12 @@ export default function BookTicket() {
             )}
           </Section>
 
-          {/* Seat Type & Quantity */}
           <div className="seat-type-quantity-row">
             <Section title="Select Seat Type">
               {Object.entries(PRICES).map(([type, price]) => (
                 <label key={type} className="seat-type-option">
-                  <input
-                    type="radio"
-                    checked={seatType === type}
-                    onChange={() => setSeatType(type as "Premium" | "Semi-recliner")}
-                  />
+                  <input type="radio" checked={seatType === type}
+                    onChange={() => setSeatType(type as "Premium" | "Semi-recliner")} />
                   <span>{type}</span>
                   <span className="seat-type-price">BDT {price}</span>
                 </label>
@@ -343,21 +292,9 @@ export default function BookTicket() {
 
             <Section title="Ticket Quantity">
               <div className="quantity-controls">
-                <button
-                  className="q-btn"
-                  onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
-                >
-                  −
-                </button>
-                <span className="quantity-label">
-                  {quantity} Ticket{quantity > 1 ? "s" : ""}
-                </span>
-                <button
-                  className="q-btn"
-                  onClick={() => handleQuantityChange(Math.min(10, quantity + 1))}
-                >
-                  +
-                </button>
+                <button className="q-btn" onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}>−</button>
+                <span className="quantity-label">{quantity} Ticket{quantity > 1 ? "s" : ""}</span>
+                <button className="q-btn" onClick={() => handleQuantityChange(Math.min(10, quantity + 1))}>+</button>
               </div>
               <p className="quantity-hint">
                 <i className="fa-solid fa-circle-info" /> Select exactly {quantity} seat{quantity > 1 ? "s" : ""} below
@@ -365,30 +302,20 @@ export default function BookTicket() {
             </Section>
           </div>
 
-          {/* Select Seats */}
           <Section title="Select Seats">
             <div className="seat-selection-info">
-              <span>
-                Selected: <strong>{selectedSeats.length} / {quantity}</strong>
-              </span>
+              <span>Selected: <strong>{selectedSeats.length} / {quantity}</strong></span>
               {selectedSeats.length === quantity && (
-                <span className="seat-limit-reached">
-                  <i className="fa-solid fa-check" /> Limit reached
-                </span>
+                <span className="seat-limit-reached"><i className="fa-solid fa-check" /> Limit reached</span>
               )}
             </div>
-
-            {/* Legend */}
             <div className="seat-legend">
               {LEGEND.map(({ color, label }) => (
                 <span key={label} className="legend-item">
-                  <span className="legend-dot" style={{ background: color }} />
-                  {label}
+                  <span className="legend-dot" style={{ background: color }} />{label}
                 </span>
               ))}
             </div>
-
-            {/* Seat Map */}
             <div className="seat-map-wrapper">
               {ROWS.map(row => (
                 <div key={row} className="seat-row">
@@ -398,15 +325,12 @@ export default function BookTicket() {
                     const status = seats[key] || "available"
                     const isBlockedByLimit = status === "available" && selectedSeats.length >= quantity
                     return (
-                      <button
-                        key={key}
-                        onClick={() => toggleSeat(key)}
-                        title={key}
+                      <button key={key} onClick={() => toggleSeat(key)} title={key}
                         className={`seat-btn ${status}`}
                         style={{
                           background: SEAT_COLORS[status],
-                          opacity: isBlockedByLimit ? 0.35 : 1,
-                          cursor: isBlockedByLimit || status === "taken" ? "not-allowed" : "pointer",
+                          opacity:    isBlockedByLimit ? 0.35 : 1,
+                          cursor:     isBlockedByLimit || status === "taken" ? "not-allowed" : "pointer",
                         }}
                         disabled={status === "taken"}
                         aria-label={`Seat ${key} — ${status}`}
@@ -420,15 +344,13 @@ export default function BookTicket() {
           </Section>
         </div>
 
-        {/* ── Right: Ticket Summary ── */}
+        {/* Summary */}
         <div className="book-right">
           <div className="summary-card">
             <div className="summary-header">
               <i className="fa-solid fa-ticket" /> Tickets Summary
             </div>
             <div className="summary-body">
-
-              {/* Movie row */}
               <div className="summary-movie-row">
                 <MoviePoster movie={movie} />
                 <div>
@@ -438,34 +360,31 @@ export default function BookTicket() {
                 </div>
               </div>
 
-              {/* Details */}
               <div className="summary-details">
                 {[
-                  ["Location",        "Love Road, Tejgaon"],
-                  ["Show Date",       selectedDate || "—"],
-                  ["Hall",            selectedScreening?.hall_name || "—"],
-                  ["Show Time",       selectedScreening ? formatTime(selectedScreening.start_time) : "—"],
-                  ["Seat Type",       seatType],
-                  ["Tickets",         `${quantity}`],
-                  ["Selected Seats",  selectedSeats.length > 0 ? selectedSeats.join(", ") : "—"],
+                  ["Theater",        locationDisplay],
+                  ["Location",       locationAddress],
+                  ["Show Date",      selectedDate || "—"],
+                  ["Hall",           selectedScreening?.hall_name || "—"],
+                  ["Show Time",      selectedScreening ? formatTime(selectedScreening.start_time) : "—"],
+                  ["Seat Type",      seatType],
+                  ["Tickets",        `${quantity}`],
+                  ["Selected Seats", selectedSeats.length > 0 ? selectedSeats.join(", ") : "—"],
                 ].map(([k, v]) => (
                   <div key={k} className="summary-row">
                     <span className="summary-row-key">{k}</span>
                     <span className="summary-row-value">{v}</span>
                   </div>
                 ))}
-
                 <div className="summary-total">
                   <span>Total Amount</span>
                   <span className="summary-total-amount">{TOTAL.toLocaleString()} BDT</span>
                 </div>
               </div>
 
-              <button
-                className="purchase-btn"
+              <button className="purchase-btn"
                 disabled={selectedSeats.length !== quantity || !selectedScreening}
-                title={selectedSeats.length !== quantity ? `Please select ${quantity} seat(s)` : ""}
-              >
+                title={selectedSeats.length !== quantity ? `Please select ${quantity} seat(s)` : ""}>
                 <i className="fa-solid fa-credit-card" /> PURCHASE TICKET
               </button>
 
@@ -479,9 +398,7 @@ export default function BookTicket() {
         </div>
       </div>
 
-      <div className="book-footer">
-        Copyright© 2026 CineBook Limited. All Rights Reserved.
-      </div>
+      <div className="book-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
     </div>
   )
 }

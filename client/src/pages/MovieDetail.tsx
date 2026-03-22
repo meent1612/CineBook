@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { useBranch } from "../context/BranchContext"
 import "../CSSfiles/MovieDetail.css"
 
 // ── Types ──────────────────────────────────────────────
@@ -31,7 +32,6 @@ interface Screening {
 // ── Constants ──────────────────────────────────────────
 const API_URL     = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND     = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-const DAY_NAMES   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 const FULL_DAY    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 const MONTH_NAMES = ["January","February","March","April","May","June",
                      "July","August","September","October","November","December"]
@@ -49,12 +49,11 @@ const WEEK_DAYS = Array.from({ length: 7 }, (_, i) => {
   const mm   = String(d.getMonth() + 1).padStart(2, "0")
   const dd   = String(d.getDate()).padStart(2, "0")
   return {
-    dateStr:  `${yyyy}-${mm}-${dd}`,
-    fullDay:  FULL_DAY[d.getDay()],
-    shortDay: DAY_NAMES[d.getDay()],
-    ordDate:  ordinal(d.getDate()),
-    month:    MONTH_NAMES[d.getMonth()],
-    year:     d.getFullYear(),
+    dateStr: `${yyyy}-${mm}-${dd}`,
+    fullDay: FULL_DAY[d.getDay()],
+    ordDate: ordinal(d.getDate()),
+    month:   MONTH_NAMES[d.getMonth()],
+    year:    d.getFullYear(),
   }
 })
 
@@ -84,10 +83,11 @@ const posterSrc = (url: string | null): string => {
 
 // ── Main Component ─────────────────────────────────────
 export default function MovieDetail() {
-  const { id }   = useParams<{ id: string }>()
-  const navigate  = useNavigate()
-  const { user }  = useAuth()
-  const isAdmin   = user?.role === "admin"
+  const { id }              = useParams<{ id: string }>()
+  const navigate            = useNavigate()
+  const { user }            = useAuth()
+  const { selectedTheater } = useBranch()           // ← branch context
+  const isAdmin             = user?.role === "admin"
 
   const [movie,      setMovie]      = useState<Movie | null>(null)
   const [screenings, setScreenings] = useState<Screening[]>([])
@@ -132,8 +132,11 @@ export default function MovieDetail() {
       .filter(s => s.show_date === dateStr)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const allHalls = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
-  const src      = posterSrc(movie?.poster_url ?? null)
+  const allHalls       = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
+  const src            = posterSrc(movie?.poster_url ?? null)
+  const locationDisplay = selectedTheater
+    ? `${selectedTheater.name}, ${selectedTheater.address}`
+    : "Select a theater"
 
   if (loading) return <div className="md-loading">Loading…</div>
   if (error)   return <div className="md-error">{error} <button onClick={() => navigate(-1)}>Go Back</button></div>
@@ -142,37 +145,21 @@ export default function MovieDetail() {
   return (
     <div className="md-wrapper">
 
-      {/* ── Hero: blurred bg + poster + info ── */}
-      <div
-        className="md-hero"
-        style={{ backgroundImage: src && !posterErr ? `url(${src})` : "none" }}
-      >
+      {/* Hero */}
+      <div className="md-hero" style={{ backgroundImage: src && !posterErr ? `url(${src})` : "none" }}>
         <div className="md-hero-overlay" />
-
         <div className="md-hero-content">
-          {/* Poster */}
           <div className="md-poster-wrap">
             {src && !posterErr ? (
-              <img
-                src={src}
-                alt={movie.title}
-                className="md-poster-img"
-                onError={() => setPosterErr(true)}
-              />
+              <img src={src} alt={movie.title} className="md-poster-img" onError={() => setPosterErr(true)} />
             ) : (
-              <div className="md-poster-fallback">
-                <i className="fa-solid fa-film" />
-              </div>
+              <div className="md-poster-fallback"><i className="fa-solid fa-film" /></div>
             )}
           </div>
 
-          {/* Info */}
           <div className="md-info">
             <h1 className="md-title">{movie.title}</h1>
-
-            {movie.description && (
-              <p className="md-description">{movie.description}</p>
-            )}
+            {movie.description && <p className="md-description">{movie.description}</p>}
 
             <div className="md-meta-table">
               <div className="md-meta-row">
@@ -211,27 +198,18 @@ export default function MovieDetail() {
             </div>
 
             <div className="md-action-btns">
-              <button
-                className="md-showtime-btn"
-                onClick={() => document.getElementById("md-showtime-section")?.scrollIntoView({ behavior: "smooth" })}
-              >
+              <button className="md-showtime-btn"
+                onClick={() => document.getElementById("md-showtime-section")?.scrollIntoView({ behavior: "smooth" })}>
                 <i className="fa-solid fa-clock" /> Show Time
               </button>
               {movie.trailer_url && (
-                <a
-                  href={movie.trailer_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="md-trailer-btn"
-                >
+                <a href={movie.trailer_url} target="_blank" rel="noreferrer" className="md-trailer-btn">
                   <i className="fa-solid fa-circle-play" /> Watch Trailer
                 </a>
               )}
               {isAdmin && (
-                <button
-                  className="md-edit-btn"
-                  onClick={() => navigate("/admin", { state: { editMovieId: movie.id } })}
-                >
+                <button className="md-edit-btn"
+                  onClick={() => navigate("/admin", { state: { editMovieId: movie.id } })}>
                   <i className="fa-solid fa-pen" /> Edit Movie
                 </button>
               )}
@@ -240,21 +218,18 @@ export default function MovieDetail() {
         </div>
       </div>
 
-      {/* ── Showtime Section ── */}
+      {/* Showtime Section */}
       <div className="md-showtime-section" id="md-showtime-section">
         <div className="md-showtime-header">
           <div className="md-showtime-title-row">
             <h2 className="md-showtime-title">Showtime</h2>
+            {/* ── Selected theater shown here ── */}
             <div className="md-location">
               <i className="fa-solid fa-location-dot" />
-              <span>Love Road, Tejgaon, Dhaka</span>
+              <span>[ {locationDisplay} ]</span>
             </div>
-            <button className="md-change-location-btn">
-              <i className="fa-solid fa-rotate" /> Change Location
-            </button>
           </div>
 
-          {/* Hall legend */}
           {allHalls.length > 0 && (
             <div className="md-hall-legend">
               {allHalls.map(hall => (
@@ -279,32 +254,25 @@ export default function MovieDetail() {
                     <div className="md-day-name">{fullDay}</div>
                     <div className="md-day-date">{ordDate}, {month} {year}</div>
                   </div>
-
                   <div className="md-slots">
                     {dayScreenings.length === 0 ? (
                       <div className="md-no-show">—</div>
                     ) : (
                       dayScreenings.map(s => (
-                        <button
-                          key={s.id}
-                          className="md-time-btn"
+                        <button key={s.id} className="md-time-btn"
                           style={{ background: getHallColor(s.hall_name) }}
-                          title={`${s.hall_name} — ${s.available_seats} seats`}
-                        >
-                          <i className="fa-solid fa-ticket" />
-                          {formatTime(s.start_time)}
+                          title={`${s.hall_name} — ${s.available_seats} seats`}>
+                          <i className="fa-solid fa-ticket" /> {formatTime(s.start_time)}
                         </button>
                       ))
                     )}
                   </div>
-
                   {dayScreenings.length > 0 && (
                     <button
                       className={`md-get-ticket-btn ${isAdmin ? "md-admin-btn" : ""}`}
-                      onClick={() =>
-                        isAdmin
-                          ? navigate("/admin", { state: { editMovieId: movie.id } })
-                          : navigate(`/book/${movie.id}`)
+                      onClick={() => isAdmin
+                        ? navigate("/admin", { state: { editMovieId: movie.id } })
+                        : navigate(`/book/${movie.id}`)
                       }
                     >
                       {isAdmin
@@ -320,9 +288,7 @@ export default function MovieDetail() {
         )}
       </div>
 
-      <div className="md-footer">
-        Copyright© 2026 CineBook Limited. All Rights Reserved.
-      </div>
+      <div className="md-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
     </div>
   )
 }
