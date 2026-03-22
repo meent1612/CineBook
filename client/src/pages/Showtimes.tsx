@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { useBranch } from "../context/BranchContext"
 import "../CSSfiles/Showtimes.css"
-
 
 // ── Types ──────────────────────────────────────────────
 interface Movie {
@@ -29,7 +29,6 @@ interface Screening {
 const API_URL         = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND         = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const FALLBACK_COLORS = ["#4e0f1a", "#1a3a5c", "#1a4d2e", "#3b1f5e", "#7a3b00"]
-const DAY_NAMES       = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const MONTH_NAMES     = ["January","February","March","April","May","June",
                          "July","August","September","October","November","December"]
 const FULL_DAY        = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
@@ -74,7 +73,6 @@ const getHallColor = (hall: string): string => {
   return hallColorMap[hall]
 }
 
-// ── Poster component ───────────────────────────────────
 function Poster({ title, url }: { title: string; url: string | null }) {
   const [failed, setFailed] = useState(false)
   const src = url ? (url.startsWith("/") ? `${BACKEND}${url}` : url) : ""
@@ -88,16 +86,15 @@ function Poster({ title, url }: { title: string; url: string | null }) {
       </div>
     )
   }
-  return (
-    <img src={src} alt={title} className="st-poster-img" onError={() => setFailed(true)} />
-  )
+  return <img src={src} alt={title} className="st-poster-img" onError={() => setFailed(true)} />
 }
 
 // ── Main Component ─────────────────────────────────────
 export default function ShowTimes() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const isAdmin  = user?.role === "admin"
+  const navigate              = useNavigate()
+  const { user }              = useAuth()
+  const { selectedTheater }   = useBranch()         // ← branch context
+  const isAdmin               = user?.role === "admin"
 
   const [movies,     setMovies]     = useState<Movie[]>([])
   const [screenings, setScreenings] = useState<Screening[]>([])
@@ -130,12 +127,10 @@ export default function ShowTimes() {
     fetchData()
   }, [])
 
-  const weekDates = WEEK_DAYS.map(d => d.dateStr)
-
-  const moviesThisWeek = movies.filter(movie =>
+  const weekDates        = WEEK_DAYS.map(d => d.dateStr)
+  const moviesThisWeek   = movies.filter(movie =>
     screenings.some(s => s.movie_id === movie.id && weekDates.includes(s.show_date))
   )
-
   const getScreeningsForDay = (movieId: number, dateStr: string): Screening[] =>
     screenings
       .filter(s => s.movie_id === movieId && s.show_date === dateStr)
@@ -143,16 +138,16 @@ export default function ShowTimes() {
 
   const allHalls = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
 
-  // Details → movie detail page
-  const handleDetails = (movieId: number) => {
+  const handleDetails   = (movieId: number) => {
     if (isAdmin) navigate("/admin", { state: { editMovieId: movieId } })
     else navigate(`/movie/${movieId}`)
   }
+  const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
 
-  // Get Tickets → booking page
-  const handleGetTickets = (movieId: number) => {
-    navigate(`/book/${movieId}`)
-  }
+  // Display name from selected theater
+  const locationDisplay = selectedTheater
+    ? `${selectedTheater.name}, ${selectedTheater.address}`
+    : "Select a theater"
 
   return (
     <div className="st-wrapper">
@@ -163,11 +158,8 @@ export default function ShowTimes() {
           <h1 className="st-page-title">Weekly Showtime</h1>
           <div className="st-page-location">
             <i className="fa-solid fa-location-dot" />
-            <span>Love Road, Tejgaon, Dhaka</span>
+            <span>[ {locationDisplay} ]</span>
           </div>
-          <button className="st-change-location-btn">
-            <i className="fa-solid fa-rotate" /> Change Location
-          </button>
         </div>
 
         {allHalls.length > 0 && (
@@ -195,15 +187,12 @@ export default function ShowTimes() {
           {moviesThisWeek.map(movie => (
             <div key={movie.id} className="st-movie-row">
 
-              {/* Left: Poster + Info */}
               <div className="st-movie-left">
                 <div className="st-poster-wrap">
                   <Poster title={movie.title} url={movie.poster_url} />
                 </div>
-
                 <div className="st-movie-meta">
                   <h2 className="st-movie-title">{movie.title}</h2>
-
                   <div className="st-meta-table">
                     <div className="st-meta-row">
                       <span className="st-meta-key">Category</span>
@@ -239,24 +228,12 @@ export default function ShowTimes() {
                       </div>
                     )}
                   </div>
-
                   <div className="st-movie-btns">
-                    {/* Details → /movie/:id  |  Edit → /admin */}
-                    <button
-                      className="st-details-btn"
-                      onClick={() => handleDetails(movie.id)}
-                    >
+                    <button className="st-details-btn" onClick={() => handleDetails(movie.id)}>
                       {isAdmin ? <><i className="fa-solid fa-pen" /> Edit</> : "Details"}
                     </button>
-
-                    {/* Trailer link */}
                     {movie.trailer_url && (
-                      <a
-                        href={movie.trailer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="st-trailer-btn"
-                      >
+                      <a href={movie.trailer_url} target="_blank" rel="noreferrer" className="st-trailer-btn">
                         <i className="fa-solid fa-circle-play" /> Watch Trailer
                       </a>
                     )}
@@ -264,7 +241,6 @@ export default function ShowTimes() {
                 </div>
               </div>
 
-              {/* Right: 7-day grid */}
               <div className="st-schedule-grid">
                 {WEEK_DAYS.map(({ dateStr, fullDay, ordDate, month, year }) => {
                   const dayScreenings = getScreeningsForDay(movie.id, dateStr)
@@ -274,33 +250,24 @@ export default function ShowTimes() {
                         <div className="st-day-name">{fullDay}</div>
                         <div className="st-day-date">{ordDate}, {month} {year}</div>
                       </div>
-
                       <div className="st-slots">
                         {dayScreenings.length === 0 ? (
                           <div className="st-no-show">—</div>
                         ) : (
                           dayScreenings.map(s => (
-                            <button
-                              key={s.id}
-                              className="st-time-btn"
-                              style={{ background: getHallColor(s.hall_name) }}
-                              title={s.hall_name}
-                            >
-                              <i className="fa-solid fa-ticket" />
-                              {formatTime(s.start_time)}
+                            <button key={s.id} className="st-time-btn"
+                              style={{ background: getHallColor(s.hall_name) }} title={s.hall_name}>
+                              <i className="fa-solid fa-ticket" /> {formatTime(s.start_time)}
                             </button>
                           ))
                         )}
                       </div>
-
-                      {/* Get Tickets → /book/:id  |  Edit Data → /admin */}
                       {dayScreenings.length > 0 && (
                         <button
                           className={`st-get-ticket-btn ${isAdmin ? "st-edit-btn" : ""}`}
-                          onClick={() =>
-                            isAdmin
-                              ? navigate("/admin", { state: { editMovieId: movie.id } })
-                              : handleGetTickets(movie.id)
+                          onClick={() => isAdmin
+                            ? navigate("/admin", { state: { editMovieId: movie.id } })
+                            : handleGetTickets(movie.id)
                           }
                         >
                           {isAdmin
@@ -319,9 +286,7 @@ export default function ShowTimes() {
         </div>
       )}
 
-      <div className="st-footer">
-        Copyright© 2026 CineBook Limited. All Rights Reserved.
-      </div>
+      <div className="st-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
     </div>
   )
 }
