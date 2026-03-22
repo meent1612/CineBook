@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Showtimes.css"
 
+
 // ── Types ──────────────────────────────────────────────
 interface Movie {
   id: number
@@ -19,8 +20,8 @@ interface Movie {
 interface Screening {
   id: number
   movie_id: number
-  show_date: string    // "2026-03-22"
-  start_time: string   // "10:00:00"
+  show_date: string
+  start_time: string
   hall_name: string
 }
 
@@ -31,35 +32,29 @@ const FALLBACK_COLORS = ["#4e0f1a", "#1a3a5c", "#1a4d2e", "#3b1f5e", "#7a3b00"]
 const DAY_NAMES       = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const MONTH_NAMES     = ["January","February","March","April","May","June",
                          "July","August","September","October","November","December"]
+const FULL_DAY        = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 
-// Ordinal suffix: 1 → "1st", 22 → "22nd"
 const ordinal = (n: number): string => {
   const s = ["th","st","nd","rd"]
   const v = n % 100
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
-// Full day name
-const FULL_DAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
-
-// ── Build next 7 real calendar days from today ─────────
 const WEEK_DAYS = Array.from({ length: 7 }, (_, i) => {
   const d = new Date()
   d.setDate(d.getDate() + i)
-  const yyyy    = d.getFullYear()
-  const mm      = String(d.getMonth() + 1).padStart(2, "0")
-  const dd      = String(d.getDate()).padStart(2, "0")
+  const yyyy = d.getFullYear()
+  const mm   = String(d.getMonth() + 1).padStart(2, "0")
+  const dd   = String(d.getDate()).padStart(2, "0")
   return {
-    dateStr:  `${yyyy}-${mm}-${dd}`,
-    fullDay:  FULL_DAY[d.getDay()],
-    shortDay: DAY_NAMES[d.getDay()],
-    ordDate:  ordinal(d.getDate()),
-    month:    MONTH_NAMES[d.getMonth()],
-    year:     d.getFullYear(),
+    dateStr: `${yyyy}-${mm}-${dd}`,
+    fullDay: FULL_DAY[d.getDay()],
+    ordDate: ordinal(d.getDate()),
+    month:   MONTH_NAMES[d.getMonth()],
+    year:    d.getFullYear(),
   }
 })
 
-// ── Format "10:00:00" → "10:00 AM" ────────────────────
 const formatTime = (time: string): string => {
   const [h, m] = time.split(":")
   const hour   = parseInt(h)
@@ -68,7 +63,6 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
-// Hall color map — cycles through colors
 const HALL_COLORS = ["#f5c518", "#00bcd4", "#4caf50", "#9c27b0", "#ff5722"]
 const hallColorMap: Record<string, string> = {}
 let hallColorIdx = 0
@@ -95,20 +89,15 @@ function Poster({ title, url }: { title: string; url: string | null }) {
     )
   }
   return (
-    <img
-      src={src}
-      alt={title}
-      className="st-poster-img"
-      onError={() => setFailed(true)}
-    />
+    <img src={src} alt={title} className="st-poster-img" onError={() => setFailed(true)} />
   )
 }
 
 // ── Main Component ─────────────────────────────────────
 export default function ShowTimes() {
-  const navigate     = useNavigate()
-  const { user }     = useAuth()
-  const isAdmin      = user?.role === "admin"
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin  = user?.role === "admin"
 
   const [movies,     setMovies]     = useState<Movie[]>([])
   const [screenings, setScreenings] = useState<Screening[]>([])
@@ -147,24 +136,28 @@ export default function ShowTimes() {
     screenings.some(s => s.movie_id === movie.id && weekDates.includes(s.show_date))
   )
 
-  // Get screenings for a specific movie + date
   const getScreeningsForDay = (movieId: number, dateStr: string): Screening[] =>
     screenings
       .filter(s => s.movie_id === movieId && s.show_date === dateStr)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  // Collect all unique halls for the legend
   const allHalls = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
 
-  const handleAction = (movieId: number) => {
+  // Details → movie detail page
+  const handleDetails = (movieId: number) => {
     if (isAdmin) navigate("/admin", { state: { editMovieId: movieId } })
-    else navigate(`/book/${movieId}`)
+    else navigate(`/movie/${movieId}`)
+  }
+
+  // Get Tickets → booking page
+  const handleGetTickets = (movieId: number) => {
+    navigate(`/book/${movieId}`)
   }
 
   return (
     <div className="st-wrapper">
 
-      {/* ── Page Header ── */}
+      {/* Page Header */}
       <div className="st-page-header">
         <div className="st-page-header-left">
           <h1 className="st-page-title">Weekly Showtime</h1>
@@ -177,7 +170,6 @@ export default function ShowTimes() {
           </button>
         </div>
 
-        {/* Hall Legend */}
         {allHalls.length > 0 && (
           <div className="st-hall-legend">
             {allHalls.map(hall => (
@@ -190,14 +182,14 @@ export default function ShowTimes() {
         )}
       </div>
 
-      {/* ── States ── */}
+      {/* States */}
       {loading && <p className="st-state-msg">Loading showtimes…</p>}
       {error   && <p className="st-state-msg st-state-error">{error}</p>}
       {!loading && !error && moviesThisWeek.length === 0 && (
         <p className="st-state-msg">No screenings scheduled this week.</p>
       )}
 
-      {/* ── Movie Rows ── */}
+      {/* Movie Rows */}
       {!loading && !error && moviesThisWeek.length > 0 && (
         <div className="st-movie-list">
           {moviesThisWeek.map(movie => (
@@ -249,12 +241,15 @@ export default function ShowTimes() {
                   </div>
 
                   <div className="st-movie-btns">
+                    {/* Details → /movie/:id  |  Edit → /admin */}
                     <button
                       className="st-details-btn"
-                      onClick={() => handleAction(movie.id)}
+                      onClick={() => handleDetails(movie.id)}
                     >
                       {isAdmin ? <><i className="fa-solid fa-pen" /> Edit</> : "Details"}
                     </button>
+
+                    {/* Trailer link */}
                     {movie.trailer_url && (
                       <a
                         href={movie.trailer_url}
@@ -275,16 +270,11 @@ export default function ShowTimes() {
                   const dayScreenings = getScreeningsForDay(movie.id, dateStr)
                   return (
                     <div key={dateStr} className="st-day-col">
-
-                      {/* Day header */}
                       <div className="st-day-header">
                         <div className="st-day-name">{fullDay}</div>
-                        <div className="st-day-date">
-                          {ordDate}, {month} {year}
-                        </div>
+                        <div className="st-day-date">{ordDate}, {month} {year}</div>
                       </div>
 
-                      {/* Time slots */}
                       <div className="st-slots">
                         {dayScreenings.length === 0 ? (
                           <div className="st-no-show">—</div>
@@ -303,15 +293,19 @@ export default function ShowTimes() {
                         )}
                       </div>
 
-                      {/* Get Tickets / Edit */}
+                      {/* Get Tickets → /book/:id  |  Edit Data → /admin */}
                       {dayScreenings.length > 0 && (
                         <button
                           className={`st-get-ticket-btn ${isAdmin ? "st-edit-btn" : ""}`}
-                          onClick={() => handleAction(movie.id)}
+                          onClick={() =>
+                            isAdmin
+                              ? navigate("/admin", { state: { editMovieId: movie.id } })
+                              : handleGetTickets(movie.id)
+                          }
                         >
                           {isAdmin
                             ? <><i className="fa-solid fa-pen" /> Edit Data</>
-                            : <><i className="fa-solid fa-ticket" /> Get Ticket</>
+                            : <><i className="fa-solid fa-ticket" /> Get Tickets</>
                           }
                         </button>
                       )}
