@@ -43,16 +43,12 @@ function MoviePoster({ movie }: { movie: Movie }) {
   if (!src || failed) {
     return (
       <div className="movie-poster-fallback" style={{ background: bg }}>
-        <div className="movie-poster-fallback-icon">
-          <i className="fa-solid fa-film" />
-        </div>
+        <div className="movie-poster-fallback-icon"><i className="fa-solid fa-film" /></div>
         <div className="movie-poster-fallback-title">{movie.title}</div>
       </div>
     )
   }
-  return (
-    <img src={src} alt={movie.title} className="movie-card-img" onError={() => setFailed(true)} />
-  )
+  return <img src={src} alt={movie.title} className="movie-card-img" onError={() => setFailed(true)} />
 }
 
 interface MovieCardProps {
@@ -65,9 +61,7 @@ interface MovieCardProps {
 function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) {
   return (
     <div className="movie-card">
-      <div className="movie-card-img-wrap">
-        <MoviePoster movie={movie} />
-      </div>
+      <div className="movie-card-img-wrap"><MoviePoster movie={movie} /></div>
       <div className="movie-card-body">
         <div className="movie-card-title">{movie.title}</div>
         <div className="movie-card-meta">
@@ -81,7 +75,6 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
             })}
           </div>
         )}
-
         <div className="movie-toggle-row">
           <span className={`movie-toggle-label ${movie.is_active ? "label-active" : "label-inactive"}`}>
             {movie.is_active ? "Active" : "Inactive"}
@@ -94,9 +87,8 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
             <span className="toggle-thumb" />
           </button>
         </div>
-
         <div className="movie-card-actions">
-          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
+          <button className="movie-edit-btn"   onClick={() => onEdit(movie)}>
             <i className="fa-solid fa-pen" /> Edit
           </button>
           <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
@@ -115,8 +107,8 @@ const EMPTY_MOVIE = {
 }
 
 export default function AdminDashboard() {
-  const { token }   = useAuth()
-  const location    = useLocation()
+  const { token } = useAuth()
+  const location  = useLocation()
 
   const [selectedMonth, setSelectedMonth] = useState("March")
   const [movieList,     setMovieList]     = useState<Movie[]>([])
@@ -139,13 +131,25 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
+  // ── Auto-open edit movie modal when navigated from Home ──
+  // ── Auto-open screening modal when navigated from Showtimes ──
   useEffect(() => {
-    const editId = (location.state as any)?.editMovieId
-    if (!editId || movieList.length === 0) return
-    const target = movieList.find(m => m.id === editId)
-    if (!target) return
-    handleOpenEdit(target)
-    window.history.replaceState({}, "")
+    const state = location.state as any
+    if (!state) return
+
+    if (state.openScreeningModal) {
+      setShowAddScreening(true)
+      window.history.replaceState({}, "")
+      return
+    }
+
+    if (state.editMovieId && movieList.length > 0) {
+      const target = movieList.find(m => m.id === state.editMovieId)
+      if (target) {
+        handleOpenEdit(target)
+        window.history.replaceState({}, "")
+      }
+    }
   }, [location.state, movieList])
 
   const fetchMovies = async () => {
@@ -342,15 +346,15 @@ export default function AdminDashboard() {
   const activeMovies = movieList.filter(m => m.is_active)
 
   const stats = [
-    { label: "Tickets Sold",      value: "15,000",                         icon: "fa-ticket" },
-    { label: "Total Movies",      value: movieList.length.toString(),      icon: "fa-film" },
-    { label: "Active Movies",     value: activeMovies.length.toString(),   icon: "fa-circle-play" },
-    { label: "Revenue",           value: "40M BDT",                        icon: "fa-sack-dollar" },
-    { label: "Active Screenings", value: "500",                            icon: "fa-clapperboard" },
+    { label: "Tickets Sold",      value: "15,000",                        icon: "fa-ticket" },
+    { label: "Total Movies",      value: movieList.length.toString(),     icon: "fa-film" },
+    { label: "Active Movies",     value: activeMovies.length.toString(),  icon: "fa-circle-play" },
+    { label: "Revenue",           value: "40M BDT",                       icon: "fa-sack-dollar" },
+    { label: "Active Screenings", value: "500",                           icon: "fa-clapperboard" },
   ]
 
   const mgmt = [
-    { label: "Movie Management",     icon: "fa-film",        action: () => setShowAddMovie(true) },
+    { label: "Movie Management",     icon: "fa-film",         action: () => setShowAddMovie(true) },
     { label: "Screening Management", icon: "fa-clapperboard", action: () => setShowAddScreening(true) },
     { label: "Inbox",                icon: "fa-inbox",        action: () => {} },
   ]
@@ -358,7 +362,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-wrapper">
 
-      
+      {/* Header */}
       <div className="admin-header">
         <div className="admin-header-top">
           <div>
@@ -370,15 +374,10 @@ export default function AdminDashboard() {
         <div className="admin-month-section">
           <div className="admin-month-row">
             <span className="admin-month-label">For the month of:</span>
-            <select
-              className="admin-month-select"
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-            >
+            <select className="admin-month-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
               {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
-
           <div className="admin-stats-row">
             {stats.map(s => (
               <div key={s.label} className="admin-stat-card">
@@ -391,26 +390,18 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      
+      {/* Management Cards */}
       <div className="admin-mgmt-row">
         {mgmt.map(m => (
-          <div
-            key={m.label}
-            className="admin-mgmt-card"
-            onClick={m.action}
-            role="button"
-            tabIndex={0}
-            onKeyDown={e => e.key === "Enter" && m.action()}
-          >
-            <div className="admin-mgmt-icon">
-              <i className={`fa-solid ${m.icon}`} />
-            </div>
+          <div key={m.label} className="admin-mgmt-card" onClick={m.action}
+            role="button" tabIndex={0} onKeyDown={e => e.key === "Enter" && m.action()}>
+            <div className="admin-mgmt-icon"><i className={`fa-solid ${m.icon}`} /></div>
             <div className="admin-mgmt-label">{m.label}</div>
           </div>
         ))}
       </div>
 
-      
+      {/* Movie Sections */}
       <div className="admin-movies-area">
         {loadingMovies && <p className="admin-loading">Loading movies…</p>}
         {movieError    && <p className="admin-error">{movieError}</p>}
@@ -426,17 +417,12 @@ export default function AdminDashboard() {
               </div>
               {nowShowing.length === 0
                 ? <p className="admin-empty">No movies currently showing.</p>
-                : (
-                  <div className="movie-grid">
+                : <div className="movie-grid">
                     {nowShowing.map(m => (
                       <MovieCard key={m.id} movie={m}
-                        onDelete={handleDeleteMovie}
-                        onToggleActive={handleToggleActive}
-                        onEdit={handleOpenEdit}
-                      />
+                        onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />
                     ))}
                   </div>
-                )
               }
             </section>
 
@@ -449,30 +435,23 @@ export default function AdminDashboard() {
               </div>
               {comingSoon.length === 0
                 ? <p className="admin-empty">No upcoming movies.</p>
-                : (
-                  <div className="movie-grid">
+                : <div className="movie-grid">
                     {comingSoon.map(m => (
                       <MovieCard key={m.id} movie={m}
-                        onDelete={handleDeleteMovie}
-                        onToggleActive={handleToggleActive}
-                        onEdit={handleOpenEdit}
-                      />
+                        onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />
                     ))}
                   </div>
-                )
               }
             </section>
           </>
         )}
       </div>
 
-      
+      {/* Add Movie Modal */}
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">
-              <i className="fa-solid fa-film" /> Add New Movie
-            </h3>
+            <h3 className="modal-title"><i className="fa-solid fa-film" /> Add New Movie</h3>
             <div className="modal-grid">
               <div className="modal-col">
                 <label className="modal-label">Title *</label>
@@ -519,13 +498,11 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      
+      {/* Add Screening Modal */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => setShowAddScreening(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">
-              <i className="fa-solid fa-clapperboard" /> Add New Screening
-            </h3>
+            <h3 className="modal-title"><i className="fa-solid fa-clapperboard" /> Add New Screening</h3>
             <label className="modal-label">Movie *</label>
             <select className="modal-input" value={newScreening.movie_id} onChange={e => setNewScreening(p => ({ ...p, movie_id: e.target.value }))}>
               <option value="" disabled>Select Movie</option>
@@ -552,13 +529,11 @@ export default function AdminDashboard() {
         </div>
       )}
 
-     
+      {/* Edit Movie Modal */}
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">
-              <i className="fa-solid fa-pen" /> Edit Movie
-            </h3>
+            <h3 className="modal-title"><i className="fa-solid fa-pen" /> Edit Movie</h3>
             <div className="modal-grid">
               <div className="modal-col">
                 <label className="modal-label">Title *</label>
@@ -605,9 +580,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="admin-footer">
-        Copyright© 2026 CineBook Limited. All Rights Reserved.
-      </div>
+      <div className="admin-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
     </div>
   )
 }

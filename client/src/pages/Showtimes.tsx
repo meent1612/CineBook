@@ -91,10 +91,10 @@ function Poster({ title, url }: { title: string; url: string | null }) {
 
 // ── Main Component ─────────────────────────────────────
 export default function ShowTimes() {
-  const navigate              = useNavigate()
-  const { user }              = useAuth()
-  const { selectedTheater }   = useBranch()         // ← branch context
-  const isAdmin               = user?.role === "admin"
+  const navigate            = useNavigate()
+  const { user }            = useAuth()
+  const { selectedTheater } = useBranch()
+  const isAdmin             = user?.role === "admin"
 
   const [movies,     setMovies]     = useState<Movie[]>([])
   const [screenings, setScreenings] = useState<Screening[]>([])
@@ -127,10 +127,11 @@ export default function ShowTimes() {
     fetchData()
   }, [])
 
-  const weekDates        = WEEK_DAYS.map(d => d.dateStr)
-  const moviesThisWeek   = movies.filter(movie =>
+  const weekDates      = WEEK_DAYS.map(d => d.dateStr)
+  const moviesThisWeek = movies.filter(movie =>
     screenings.some(s => s.movie_id === movie.id && weekDates.includes(s.show_date))
   )
+
   const getScreeningsForDay = (movieId: number, dateStr: string): Screening[] =>
     screenings
       .filter(s => s.movie_id === movieId && s.show_date === dateStr)
@@ -138,13 +139,20 @@ export default function ShowTimes() {
 
   const allHalls = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
 
-  const handleDetails   = (movieId: number) => {
+  // Details → movie detail page
+  const handleDetails = (movieId: number) => {
     if (isAdmin) navigate("/admin", { state: { editMovieId: movieId } })
     else navigate(`/movie/${movieId}`)
   }
+
+  // Get Tickets → booking page
   const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
 
-  // Display name from selected theater
+  // Edit Data (admin) → opens Screening Management modal in AdminDashboard
+  const handleEditData = () => {
+    navigate("/admin", { state: { openScreeningModal: true } })
+  }
+
   const locationDisplay = selectedTheater
     ? `${selectedTheater.name}, ${selectedTheater.address}`
     : "Select a theater"
@@ -230,7 +238,7 @@ export default function ShowTimes() {
                   </div>
                   <div className="st-movie-btns">
                     <button className="st-details-btn" onClick={() => handleDetails(movie.id)}>
-                      {isAdmin ? <><i className="fa-solid fa-pen" /> Edit</> : "Details"}
+                      {isAdmin ? <><i className="fa-solid fa-pen" /> Edit Movie</> : "Details"}
                     </button>
                     {movie.trailer_url && (
                       <a href={movie.trailer_url} target="_blank" rel="noreferrer" className="st-trailer-btn">
@@ -262,16 +270,14 @@ export default function ShowTimes() {
                           ))
                         )}
                       </div>
+
                       {dayScreenings.length > 0 && (
                         <button
                           className={`st-get-ticket-btn ${isAdmin ? "st-edit-btn" : ""}`}
-                          onClick={() => isAdmin
-                            ? navigate("/admin", { state: { editMovieId: movie.id } })
-                            : handleGetTickets(movie.id)
-                          }
+                          onClick={() => isAdmin ? handleEditData() : handleGetTickets(movie.id)}
                         >
                           {isAdmin
-                            ? <><i className="fa-solid fa-pen" /> Edit Data</>
+                            ? <><i className="fa-solid fa-clapperboard" /> Edit Screening</>
                             : <><i className="fa-solid fa-ticket" /> Get Tickets</>
                           }
                         </button>
