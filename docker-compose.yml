@@ -48,6 +48,9 @@ services:
       - ./database/migrations/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./database/migrations/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
       - ./database/migrations/03_migration.sql:/docker-entrypoint-initdb.d/03_migration.sql
+      - ./database/migrations/04_init2.sql:/docker-entrypoint-initdb.d/04_init2.sql
+      - ./database/migrations/05_seed2.sql:/docker-entrypoint-initdb.d/05_seed2.sql
+      - ./database/migrations/06_migration2.sql:/docker-entrypoint-initdb.d/06_migration2.sql
       - cinebook_db_data:/var/lib/mysql
 
 volumes:

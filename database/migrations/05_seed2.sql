@@ -1,4 +1,3 @@
--- Add this to your 02_seed.sql AFTER the movies INSERT
 -- Movie IDs: 1=Avatar 2D, 2=Avatar 3D, 3=Anaconda, 4=Rajnoitik, 5=Sultana, 6=SpongeBob
 -- Hall IDs:  1=Hall 1 (100), 2=Hall 2 (80), 3=Hall 3 (120)
 
@@ -132,3 +131,7 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (6, 3, '2026-03-28', '11:00:00', 120),
 (6, 3, '2026-03-28', '14:00:00', 120),
 (6, 3, '2026-03-28', '17:00:00', 120);
+
+INSERT INTO theaters (name, address, city, is_active) VALUES
+('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',              'Dhaka', true),
+('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka',   'Dhaka', true);
