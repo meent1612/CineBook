@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useBranch } from "../context/BranchContext"
 import "../CSSfiles/Bookticket.css"
-
 // ── Types ──────────────────────────────────────────────
 interface Movie {
   id: number
