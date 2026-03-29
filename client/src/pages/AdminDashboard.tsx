@@ -33,6 +33,16 @@ interface Hall {
   capacity: number
 }
 
+interface Screening {
+  id: number
+  movie_id: number
+  hall_id?: number
+  hall_name: string
+  show_date: string
+  start_time: string
+  available_seats: number
+}
+
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const bg  = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
@@ -106,6 +116,19 @@ const EMPTY_MOVIE = {
   poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
 }
 
+const formatTime12 = (time: string): string => {
+  const [h, m] = time.split(":")
+  const hour   = parseInt(h)
+  const ampm   = hour >= 12 ? "PM" : "AM"
+  const hour12 = hour % 12 || 12
+  return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
+}
+
+const formatDateDisplay = (dateStr: string): string => {
+  const d = new Date(dateStr + "T00:00:00")
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+}
+
 export default function AdminDashboard() {
   const { token } = useAuth()
   const location  = useLocation()
@@ -124,25 +147,50 @@ export default function AdminDashboard() {
   const [editingMovie,  setEditingMovie]  = useState(false)
   const [editMovie,     setEditMovie]     = useState({ ...EMPTY_MOVIE, id: 0 })
 
+  // ── Add Screening state ──
   const [showAddScreening, setShowAddScreening] = useState(false)
   const [newScreening,     setNewScreening]     = useState({
     movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "",
   })
 
+  // ── Edit Screening state ──
+  const [showEditScreening,   setShowEditScreening]   = useState(false)
+  const [editScreeningMovie,  setEditScreeningMovie]  = useState<Movie | null>(null)
+  const [editScreeningDate,   setEditScreeningDate]   = useState("")
+  const [editScreeningList,   setEditScreeningList]   = useState<Screening[]>([])
+  const [loadingScreenings,   setLoadingScreenings]   = useState(false)
+  const [editingScreeningId,  setEditingScreeningId]  = useState<number | null>(null)
+  const [editScreeningForm,   setEditScreeningForm]   = useState({
+    hall_id: "", start_time: "", available_seats: "",
+  })
+
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
-  // ── Auto-open edit movie modal when navigated from Home ──
-  // ── Auto-open screening modal when navigated from Showtimes ──
+  // ── Auto-open modals when navigated from other pages ──
   useEffect(() => {
     const state = location.state as any
     if (!state) return
 
+    // From Showtimes "Edit Screening" button — open edit modal with movie+date context
+    if (state.openScreeningModal && state.editMovieId && state.editDate) {
+      // Wait for movies to load before opening edit modal
+      if (movieList.length === 0) return
+      const movie = movieList.find(m => m.id === state.editMovieId)
+      if (movie) {
+        openEditScreeningModal(movie, state.editDate)
+      }
+      window.history.replaceState({}, "")
+      return
+    }
+
+    // From Showtimes with just openScreeningModal (no context) — open add modal
     if (state.openScreeningModal) {
       setShowAddScreening(true)
       window.history.replaceState({}, "")
       return
     }
 
+    // From Home "Edit Movie" button
     if (state.editMovieId && movieList.length > 0) {
       const target = movieList.find(m => m.id === state.editMovieId)
       if (target) {
@@ -177,6 +225,94 @@ export default function AdminDashboard() {
       setHallList(data.halls)
     } catch (err: any) {
       console.error("Failed to load halls:", err.message)
+    }
+  }
+
+  // ── Fetch screenings for a specific movie on a specific date ──
+  const fetchScreeningsForEdit = async (movieId: number, dateStr: string) => {
+    setLoadingScreenings(true)
+    try {
+      const res  = await fetch(`${API_URL}/screenings`)
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      const filtered = (data.screenings as Screening[]).filter(
+        s => s.movie_id === movieId && s.show_date === dateStr
+      ).sort((a, b) => a.start_time.localeCompare(b.start_time))
+      setEditScreeningList(filtered)
+    } catch (err: any) {
+      console.error("Failed to load screenings:", err.message)
+      setEditScreeningList([])
+    } finally {
+      setLoadingScreenings(false)
+    }
+  }
+
+  const openEditScreeningModal = (movie: Movie, dateStr: string) => {
+    setEditScreeningMovie(movie)
+    setEditScreeningDate(dateStr)
+    setEditingScreeningId(null)
+    setShowEditScreening(true)
+    fetchScreeningsForEdit(movie.id, dateStr)
+  }
+
+  // ── Edit a single screening (inline) ──
+  const startEditingScreening = (screening: Screening) => {
+    const hallMatch = hallList.find(h => h.name === screening.hall_name)
+    setEditingScreeningId(screening.id)
+    setEditScreeningForm({
+      hall_id:         hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
+      start_time:      screening.start_time.slice(0, 5), // HH:MM
+      available_seats: String(screening.available_seats),
+    })
+  }
+
+  const cancelEditingScreening = () => {
+    setEditingScreeningId(null)
+  }
+
+  const saveEditingScreening = async () => {
+    if (!editingScreeningId) return
+    const { hall_id, start_time, available_seats } = editScreeningForm
+    if (!hall_id || !start_time) {
+      alert("Hall and start time are required.")
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hall_id:         parseInt(hall_id),
+          start_time,
+          available_seats: available_seats ? parseInt(available_seats) : undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setEditingScreeningId(null)
+      if (editScreeningMovie) {
+        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to update screening.")
+    }
+  }
+
+  // ── Delete a screening ──
+  const handleDeleteScreening = async (screeningId: number) => {
+    if (!confirm("Are you sure you want to delete this screening?")) return
+    try {
+      const res = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      if (editScreeningMovie) {
+        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to delete screening.")
     }
   }
 
@@ -327,6 +463,46 @@ export default function AdminDashboard() {
     }
   }
 
+  // ── Add a screening from within the Edit Screening modal ──
+  const [showInlineAdd, setShowInlineAdd] = useState(false)
+  const [inlineNewScreening, setInlineNewScreening] = useState({
+    hall_id: "", start_time: "", available_seats: "",
+  })
+
+  const handleInlineAddScreening = async () => {
+    if (!editScreeningMovie || !editScreeningDate) return
+    const { hall_id, start_time } = inlineNewScreening
+    if (!hall_id || !start_time) {
+      alert("Hall and start time are required.")
+      return
+    }
+    try {
+      const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
+      const seats = inlineNewScreening.available_seats
+        ? parseInt(inlineNewScreening.available_seats)
+        : selectedHall?.capacity || 100
+
+      const res = await fetch(`${API_URL}/admin/screenings`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          movie_id:        editScreeningMovie.id,
+          hall_id:         parseInt(hall_id),
+          show_date:       editScreeningDate,
+          start_time,
+          available_seats: seats,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setInlineNewScreening({ hall_id: "", start_time: "", available_seats: "" })
+      setShowInlineAdd(false)
+      fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+    } catch (err: any) {
+      alert(err.message || "Failed to add screening.")
+    }
+  }
+
   const setMovieField = (field: string) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
@@ -447,7 +623,9 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Add Movie Modal */}
+      {/* ═══════════════════════════════════════════════ */}
+      {/* Add Movie Modal                                */}
+      {/* ═══════════════════════════════════════════════ */}
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -498,7 +676,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Add Screening Modal */}
+      {/* ═══════════════════════════════════════════════ */}
+      {/* Add Screening Modal (blank — from management)  */}
+      {/* ═══════════════════════════════════════════════ */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => setShowAddScreening(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -529,7 +709,143 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Edit Movie Modal */}
+      {/* ═══════════════════════════════════════════════ */}
+      {/* Edit Screening Modal (from Showtimes page)     */}
+      {/* ═══════════════════════════════════════════════ */}
+      {showEditScreening && editScreeningMovie && (
+        <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null) }}>
+          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title"><i className="fa-solid fa-pen" /> Edit Screenings</h3>
+
+            <div className="edit-screening-header">
+              <div className="edit-screening-movie-info">
+                <span className="edit-screening-movie-name">{editScreeningMovie.title}</span>
+                <span className="edit-screening-date">{formatDateDisplay(editScreeningDate)}</span>
+              </div>
+            </div>
+
+            {loadingScreenings ? (
+              <p className="admin-loading">Loading screenings…</p>
+            ) : editScreeningList.length === 0 ? (
+              <p className="admin-empty">No screenings found for this movie on this date.</p>
+            ) : (
+              <div className="edit-screening-table-wrap">
+                <table className="edit-screening-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Hall</th>
+                      <th>Seats</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editScreeningList.map(s => (
+                      <tr key={s.id}>
+                        {editingScreeningId === s.id ? (
+                          <>
+                            <td>
+                              <input type="time" className="modal-input" style={{ margin: 0 }}
+                                value={editScreeningForm.start_time}
+                                onChange={e => setEditScreeningForm(p => ({ ...p, start_time: e.target.value }))} />
+                            </td>
+                            <td>
+                              <select className="modal-input" style={{ margin: 0 }}
+                                value={editScreeningForm.hall_id}
+                                onChange={e => setEditScreeningForm(p => ({ ...p, hall_id: e.target.value }))}>
+                                <option value="" disabled>Select Hall</option>
+                                {hallList.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                              </select>
+                            </td>
+                            <td>
+                              <input type="number" className="modal-input" style={{ margin: 0, width: "80px" }}
+                                value={editScreeningForm.available_seats}
+                                onChange={e => setEditScreeningForm(p => ({ ...p, available_seats: e.target.value }))}
+                                min={1} />
+                            </td>
+                            <td>
+                              <div className="edit-screening-actions">
+                                <button className="screening-save-btn" onClick={saveEditingScreening}
+                                  title="Save"><i className="fa-solid fa-check" /></button>
+                                <button className="screening-cancel-btn" onClick={cancelEditingScreening}
+                                  title="Cancel"><i className="fa-solid fa-xmark" /></button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td><strong>{formatTime12(s.start_time)}</strong></td>
+                            <td>{s.hall_name}</td>
+                            <td>{s.available_seats}</td>
+                            <td>
+                              <div className="edit-screening-actions">
+                                <button className="screening-edit-btn" onClick={() => startEditingScreening(s)}
+                                  title="Edit"><i className="fa-solid fa-pen" /></button>
+                                <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)}
+                                  title="Delete"><i className="fa-solid fa-trash" /></button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Inline Add within edit modal */}
+            {showInlineAdd ? (
+              <div className="inline-add-screening">
+                <h4 className="inline-add-title">Add Another Screening</h4>
+                <div className="inline-add-row">
+                  <div className="inline-add-field">
+                    <label className="modal-label">Start Time *</label>
+                    <input type="time" className="modal-input"
+                      value={inlineNewScreening.start_time}
+                      onChange={e => setInlineNewScreening(p => ({ ...p, start_time: e.target.value }))} />
+                  </div>
+                  <div className="inline-add-field">
+                    <label className="modal-label">Hall *</label>
+                    <select className="modal-input"
+                      value={inlineNewScreening.hall_id}
+                      onChange={e => setInlineNewScreening(p => ({ ...p, hall_id: e.target.value }))}>
+                      <option value="" disabled>Select Hall</option>
+                      {hallList.map(h => <option key={h.id} value={h.id}>{h.name} (cap: {h.capacity})</option>)}
+                    </select>
+                  </div>
+                  <div className="inline-add-field">
+                    <label className="modal-label">Seats</label>
+                    <input type="number" className="modal-input" placeholder="Auto"
+                      value={inlineNewScreening.available_seats}
+                      onChange={e => setInlineNewScreening(p => ({ ...p, available_seats: e.target.value }))}
+                      min={1} />
+                  </div>
+                </div>
+                <div className="inline-add-actions">
+                  <button className="modal-cancel-btn" onClick={() => setShowInlineAdd(false)}>Cancel</button>
+                  <button className="modal-confirm-btn" onClick={handleInlineAddScreening}>Add</button>
+                </div>
+              </div>
+            ) : (
+              <button className="add-screening-inline-btn"
+                onClick={() => setShowInlineAdd(true)}>
+                <i className="fa-solid fa-plus" /> Add Screening for This Date
+              </button>
+            )}
+
+            <div className="modal-actions">
+              <button className="modal-cancel-btn" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null) }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════ */}
+      {/* Edit Movie Modal                               */}
+      {/* ═══════════════════════════════════════════════ */}
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>

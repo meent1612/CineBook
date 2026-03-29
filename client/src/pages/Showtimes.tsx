@@ -148,9 +148,9 @@ export default function ShowTimes() {
   // Get Tickets → booking page
   const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
 
-  // Edit Data (admin) → opens Screening Management modal in AdminDashboard
-  const handleEditData = () => {
-    navigate("/admin", { state: { openScreeningModal: true } })
+  // Edit Data (admin) → opens Screening Management modal in AdminDashboard with context
+  const handleEditData = (movieId: number, dateStr: string) => {
+    navigate("/admin", { state: { openScreeningModal: true, editMovieId: movieId, editDate: dateStr } })
   }
 
   const locationDisplay = selectedTheater
@@ -274,7 +274,7 @@ export default function ShowTimes() {
                       {dayScreenings.length > 0 && (
                         <button
                           className={`st-get-ticket-btn ${isAdmin ? "st-edit-btn" : ""}`}
-                          onClick={() => isAdmin ? handleEditData() : handleGetTickets(movie.id)}
+                          onClick={() => isAdmin ? handleEditData(movie.id, dateStr) : handleGetTickets(movie.id)}
                         >
                           {isAdmin
                             ? <><i className="fa-solid fa-clapperboard" /> Edit Screening</>
