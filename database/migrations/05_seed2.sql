@@ -1,16 +1,12 @@
--- Movie IDs: 1=Avatar 2D, 2=Avatar 3D, 3=Anaconda, 4=Rajnoitik, 5=Sultana, 6=SpongeBob
--- Hall IDs:  1=Hall 1 (100), 2=Hall 2 (80), 3=Hall 3 (120)
--- Coverage:  Mar 29 – Apr 14, 2026 (17 days)
+USE cinebook_db;
 
--- Clear old screenings first
 DELETE FROM screenings;
 
 INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seats) VALUES
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- Avatar 2D (id=1) - Hall 1
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (1, 1, '2026-03-29', '10:00:00', 100),
 (1, 1, '2026-03-29', '13:30:00', 100),
 (1, 1, '2026-03-29', '17:00:00', 100),
@@ -36,7 +32,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (1, 1, '2026-04-04', '11:00:00', 100),
 (1, 1, '2026-04-04', '15:00:00', 100),
 (1, 1, '2026-04-04', '19:00:00', 100),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (1, 1, '2026-04-05', '10:00:00', 100),
 (1, 1, '2026-04-05', '13:30:00', 100),
 (1, 1, '2026-04-05', '17:00:00', 100),
@@ -62,7 +57,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (1, 1, '2026-04-11', '11:00:00', 100),
 (1, 1, '2026-04-11', '15:00:00', 100),
 (1, 1, '2026-04-11', '19:00:00', 100),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (1, 1, '2026-04-12', '10:00:00', 100),
 (1, 1, '2026-04-12', '13:30:00', 100),
 (1, 1, '2026-04-12', '17:00:00', 100),
@@ -74,10 +68,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (1, 1, '2026-04-14', '14:30:00', 100),
 (1, 1, '2026-04-14', '18:00:00', 100),
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- Avatar 3D (id=2) - Hall 2
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (2, 2, '2026-03-29', '12:00:00', 80),
 (2, 2, '2026-03-29', '16:00:00', 80),
 (2, 2, '2026-03-30', '12:00:00', 80),
@@ -96,7 +89,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (2, 2, '2026-04-03', '21:00:00', 80),
 (2, 2, '2026-04-04', '13:00:00', 80),
 (2, 2, '2026-04-04', '17:00:00', 80),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (2, 2, '2026-04-05', '12:00:00', 80),
 (2, 2, '2026-04-05', '16:00:00', 80),
 (2, 2, '2026-04-06', '12:00:00', 80),
@@ -115,7 +107,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (2, 2, '2026-04-10', '21:00:00', 80),
 (2, 2, '2026-04-11', '13:00:00', 80),
 (2, 2, '2026-04-11', '17:00:00', 80),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (2, 2, '2026-04-12', '12:00:00', 80),
 (2, 2, '2026-04-12', '16:00:00', 80),
 (2, 2, '2026-04-13', '12:00:00', 80),
@@ -124,10 +115,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (2, 2, '2026-04-14', '13:00:00', 80),
 (2, 2, '2026-04-14', '17:00:00', 80),
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- Anaconda (id=3) - Hall 3
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (3, 3, '2026-03-29', '11:00:00', 120),
 (3, 3, '2026-03-29', '15:00:00', 120),
 (3, 3, '2026-03-30', '11:00:00', 120),
@@ -146,7 +136,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (3, 3, '2026-04-03', '20:00:00', 120),
 (3, 3, '2026-04-04', '12:00:00', 120),
 (3, 3, '2026-04-04', '16:00:00', 120),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (3, 3, '2026-04-05', '11:00:00', 120),
 (3, 3, '2026-04-05', '15:00:00', 120),
 (3, 3, '2026-04-06', '11:00:00', 120),
@@ -165,7 +154,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (3, 3, '2026-04-10', '20:00:00', 120),
 (3, 3, '2026-04-11', '12:00:00', 120),
 (3, 3, '2026-04-11', '16:00:00', 120),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (3, 3, '2026-04-12', '11:00:00', 120),
 (3, 3, '2026-04-12', '15:00:00', 120),
 (3, 3, '2026-04-13', '11:00:00', 120),
@@ -174,10 +162,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (3, 3, '2026-04-14', '11:00:00', 120),
 (3, 3, '2026-04-14', '15:00:00', 120),
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- Ekhane Rajnoitik (id=4) - Hall 1
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (4, 1, '2026-03-29', '14:00:00', 100),
 (4, 1, '2026-03-29', '18:00:00', 100),
 (4, 1, '2026-03-30', '10:30:00', 100),
@@ -195,7 +182,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (4, 1, '2026-04-03', '19:30:00', 100),
 (4, 1, '2026-04-04', '11:30:00', 100),
 (4, 1, '2026-04-04', '15:30:00', 100),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (4, 1, '2026-04-05', '14:00:00', 100),
 (4, 1, '2026-04-05', '18:00:00', 100),
 (4, 1, '2026-04-06', '10:30:00', 100),
@@ -213,7 +199,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (4, 1, '2026-04-10', '19:30:00', 100),
 (4, 1, '2026-04-11', '11:30:00', 100),
 (4, 1, '2026-04-11', '15:30:00', 100),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (4, 1, '2026-04-12', '14:00:00', 100),
 (4, 1, '2026-04-12', '18:00:00', 100),
 (4, 1, '2026-04-13', '10:30:00', 100),
@@ -222,10 +207,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (4, 1, '2026-04-14', '14:00:00', 100),
 (4, 1, '2026-04-14', '18:00:00', 100),
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- Sultana's Dream (id=5) - Hall 2
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (5, 2, '2026-03-29', '11:00:00', 80),
 (5, 2, '2026-03-29', '15:00:00', 80),
 (5, 2, '2026-03-30', '11:00:00', 80),
@@ -244,7 +228,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (5, 2, '2026-04-03', '20:00:00', 80),
 (5, 2, '2026-04-04', '12:00:00', 80),
 (5, 2, '2026-04-04', '16:00:00', 80),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (5, 2, '2026-04-05', '11:00:00', 80),
 (5, 2, '2026-04-05', '15:00:00', 80),
 (5, 2, '2026-04-06', '11:00:00', 80),
@@ -263,7 +246,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (5, 2, '2026-04-10', '20:00:00', 80),
 (5, 2, '2026-04-11', '12:00:00', 80),
 (5, 2, '2026-04-11', '16:00:00', 80),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (5, 2, '2026-04-12', '11:00:00', 80),
 (5, 2, '2026-04-12', '15:00:00', 80),
 (5, 2, '2026-04-13', '11:00:00', 80),
@@ -272,10 +254,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (5, 2, '2026-04-14', '11:00:00', 80),
 (5, 2, '2026-04-14', '15:00:00', 80),
 
--- ════════════════════════════════════════════════════════
+-- ════════════════════════════════════════════
 -- SpongeBob (id=6) - Hall 3
--- ════════════════════════════════════════════════════════
--- Week 1: Mar 29 (Sun) – Apr 4 (Sat)
+-- ════════════════════════════════════════════
 (6, 3, '2026-03-29', '10:00:00', 120),
 (6, 3, '2026-03-29', '13:00:00', 120),
 (6, 3, '2026-03-29', '16:00:00', 120),
@@ -297,7 +278,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (6, 3, '2026-04-04', '11:00:00', 120),
 (6, 3, '2026-04-04', '14:00:00', 120),
 (6, 3, '2026-04-04', '17:00:00', 120),
--- Week 2: Apr 5 (Sun) – Apr 11 (Sat)
 (6, 3, '2026-04-05', '10:00:00', 120),
 (6, 3, '2026-04-05', '13:00:00', 120),
 (6, 3, '2026-04-05', '16:00:00', 120),
@@ -319,7 +299,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (6, 3, '2026-04-11', '11:00:00', 120),
 (6, 3, '2026-04-11', '14:00:00', 120),
 (6, 3, '2026-04-11', '17:00:00', 120),
--- Week 3: Apr 12 (Sun) – Apr 14 (Tue)
 (6, 3, '2026-04-12', '10:00:00', 120),
 (6, 3, '2026-04-12', '13:00:00', 120),
 (6, 3, '2026-04-12', '16:00:00', 120),
@@ -329,6 +308,74 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (6, 3, '2026-04-14', '10:00:00', 120),
 (6, 3, '2026-04-14', '13:00:00', 120);
 
+-- ════════════════════════════════════════════
+-- Theaters seed
+-- ════════════════════════════════════════════
 INSERT INTO theaters (name, address, city, is_active) VALUES
-('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',              'Dhaka', true),
-('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka',   'Dhaka', true);
+('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',            'Dhaka', true),
+('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka', 'Dhaka', true);
+
+-- ── HALL 1 ─────────────────────────────────
+INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+(1,'A',1,'standard'),(1,'A',2,'standard'),(1,'A',3,'standard'),(1,'A',4,'standard'),(1,'A',5,'standard'),
+(1,'A',6,'standard'),(1,'A',7,'standard'),(1,'A',8,'standard'),(1,'A',9,'standard'),(1,'A',10,'standard'),
+(1,'B',1,'standard'),(1,'B',2,'standard'),(1,'B',3,'standard'),(1,'B',4,'standard'),(1,'B',5,'standard'),
+(1,'B',6,'standard'),(1,'B',7,'standard'),(1,'B',8,'standard'),(1,'B',9,'standard'),(1,'B',10,'standard'),
+(1,'C',1,'standard'),(1,'C',2,'standard'),(1,'C',3,'standard'),(1,'C',4,'standard'),(1,'C',5,'standard'),
+(1,'C',6,'standard'),(1,'C',7,'standard'),(1,'C',8,'standard'),(1,'C',9,'standard'),(1,'C',10,'standard'),
+(1,'D',1,'standard'),(1,'D',2,'standard'),(1,'D',3,'standard'),(1,'D',4,'standard'),(1,'D',5,'standard'),
+(1,'D',6,'standard'),(1,'D',7,'standard'),(1,'D',8,'standard'),(1,'D',9,'standard'),(1,'D',10,'standard'),
+(1,'E',1,'semi_recliner'),(1,'E',2,'semi_recliner'),(1,'E',3,'semi_recliner'),(1,'E',4,'semi_recliner'),(1,'E',5,'semi_recliner'),
+(1,'E',6,'semi_recliner'),(1,'E',7,'semi_recliner'),(1,'E',8,'semi_recliner'),(1,'E',9,'semi_recliner'),(1,'E',10,'semi_recliner'),
+(1,'F',1,'semi_recliner'),(1,'F',2,'semi_recliner'),(1,'F',3,'semi_recliner'),(1,'F',4,'semi_recliner'),(1,'F',5,'semi_recliner'),
+(1,'F',6,'semi_recliner'),(1,'F',7,'semi_recliner'),(1,'F',8,'semi_recliner'),(1,'F',9,'semi_recliner'),(1,'F',10,'semi_recliner'),
+(1,'G',1,'semi_recliner'),(1,'G',2,'semi_recliner'),(1,'G',3,'semi_recliner'),(1,'G',4,'semi_recliner'),(1,'G',5,'semi_recliner'),
+(1,'G',6,'semi_recliner'),(1,'G',7,'semi_recliner'),(1,'G',8,'semi_recliner'),(1,'G',9,'semi_recliner'),(1,'G',10,'semi_recliner'),
+(1,'H',1,'premium'),(1,'H',2,'premium'),(1,'H',3,'premium'),(1,'H',4,'premium'),(1,'H',5,'premium'),
+(1,'H',6,'premium'),(1,'H',7,'premium'),(1,'H',8,'premium'),(1,'H',9,'premium'),(1,'H',10,'premium'),
+(1,'I',1,'premium'),(1,'I',2,'premium'),(1,'I',3,'premium'),(1,'I',4,'premium'),(1,'I',5,'premium'),
+(1,'I',6,'premium'),(1,'I',7,'premium'),(1,'I',8,'premium'),(1,'I',9,'premium'),(1,'I',10,'premium'),
+(1,'J',1,'vip'),(1,'J',2,'vip'),(1,'J',3,'vip'),(1,'J',4,'vip'),(1,'J',5,'vip'),
+(1,'J',6,'vip'),(1,'J',7,'vip'),(1,'J',8,'vip'),(1,'J',9,'vip'),(1,'J',10,'vip');
+
+-- ── HALL 2 ─────────────────────────────────
+INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+(2,'A',1,'standard'),(2,'A',2,'standard'),(2,'A',3,'standard'),(2,'A',4,'standard'),(2,'A',5,'standard'),
+(2,'A',6,'standard'),(2,'A',7,'standard'),(2,'A',8,'standard'),(2,'A',9,'standard'),(2,'A',10,'standard'),
+(2,'B',1,'standard'),(2,'B',2,'standard'),(2,'B',3,'standard'),(2,'B',4,'standard'),(2,'B',5,'standard'),
+(2,'B',6,'standard'),(2,'B',7,'standard'),(2,'B',8,'standard'),(2,'B',9,'standard'),(2,'B',10,'standard'),
+(2,'C',1,'standard'),(2,'C',2,'standard'),(2,'C',3,'standard'),(2,'C',4,'standard'),(2,'C',5,'standard'),
+(2,'C',6,'standard'),(2,'C',7,'standard'),(2,'C',8,'standard'),(2,'C',9,'standard'),(2,'C',10,'standard'),
+(2,'D',1,'semi_recliner'),(2,'D',2,'semi_recliner'),(2,'D',3,'semi_recliner'),(2,'D',4,'semi_recliner'),(2,'D',5,'semi_recliner'),
+(2,'D',6,'semi_recliner'),(2,'D',7,'semi_recliner'),(2,'D',8,'semi_recliner'),(2,'D',9,'semi_recliner'),(2,'D',10,'semi_recliner'),
+(2,'E',1,'semi_recliner'),(2,'E',2,'semi_recliner'),(2,'E',3,'semi_recliner'),(2,'E',4,'semi_recliner'),(2,'E',5,'semi_recliner'),
+(2,'E',6,'semi_recliner'),(2,'E',7,'semi_recliner'),(2,'E',8,'semi_recliner'),(2,'E',9,'semi_recliner'),(2,'E',10,'semi_recliner'),
+(2,'F',1,'semi_recliner'),(2,'F',2,'semi_recliner'),(2,'F',3,'semi_recliner'),(2,'F',4,'semi_recliner'),(2,'F',5,'semi_recliner'),
+(2,'F',6,'semi_recliner'),(2,'F',7,'semi_recliner'),(2,'F',8,'semi_recliner'),(2,'F',9,'semi_recliner'),(2,'F',10,'semi_recliner'),
+(2,'G',1,'premium'),(2,'G',2,'premium'),(2,'G',3,'premium'),(2,'G',4,'premium'),(2,'G',5,'premium'),
+(2,'G',6,'premium'),(2,'G',7,'premium'),(2,'G',8,'premium'),(2,'G',9,'premium'),(2,'G',10,'premium'),
+(2,'H',1,'vip'),(2,'H',2,'vip'),(2,'H',3,'vip'),(2,'H',4,'vip'),(2,'H',5,'vip'),
+(2,'H',6,'vip'),(2,'H',7,'vip'),(2,'H',8,'vip'),(2,'H',9,'vip'),(2,'H',10,'vip');
+
+-- ── HALL 3 ─────────────────────────────────
+INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+(3,'A',1,'standard'),(3,'A',2,'standard'),(3,'A',3,'standard'),(3,'A',4,'standard'),(3,'A',5,'standard'),(3,'A',6,'standard'),
+(3,'A',7,'standard'),(3,'A',8,'standard'),(3,'A',9,'standard'),(3,'A',10,'standard'),(3,'A',11,'standard'),(3,'A',12,'standard'),
+(3,'B',1,'standard'),(3,'B',2,'standard'),(3,'B',3,'standard'),(3,'B',4,'standard'),(3,'B',5,'standard'),(3,'B',6,'standard'),
+(3,'B',7,'standard'),(3,'B',8,'standard'),(3,'B',9,'standard'),(3,'B',10,'standard'),(3,'B',11,'standard'),(3,'B',12,'standard'),
+(3,'C',1,'standard'),(3,'C',2,'standard'),(3,'C',3,'standard'),(3,'C',4,'standard'),(3,'C',5,'standard'),(3,'C',6,'standard'),
+(3,'C',7,'standard'),(3,'C',8,'standard'),(3,'C',9,'standard'),(3,'C',10,'standard'),(3,'C',11,'standard'),(3,'C',12,'standard'),
+(3,'D',1,'standard'),(3,'D',2,'standard'),(3,'D',3,'standard'),(3,'D',4,'standard'),(3,'D',5,'standard'),(3,'D',6,'standard'),
+(3,'D',7,'standard'),(3,'D',8,'standard'),(3,'D',9,'standard'),(3,'D',10,'standard'),(3,'D',11,'standard'),(3,'D',12,'standard'),
+(3,'E',1,'semi_recliner'),(3,'E',2,'semi_recliner'),(3,'E',3,'semi_recliner'),(3,'E',4,'semi_recliner'),(3,'E',5,'semi_recliner'),(3,'E',6,'semi_recliner'),
+(3,'E',7,'semi_recliner'),(3,'E',8,'semi_recliner'),(3,'E',9,'semi_recliner'),(3,'E',10,'semi_recliner'),(3,'E',11,'semi_recliner'),(3,'E',12,'semi_recliner'),
+(3,'F',1,'semi_recliner'),(3,'F',2,'semi_recliner'),(3,'F',3,'semi_recliner'),(3,'F',4,'semi_recliner'),(3,'F',5,'semi_recliner'),(3,'F',6,'semi_recliner'),
+(3,'F',7,'semi_recliner'),(3,'F',8,'semi_recliner'),(3,'F',9,'semi_recliner'),(3,'F',10,'semi_recliner'),(3,'F',11,'semi_recliner'),(3,'F',12,'semi_recliner'),
+(3,'G',1,'semi_recliner'),(3,'G',2,'semi_recliner'),(3,'G',3,'semi_recliner'),(3,'G',4,'semi_recliner'),(3,'G',5,'semi_recliner'),(3,'G',6,'semi_recliner'),
+(3,'G',7,'semi_recliner'),(3,'G',8,'semi_recliner'),(3,'G',9,'semi_recliner'),(3,'G',10,'semi_recliner'),(3,'G',11,'semi_recliner'),(3,'G',12,'semi_recliner'),
+(3,'H',1,'premium'),(3,'H',2,'premium'),(3,'H',3,'premium'),(3,'H',4,'premium'),(3,'H',5,'premium'),(3,'H',6,'premium'),
+(3,'H',7,'premium'),(3,'H',8,'premium'),(3,'H',9,'premium'),(3,'H',10,'premium'),(3,'H',11,'premium'),(3,'H',12,'premium'),
+(3,'I',1,'premium'),(3,'I',2,'premium'),(3,'I',3,'premium'),(3,'I',4,'premium'),(3,'I',5,'premium'),(3,'I',6,'premium'),
+(3,'I',7,'premium'),(3,'I',8,'premium'),(3,'I',9,'premium'),(3,'I',10,'premium'),(3,'I',11,'premium'),(3,'I',12,'premium'),
+(3,'J',1,'vip'),(3,'J',2,'vip'),(3,'J',3,'vip'),(3,'J',4,'vip'),(3,'J',5,'vip'),(3,'J',6,'vip'),
+(3,'J',7,'vip'),(3,'J',8,'vip'),(3,'J',9,'vip'),(3,'J',10,'vip'),(3,'J',11,'vip'),(3,'J',12,'vip');
