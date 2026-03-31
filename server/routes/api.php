@@ -7,6 +7,7 @@ use App\Http\Controllers\ScreeningController;
 use App\Http\Controllers\HallController;
 use App\Http\Controllers\TheaterController;
 use App\Http\Controllers\SeatController;
+use App\Http\Controllers\BookingController;
 
 // ══════════════════════════════════════════════
 // Public routes
@@ -20,11 +21,8 @@ Route::get('/screenings',      [ScreeningController::class, 'index']);
 Route::get('/screenings/{id}', [ScreeningController::class, 'show']);
 Route::get('/halls',           [HallController::class,      'index']);
 Route::get('/halls/{id}',      [HallController::class,      'show']);
+Route::get('/theaters',        [TheaterController::class,   'index']);
 
-// Theaters — used by BranchContext.tsx to populate the theater dropdown
-Route::get('/theaters', [TheaterController::class, 'index']);
-
-// Seat layout — public so the booking page can load without forcing login
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
 
 // ══════════════════════════════════════════════
@@ -33,7 +31,18 @@ Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me',      [AuthController::class, 'me']);
+
+    // /profile used by UserDashboard
+    Route::get('/profile', [AuthController::class, 'me']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+    // Seat locking (called on seat select / deselect)
+    Route::post('/seats/lock',   [BookingController::class, 'lockSeats']);
+    Route::post('/seats/unlock', [BookingController::class, 'unlockSeats']);
+
+    // Bookings
+    Route::get('/bookings',  [BookingController::class, 'getUserBookings']);
+    Route::post('/bookings', [BookingController::class, 'createBooking']);
 
     // ── Admin routes ────────────────────────────────
     Route::middleware('admin')->prefix('admin')->group(function () {
