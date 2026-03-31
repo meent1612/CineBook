@@ -9,7 +9,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Tymon\JWTAuth\Facades\JWTAuth;
 
 class BookingController extends Controller
 {
@@ -24,10 +23,21 @@ class BookingController extends Controller
         };
     }
 
-    
+    // ═══════════════════════════════════════════════════════
+    // POST /api/seats/lock
+    // Temporarily reserves seats for 10 minutes.
+    // Body: { screening_id: int, seat_ids: int[] }
+    // ═══════════════════════════════════════════════════════
     public function lockSeats(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate();
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
 
         $request->validate([
             'screening_id' => 'required|integer|exists:screenings,id',
@@ -39,10 +49,10 @@ class BookingController extends Controller
         $seatIds     = $request->seat_ids;
         $lockedUntil = Carbon::now()->addMinutes(10);
 
-       
+        // Remove stale locks
         SeatLock::where('locked_until', '<', Carbon::now())->delete();
 
-        
+        // Block if already permanently booked
         $alreadyBooked = Booking::where('screening_id', $screeningId)
             ->whereIn('seat_id', $seatIds)
             ->where('status', 'confirmed')
@@ -55,7 +65,7 @@ class BookingController extends Controller
             ], 409);
         }
 
-        
+        // Block if locked by a different user
         $lockedByOthers = SeatLock::where('screening_id', $screeningId)
             ->whereIn('seat_id', $seatIds)
             ->where('user_id', '!=', $user->id)
@@ -69,7 +79,7 @@ class BookingController extends Controller
             ], 409);
         }
 
-        
+        // Create or refresh the lock
         foreach ($seatIds as $seatId) {
             SeatLock::updateOrCreate(
                 ['screening_id' => $screeningId, 'seat_id' => $seatId],
@@ -84,10 +94,21 @@ class BookingController extends Controller
         ]);
     }
 
-   
+    // ═══════════════════════════════════════════════════════
+    // POST /api/seats/unlock
+    // Releases locks this user holds when they deselect a seat.
+    // Body: { screening_id: int, seat_ids: int[] }
+    // ═══════════════════════════════════════════════════════
     public function unlockSeats(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate();
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
 
         $request->validate([
             'screening_id' => 'required|integer',
@@ -100,13 +121,27 @@ class BookingController extends Controller
             ->where('user_id', $user->id)
             ->delete();
 
-        return response()->json(['success' => true, 'message' => 'Seats unlocked.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Seats unlocked.',
+        ]);
     }
 
-    
+    // ═══════════════════════════════════════════════════════
+    // POST /api/bookings
+    // Confirms booking with DB transaction + lockForUpdate()
+    // Body: { screening_id: int, seat_ids: int[] }
+    // ═══════════════════════════════════════════════════════
     public function createBooking(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate();
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
 
         $request->validate([
             'screening_id' => 'required|integer|exists:screenings,id',
@@ -122,7 +157,7 @@ class BookingController extends Controller
 
             SeatLock::where('locked_until', '<', Carbon::now())->delete();
 
-            // Final check with database row lock — prevents race conditions
+            // Final conflict check with row lock
             $alreadyBooked = Booking::where('screening_id', $screeningId)
                 ->whereIn('seat_id', $seatIds)
                 ->where('status', 'confirmed')
@@ -197,15 +232,28 @@ class BookingController extends Controller
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // GET /api/bookings
+    // Returns all bookings for the logged-in user.
+    // Shape matches UserDashboard.tsx Booking interface.
+    // ═══════════════════════════════════════════════════════
     public function getUserBookings()
     {
-        $user = JWTAuth::parseToken()->authenticate();
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
 
         $bookings = Booking::where('user_id', $user->id)
             ->with(['screening.movie', 'screening.hall'])
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Group by booking_group_id so one purchase = one card
         $grouped = $bookings->groupBy('booking_group_id');
 
         $result = $grouped->map(function ($groupBookings) {

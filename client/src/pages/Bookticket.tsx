@@ -22,11 +22,11 @@ interface Screening {
   movie_id: number
   show_date: string
   start_time: string
-  hall_name: string
+  hall_name: string | null
+  hall?: { id: number; name: string; capacity: number }
   available_seats: number
 }
 
-// Shape returned by GET /api/seats/{screeningId}
 interface ApiSeat {
   id: number
   row_label: string
@@ -44,7 +44,6 @@ type LocalSeatStatus = "available" | "selected" | "taken"
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
-// Order: cheapest to most expensive
 const TYPE_ORDER: SeatTypeKey[] = ["standard", "semi_recliner", "premium", "vip"]
 
 const SEAT_TYPE_DISPLAY: Record<SeatTypeKey, string> = {
@@ -61,12 +60,11 @@ const PRICES: Record<SeatTypeKey, number> = {
   vip:           1200,
 }
 
-// Each zone has its own color — matches TicketPrice.tsx vibe
 const ZONE_COLORS: Record<SeatTypeKey, string> = {
-  standard:      "#2196F3",  // blue
-  semi_recliner: "#9C27B0",  // purple
-  premium:       "#c8a96e",  // gold
-  vip:           "#6B1829",  // crimson
+  standard:      "#2196F3",
+  semi_recliner: "#9C27B0",
+  premium:       "#c8a96e",
+  vip:           "#6B1829",
 }
 
 const LEGEND_ITEMS = [
@@ -86,6 +84,12 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
+// Reads hall name from either hall_name (flat) or hall.name (nested)
+const getHallName = (screening: Screening | null): string => {
+  if (!screening) return "—"
+  return screening.hall_name || screening.hall?.name || "—"
+}
+
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
@@ -97,7 +101,6 @@ const formatDateLabel = (dateStr: string): { display: string; day: string } => {
   }
 }
 
-// ── Small helper components ────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const src = movie.poster_url
@@ -127,7 +130,6 @@ export default function BookTicket() {
   const { selectedTheater } = useBranch()
   const { user, token }     = useAuth()
 
-  // ── Movie & screening state ──────────────────────────
   const [movie,             setMovie]             = useState<Movie | null>(null)
   const [screenings,        setScreenings]        = useState<Screening[]>([])
   const [loading,           setLoading]           = useState(true)
@@ -135,7 +137,6 @@ export default function BookTicket() {
   const [selectedDate,      setSelectedDate]      = useState("")
   const [selectedScreening, setSelectedScreening] = useState<Screening | null>(null)
 
-  // ── Seat state from API ──────────────────────────────
   const [seatsByRow,     setSeatsByRow]     = useState<Record<string, ApiSeat[]>>({})
   const [seatStatusMap,  setSeatStatusMap]  = useState<Record<string, LocalSeatStatus>>({})
   const [seatIdMap,      setSeatIdMap]      = useState<Record<string, number>>({})
@@ -143,16 +144,10 @@ export default function BookTicket() {
   const [availableTypes, setAvailableTypes] = useState<SeatTypeKey[]>([])
   const [seatsLoading,   setSeatsLoading]   = useState(false)
 
-  // ── User selection state ─────────────────────────────
   const [seatType,        setSeatType]        = useState<SeatTypeKey>("standard")
   const [quantity,        setQuantity]        = useState(1)
   const [selectedSeats,   setSelectedSeats]   = useState<string[]>([])
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([])
-
-  // ── Booking state ────────────────────────────────────
-  const [bookingLoading, setBookingLoading] = useState(false)
-  const [bookingError,   setBookingError]   = useState("")
-  const [bookingSuccess, setBookingSuccess] = useState(false)
 
   // ── Load movie + screenings ──────────────────────────
   useEffect(() => {
@@ -196,11 +191,9 @@ export default function BookTicket() {
     fetchData()
   }, [id])
 
-  // ── Load seats whenever screening changes ────────────
+  // ── Load seats when screening changes ────────────────
   const fetchSeats = useCallback(async (screeningId: number) => {
     setSeatsLoading(true)
-    setBookingSuccess(false)
-    setBookingError("")
     try {
       const res  = await fetch(`${API_URL}/seats/${screeningId}`)
       const data = await res.json()
@@ -215,7 +208,6 @@ export default function BookTicket() {
       Object.entries(data.seats as Record<string, ApiSeat[]>).forEach(([row, seats]) => {
         rows[row] = seats
         seats.forEach(seat => {
-          // "locked" by another user shows as "taken" to this user
           const local: LocalSeatStatus = seat.status === "available" ? "available" : "taken"
           statusMap[seat.seat_label] = local
           idMap[seat.seat_label]     = seat.id
@@ -231,7 +223,6 @@ export default function BookTicket() {
       setSelectedSeats([])
       setSelectedSeatIds([])
 
-      // Only show types that actually exist in this hall
       const orderedTypes = TYPE_ORDER.filter(t => typesFound.has(t))
       setAvailableTypes(orderedTypes)
       setSeatType(prev => orderedTypes.includes(prev) ? prev : (orderedTypes[0] ?? "standard"))
@@ -263,16 +254,14 @@ export default function BookTicket() {
     const localStatus  = seatStatusMap[key] || "available"
     const thisSeatType = seatTypeMap[key]
 
-    if (localStatus === "taken")   return   // already booked/locked
-    if (thisSeatType !== seatType) return   // wrong zone — user must select correct type first
+    if (localStatus === "taken")   return
+    if (thisSeatType !== seatType) return
 
     if (localStatus === "selected") {
-      // Deselect
       setSeatStatusMap(prev => ({ ...prev, [key]: "available" }))
       setSelectedSeats(prev => prev.filter(k => k !== key))
       setSelectedSeatIds(prev => prev.filter(id => id !== seatIdMap[key]))
 
-      // Release the lock if logged in
       if (user && token && selectedScreening) {
         fetch(`${API_URL}/seats/unlock`, {
           method:  "POST",
@@ -283,22 +272,19 @@ export default function BookTicket() {
     } else {
       if (selectedSeats.length >= quantity) return
 
-      // Try to lock the seat if logged in
       if (user && token && selectedScreening) {
         try {
-          const res  = await fetch(`${API_URL}/seats/lock`, {
+          const res = await fetch(`${API_URL}/seats/lock`, {
             method:  "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body:    JSON.stringify({ screening_id: selectedScreening.id, seat_ids: [seatIdMap[key]] }),
           })
-          const data = await res.json()
-          if (!data.success) {
-            // Seat taken by someone else — refresh the map
+          if (res.status === 409) {
             fetchSeats(selectedScreening.id)
             return
           }
         } catch {
-          // If lock call fails, still allow selection (booking does final check)
+          // network error — still allow selection
         }
       }
 
@@ -324,7 +310,6 @@ export default function BookTicket() {
   }
 
   const handleSeatTypeChange = (type: SeatTypeKey) => {
-    // Reset selections when switching zones
     setSeatStatusMap(prev => {
       const updated = { ...prev }
       selectedSeats.forEach(k => { updated[k] = "available" })
@@ -347,32 +332,11 @@ export default function BookTicket() {
     setSelectedScreening(screening)
   }
 
-  // ── Purchase ──────────────────────────────────────────
-  const handlePurchase = async () => {
+  // ── Purchase — redirects to home (payment in checkpoint 3) ──
+  const handlePurchase = () => {
     if (!user || !token) { navigate("/login"); return }
     if (!selectedScreening || selectedSeatIds.length === 0) return
-
-    setBookingLoading(true)
-    setBookingError("")
-    setBookingSuccess(false)
-
-    try {
-      const res  = await fetch(`${API_URL}/bookings`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body:    JSON.stringify({ screening_id: selectedScreening.id, seat_ids: selectedSeatIds }),
-      })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
-
-      setBookingSuccess(true)
-      fetchSeats(selectedScreening.id)
-    } catch (err: any) {
-      setBookingError(err.message || "Booking failed. Please try again.")
-      fetchSeats(selectedScreening.id)
-    } finally {
-      setBookingLoading(false)
-    }
+    navigate("/")
   }
 
   // ── Render guards ─────────────────────────────────────
@@ -382,7 +346,6 @@ export default function BookTicket() {
   )
   if (!movie)  return null
 
-  // ── Render ────────────────────────────────────────────
   return (
     <div className="book-wrapper">
 
@@ -396,7 +359,6 @@ export default function BookTicket() {
       <div className="book-main">
         <div className="book-left">
 
-          {/* ── Date ── */}
           <Section title="Select Date">
             {availableDates.length === 0 ? (
               <p className="book-empty">No dates available for this movie.</p>
@@ -417,14 +379,13 @@ export default function BookTicket() {
             )}
           </Section>
 
-          {/* ── Showtime ── */}
           <Section title="Select Showtime">
             {screeningsForDate.length === 0 ? (
               <p className="book-empty">No showtimes for this date.</p>
             ) : (
               <div className="showtime-row">
                 <div className="hall-badge">
-                  <i className="fa-solid fa-building" /> {selectedScreening?.hall_name || "—"}
+                  <i className="fa-solid fa-building" /> {getHallName(selectedScreening)}
                 </div>
                 {screeningsForDate.map(s => (
                   <button key={s.id} onClick={() => handleScreeningChange(s)}
@@ -437,7 +398,6 @@ export default function BookTicket() {
             )}
           </Section>
 
-          {/* ── Seat Type + Quantity ── */}
           <div className="seat-type-quantity-row">
             <Section title="Select Seat Type">
               {availableTypes.length === 0 ? (
@@ -470,7 +430,6 @@ export default function BookTicket() {
             </Section>
           </div>
 
-          {/* ── Seat Map ── */}
           <Section title="Select Seats">
             <div className="seat-selection-info">
               <span>Selected: <strong>{selectedSeats.length} / {quantity}</strong></span>
@@ -536,7 +495,6 @@ export default function BookTicket() {
 
         </div>
 
-        {/* ── Summary ── */}
         <div className="book-right">
           <div className="summary-card">
             <div className="summary-header">
@@ -558,7 +516,7 @@ export default function BookTicket() {
                   ["Theater",        locationDisplay],
                   ["Location",       locationAddress],
                   ["Show Date",      selectedDate || "—"],
-                  ["Hall",           selectedScreening?.hall_name || "—"],
+                  ["Hall",           getHallName(selectedScreening)],
                   ["Show Time",      selectedScreening ? formatTime(selectedScreening.start_time) : "—"],
                   ["Seat Type",      SEAT_TYPE_DISPLAY[seatType]],
                   ["Tickets",        `${quantity}`],
@@ -575,51 +533,18 @@ export default function BookTicket() {
                 </div>
               </div>
 
-              {/* Success */}
-              {bookingSuccess && (
-                <div style={{
-                  background: "#e8f5e9", border: "1px solid #a5d6a7", color: "#2e7d32",
-                  borderRadius: "6px", padding: "0.6rem 0.75rem", fontSize: "0.78rem",
-                  fontWeight: 600, marginTop: "0.75rem", textAlign: "center",
-                }}>
-                  <i className="fa-solid fa-circle-check" /> Booking confirmed!{" "}
-                  <button onClick={() => navigate("/user")} style={{
-                    background: "none", border: "none", color: "#1a5c2e",
-                    fontWeight: 700, cursor: "pointer", textDecoration: "underline",
-                    padding: 0, fontSize: "0.78rem",
-                  }}>
-                    View in Dashboard →
-                  </button>
-                </div>
-              )}
-
-              {/* Error */}
-              {bookingError && (
-                <div style={{
-                  background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c",
-                  borderRadius: "6px", padding: "0.6rem 0.75rem", fontSize: "0.78rem",
-                  fontWeight: 600, marginTop: "0.75rem",
-                }}>
-                  <i className="fa-solid fa-circle-xmark" /> {bookingError}
-                </div>
-              )}
-
               <button
                 className="purchase-btn"
                 onClick={handlePurchase}
-                disabled={selectedSeats.length !== quantity || !selectedScreening || bookingLoading || bookingSuccess}
+                disabled={selectedSeats.length !== quantity || !selectedScreening}
               >
-                {bookingLoading
-                  ? <><i className="fa-solid fa-spinner fa-spin" /> Processing…</>
-                  : bookingSuccess
-                  ? <><i className="fa-solid fa-check" /> Booked!</>
-                  : !user
+                {!user
                   ? <><i className="fa-solid fa-lock" /> Login to Purchase</>
                   : <><i className="fa-solid fa-credit-card" /> PURCHASE TICKET</>
                 }
               </button>
 
-              {selectedSeats.length !== quantity && !bookingSuccess && (
+              {selectedSeats.length !== quantity && (
                 <p className="purchase-hint">
                   Please select {quantity - selectedSeats.length} more seat{quantity - selectedSeats.length !== 1 ? "s" : ""} to continue
                 </p>
