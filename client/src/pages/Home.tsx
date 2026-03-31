@@ -32,12 +32,6 @@ const posterSrc = (url: string | null): string => {
 
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
-const formatDate = (dateStr: string | null): string => {
-  if (!dateStr) return ""
-  const d = new Date(dateStr)
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-}
-
 // ── Poster with fallback ───────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
@@ -76,6 +70,7 @@ export default function Home() {
   const navigate    = useNavigate()
   const { user }    = useAuth()
   const isAdmin     = user?.role === "admin"
+  const isLoggedIn  = !!user
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -124,8 +119,8 @@ export default function Home() {
     setHoveredId(null)
   }
 
-  const handleEditMovie   = (movieId: number) => navigate("/admin", { state: { editMovieId: movieId } })
-  const handleGetTickets  = (movieId: number) => navigate(`/book/${movieId}`)
+  const handleEditMovie  = (movieId: number) => navigate("/admin", { state: { editMovieId: movieId } })
+  const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
 
   return (
     <div className="home-wrapper">
@@ -147,7 +142,6 @@ export default function Home() {
 
         {heroMovie && (
           <div className="hero-text">
-            {/* Status ribbon on hero */}
             <span className="hero-status-badge">
               <i className="fa-solid fa-circle" style={{ fontSize: "0.5rem", marginRight: "0.4rem", color: "#4CAF50" }} />
               {heroMovie.status === "now_showing" ? "Now Showing" : "Coming Soon"}
@@ -176,14 +170,14 @@ export default function Home() {
                 >
                   <i className="fa-solid fa-pen" /> Edit Movie
                 </button>
-              ) : (
+              ) : isLoggedIn ? (
                 <button
                   className="hero-tickets-btn"
                   onClick={() => handleGetTickets(heroMovie.id)}
                 >
                   <i className="fa-solid fa-ticket" /> Get Tickets
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         )}
@@ -249,86 +243,37 @@ export default function Home() {
 
                 <MoviePoster movie={movie} />
 
-                {/* ── Hover Detail Overlay ── */}
-                <div className={`movie-card-detail-overlay ${hoveredId === movie.id ? "visible" : ""}`}>
-
-                  {/* Title */}
-                  <div className="movie-detail-title">
-                    {movie.title.length > 28 ? movie.title.substring(0, 28) + "…" : movie.title}
+                {/* ── Hover Overlay — only Get Tickets button ── */}
+                <div className={`movie-card-overlay ${hoveredId === movie.id ? "visible" : ""}`}>
+                  <div className="movie-card-hover-title">
+                    {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
                   </div>
 
-                  {/* Info rows */}
-                  <div className="movie-detail-info">
-                    {movie.genre && (
-                      <div className="movie-detail-row">
-                        <span className="movie-detail-label">
-                          <i className="fa-solid fa-masks-theater" /> Genre
-                        </span>
-                        <span className="movie-detail-value">
-                          {movie.genre.length > 20 ? movie.genre.substring(0, 20) + "…" : movie.genre}
-                        </span>
-                      </div>
-                    )}
-                    {movie.language && (
-                      <div className="movie-detail-row">
-                        <span className="movie-detail-label">
-                          <i className="fa-solid fa-language" /> Language
-                        </span>
-                        <span className="movie-detail-value">{movie.language}</span>
-                      </div>
-                    )}
-                    {movie.duration_mins && (
-                      <div className="movie-detail-row">
-                        <span className="movie-detail-label">
-                          <i className="fa-regular fa-clock" /> Duration
-                        </span>
-                        <span className="movie-detail-value">{movie.duration_mins} min</span>
-                      </div>
-                    )}
-                    {movie.release_date && (
-                      <div className="movie-detail-row">
-                        <span className="movie-detail-label">
-                          <i className="fa-regular fa-calendar" /> Release
-                        </span>
-                        <span className="movie-detail-value">{formatDate(movie.release_date)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Divider */}
-                  <div className="movie-detail-divider" />
-
-                  {/* Action buttons */}
-                  <div className="movie-detail-actions">
-                    {movie.trailer_url && !isAdmin && (
-                      <a
-                        href={movie.trailer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="movie-trailer-btn"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <i className="fa-solid fa-play" /> Trailer
-                      </a>
-                    )}
-                    {isAdmin ? (
-                      <button
-                        className="get-tickets-btn edit-movie-btn"
-                        onClick={() => handleEditMovie(movie.id)}
-                      >
-                        <i className="fa-solid fa-pen" /> Edit
-                      </button>
-                    ) : (
-                      <button
-                        className="get-tickets-btn"
-                        onClick={() => handleGetTickets(movie.id)}
-                      >
-                        <i className="fa-solid fa-ticket" /> Get Tickets
-                      </button>
-                    )}
-                  </div>
-
+                  {isAdmin ? (
+                    <button
+                      className="get-tickets-btn edit-movie-btn"
+                      onClick={() => handleEditMovie(movie.id)}
+                    >
+                      <i className="fa-solid fa-pen" /> Edit Movie
+                    </button>
+                  ) : isLoggedIn ? (
+                    <button
+                      className="get-tickets-btn"
+                      onClick={() => handleGetTickets(movie.id)}
+                    >
+                      <i className="fa-solid fa-ticket" /> Get Tickets
+                    </button>
+                  ) : (
+                    // not logged in → show login prompt
+                    <button
+                      className="get-tickets-btn login-prompt-btn"
+                      onClick={() => navigate("/login")}
+                    >
+                      <i className="fa-solid fa-user" /> Login to Book
+                    </button>
+                  )}
                 </div>
+
               </div>
             ))}
           </div>
