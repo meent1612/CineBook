@@ -19,15 +19,23 @@ class Screening extends Model
         'available_seats',
     ];
 
-   
     public function movie()
     {
         return $this->belongsTo(Movie::class);
     }
 
-    
     public function hall()
     {
         return $this->belongsTo(Hall::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function seatLocks()
+    {
+        return $this->hasMany(SeatLock::class);
     }
 }

@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useBranch } from "../context/BranchContext"
+import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Bookticket.css"
+
 // ── Types ──────────────────────────────────────────────
 interface Movie {
   id: number
@@ -20,35 +22,59 @@ interface Screening {
   movie_id: number
   show_date: string
   start_time: string
-  hall_name: string
+  hall_name: string | null
+  hall?: { id: number; name: string; capacity: number }
   available_seats: number
 }
+
+interface ApiSeat {
+  id: number
+  row_label: string
+  seat_number: number
+  seat_type: SeatTypeKey
+  seat_label: string
+  status: "available" | "taken" | "locked"
+  price: number
+}
+
+type SeatTypeKey     = "standard" | "semi_recliner" | "premium" | "vip"
+type LocalSeatStatus = "available" | "selected" | "taken"
 
 // ── Constants ──────────────────────────────────────────
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
-const ROWS = ["A","B","C","D","E","F","G","H","I","J","K","L"]
-const COLS = 14
+const TYPE_ORDER: SeatTypeKey[] = ["standard", "semi_recliner", "premium", "vip"]
 
-type SeatStatus = "available" | "selected" | "taken"
-
-const SEAT_COLORS: Record<SeatStatus, string> = {
-  available: "#4CAF50",
-  selected:  "#FF9800",
-  taken:     "#9E9E9E",
+const SEAT_TYPE_DISPLAY: Record<SeatTypeKey, string> = {
+  standard:      "Standard",
+  semi_recliner: "Semi-Recliner",
+  premium:       "Premium",
+  vip:           "VIP",
 }
 
-const LEGEND = [
-  { color: "#4CAF50", label: "Available" },
-  { color: "#FF9800", label: "Selected"  },
-  { color: "#9E9E9E", label: "Taken"     },
+const PRICES: Record<SeatTypeKey, number> = {
+  standard:      400,
+  semi_recliner: 615,
+  premium:       815,
+  vip:           1200,
+}
+
+const ZONE_COLORS: Record<SeatTypeKey, string> = {
+  standard:      "#2196F3",
+  semi_recliner: "#9C27B0",
+  premium:       "#c8a96e",
+  vip:           "#6B1829",
+}
+
+const LEGEND_ITEMS = [
+  { color: "#2196F3", label: "Standard"      },
+  { color: "#9C27B0", label: "Semi-Recliner" },
+  { color: "#c8a96e", label: "Premium"       },
+  { color: "#6B1829", label: "VIP"           },
+  { color: "#FF9800", label: "Selected"      },
+  { color: "#9E9E9E", label: "Taken"         },
 ]
-
-const PRICES: Record<string, number> = {
-  "Premium":       815,
-  "Semi-recliner": 615,
-}
 
 const formatTime = (time: string): string => {
   const [h, m] = time.split(":")
@@ -56,6 +82,12 @@ const formatTime = (time: string): string => {
   const ampm   = hour >= 12 ? "PM" : "AM"
   const hour12 = hour % 12 || 12
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
+}
+
+// Reads hall name from either hall_name (flat) or hall.name (nested)
+const getHallName = (screening: Screening | null): string => {
+  if (!screening) return "—"
+  return screening.hall_name || screening.hall?.name || "—"
 }
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
@@ -69,27 +101,11 @@ const formatDateLabel = (dateStr: string): { display: string; day: string } => {
   }
 }
 
-const generateSeats = (): Record<string, SeatStatus> => {
-  const takenSeats = new Set([
-    "A3","A4","B6","B7","C2","C8","D5","E9","F3","F4","F5",
-    "G7","G8","H1","H2","I6","J3","J4","K9","L5","L6","L7",
-  ])
-  const map: Record<string, SeatStatus> = {}
-  ROWS.forEach(row => {
-    for (let c = 1; c <= COLS; c++) {
-      const key = `${row}${c}`
-      map[key] = takenSeats.has(key) ? "taken" : "available"
-    }
-  })
-  return map
-}
-
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const src = movie.poster_url
     ? movie.poster_url.startsWith("/") ? `${BACKEND}${movie.poster_url}` : movie.poster_url
     : ""
-
   if (!src || failed) {
     return <div className="summary-poster-fallback"><i className="fa-solid fa-film" /></div>
   }
@@ -111,7 +127,8 @@ function Section({ title, children, className }: {
 export default function BookTicket() {
   const { id }              = useParams<{ id: string }>()
   const navigate            = useNavigate()
-  const { selectedTheater } = useBranch()           // ← branch context
+  const { selectedTheater } = useBranch()
+  const { user, token }     = useAuth()
 
   const [movie,             setMovie]             = useState<Movie | null>(null)
   const [screenings,        setScreenings]        = useState<Screening[]>([])
@@ -119,11 +136,20 @@ export default function BookTicket() {
   const [error,             setError]             = useState("")
   const [selectedDate,      setSelectedDate]      = useState("")
   const [selectedScreening, setSelectedScreening] = useState<Screening | null>(null)
-  const [seatType,          setSeatType]          = useState<"Premium" | "Semi-recliner">("Premium")
-  const [quantity,          setQuantity]          = useState(1)
-  const [seats,             setSeats]             = useState<Record<string, SeatStatus>>(generateSeats)
-  const [selectedSeats,     setSelectedSeats]     = useState<string[]>([])
 
+  const [seatsByRow,     setSeatsByRow]     = useState<Record<string, ApiSeat[]>>({})
+  const [seatStatusMap,  setSeatStatusMap]  = useState<Record<string, LocalSeatStatus>>({})
+  const [seatIdMap,      setSeatIdMap]      = useState<Record<string, number>>({})
+  const [seatTypeMap,    setSeatTypeMap]    = useState<Record<string, SeatTypeKey>>({})
+  const [availableTypes, setAvailableTypes] = useState<SeatTypeKey[]>([])
+  const [seatsLoading,   setSeatsLoading]   = useState(false)
+
+  const [seatType,        setSeatType]        = useState<SeatTypeKey>("standard")
+  const [quantity,        setQuantity]        = useState(1)
+  const [selectedSeats,   setSelectedSeats]   = useState<string[]>([])
+  const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([])
+
+  // ── Load movie + screenings ──────────────────────────
   useEffect(() => {
     if (!id) return
     const fetchData = async () => {
@@ -165,28 +191,106 @@ export default function BookTicket() {
     fetchData()
   }, [id])
 
+  // ── Load seats when screening changes ────────────────
+  const fetchSeats = useCallback(async (screeningId: number) => {
+    setSeatsLoading(true)
+    try {
+      const res  = await fetch(`${API_URL}/seats/${screeningId}`)
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+
+      const statusMap: Record<string, LocalSeatStatus> = {}
+      const idMap:     Record<string, number>           = {}
+      const typeMap:   Record<string, SeatTypeKey>      = {}
+      const rows:      Record<string, ApiSeat[]>        = {}
+      const typesFound = new Set<SeatTypeKey>()
+
+      Object.entries(data.seats as Record<string, ApiSeat[]>).forEach(([row, seats]) => {
+        rows[row] = seats
+        seats.forEach(seat => {
+          const local: LocalSeatStatus = seat.status === "available" ? "available" : "taken"
+          statusMap[seat.seat_label] = local
+          idMap[seat.seat_label]     = seat.id
+          typeMap[seat.seat_label]   = seat.seat_type
+          typesFound.add(seat.seat_type)
+        })
+      })
+
+      setSeatsByRow(rows)
+      setSeatStatusMap(statusMap)
+      setSeatIdMap(idMap)
+      setSeatTypeMap(typeMap)
+      setSelectedSeats([])
+      setSelectedSeatIds([])
+
+      const orderedTypes = TYPE_ORDER.filter(t => typesFound.has(t))
+      setAvailableTypes(orderedTypes)
+      setSeatType(prev => orderedTypes.includes(prev) ? prev : (orderedTypes[0] ?? "standard"))
+    } catch {
+      setSeatsByRow({})
+    } finally {
+      setSeatsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedScreening) return
+    fetchSeats(selectedScreening.id)
+  }, [selectedScreening?.id])
+
+  // ── Derived values ────────────────────────────────────
   const availableDates    = [...new Set(screenings.map(s => s.show_date))].sort()
   const screeningsForDate = screenings
     .filter(s => s.show_date === selectedDate)
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const PRICE = PRICES[seatType]
-  const TOTAL = selectedSeats.length * PRICE
+  const TOTAL = selectedSeats.length * PRICES[seatType]
 
-  // ── Location display from selected theater ──
-  const locationDisplay = selectedTheater ? selectedTheater.name : "—"
+  const locationDisplay = selectedTheater ? selectedTheater.name    : "—"
   const locationAddress = selectedTheater ? selectedTheater.address : "—"
 
-  const toggleSeat = (key: string) => {
-    const status = seats[key]
-    if (status === "taken") return
-    if (status === "selected") {
-      setSeats(prev => ({ ...prev, [key]: "available" }))
+  // ── Seat toggling ─────────────────────────────────────
+  const toggleSeat = async (key: string) => {
+    const localStatus  = seatStatusMap[key] || "available"
+    const thisSeatType = seatTypeMap[key]
+
+    if (localStatus === "taken")   return
+    if (thisSeatType !== seatType) return
+
+    if (localStatus === "selected") {
+      setSeatStatusMap(prev => ({ ...prev, [key]: "available" }))
       setSelectedSeats(prev => prev.filter(k => k !== key))
+      setSelectedSeatIds(prev => prev.filter(id => id !== seatIdMap[key]))
+
+      if (user && token && selectedScreening) {
+        fetch(`${API_URL}/seats/unlock`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body:    JSON.stringify({ screening_id: selectedScreening.id, seat_ids: [seatIdMap[key]] }),
+        }).catch(() => {})
+      }
     } else {
       if (selectedSeats.length >= quantity) return
-      setSeats(prev => ({ ...prev, [key]: "selected" }))
+
+      if (user && token && selectedScreening) {
+        try {
+          const res = await fetch(`${API_URL}/seats/lock`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body:    JSON.stringify({ screening_id: selectedScreening.id, seat_ids: [seatIdMap[key]] }),
+          })
+          if (res.status === 409) {
+            fetchSeats(selectedScreening.id)
+            return
+          }
+        } catch {
+          // network error — still allow selection
+        }
+      }
+
+      setSeatStatusMap(prev => ({ ...prev, [key]: "selected" }))
       setSelectedSeats(prev => [...prev, key])
+      setSelectedSeatIds(prev => [...prev, seatIdMap[key]])
     }
   }
 
@@ -195,13 +299,25 @@ export default function BookTicket() {
     if (selectedSeats.length > newQty) {
       const toKeep   = selectedSeats.slice(0, newQty)
       const toRemove = selectedSeats.slice(newQty)
-      setSeats(prev => {
+      setSeatStatusMap(prev => {
         const updated = { ...prev }
         toRemove.forEach(k => { updated[k] = "available" })
         return updated
       })
       setSelectedSeats(toKeep)
+      setSelectedSeatIds(prev => prev.slice(0, newQty))
     }
+  }
+
+  const handleSeatTypeChange = (type: SeatTypeKey) => {
+    setSeatStatusMap(prev => {
+      const updated = { ...prev }
+      selectedSeats.forEach(k => { updated[k] = "available" })
+      return updated
+    })
+    setSelectedSeats([])
+    setSelectedSeatIds([])
+    setSeatType(type)
   }
 
   const handleDateChange = (date: string) => {
@@ -210,24 +326,29 @@ export default function BookTicket() {
       .filter(s => s.show_date === date)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]
     setSelectedScreening(first || null)
-    setSeats(generateSeats())
-    setSelectedSeats([])
   }
 
   const handleScreeningChange = (screening: Screening) => {
     setSelectedScreening(screening)
-    setSeats(generateSeats())
-    setSelectedSeats([])
   }
 
+  // ── Purchase — redirects to home (payment in checkpoint 3) ──
+  const handlePurchase = () => {
+    if (!user || !token) { navigate("/login"); return }
+    if (!selectedScreening || selectedSeatIds.length === 0) return
+    navigate("/")
+  }
+
+  // ── Render guards ─────────────────────────────────────
   if (loading) return <div className="book-loading">Loading booking page…</div>
-  if (error)   return <div className="book-error">{error}<button onClick={() => navigate(-1)}>Go Back</button></div>
+  if (error)   return (
+    <div className="book-error">{error}<button onClick={() => navigate(-1)}>Go Back</button></div>
+  )
   if (!movie)  return null
 
   return (
     <div className="book-wrapper">
 
-      {/* Location Bar — uses selected theater */}
       <div className="book-location-bar">
         <div className="book-location-label">
           <i className="fa-solid fa-location-dot" /> {locationDisplay}
@@ -264,7 +385,7 @@ export default function BookTicket() {
             ) : (
               <div className="showtime-row">
                 <div className="hall-badge">
-                  <i className="fa-solid fa-building" /> {selectedScreening?.hall_name || "—"}
+                  <i className="fa-solid fa-building" /> {getHallName(selectedScreening)}
                 </div>
                 {screeningsForDate.map(s => (
                   <button key={s.id} onClick={() => handleScreeningChange(s)}
@@ -279,14 +400,22 @@ export default function BookTicket() {
 
           <div className="seat-type-quantity-row">
             <Section title="Select Seat Type">
-              {Object.entries(PRICES).map(([type, price]) => (
-                <label key={type} className="seat-type-option">
-                  <input type="radio" checked={seatType === type}
-                    onChange={() => setSeatType(type as "Premium" | "Semi-recliner")} />
-                  <span>{type}</span>
-                  <span className="seat-type-price">BDT {price}</span>
-                </label>
-              ))}
+              {availableTypes.length === 0 ? (
+                <p className="book-empty">Loading…</p>
+              ) : (
+                availableTypes.map(type => (
+                  <label key={type} className="seat-type-option">
+                    <input type="radio" checked={seatType === type}
+                      onChange={() => handleSeatTypeChange(type)} />
+                    <span style={{
+                      display: "inline-block", width: "10px", height: "10px",
+                      borderRadius: "2px", background: ZONE_COLORS[type], flexShrink: 0,
+                    }} />
+                    <span>{SEAT_TYPE_DISPLAY[type]}</span>
+                    <span className="seat-type-price">BDT {PRICES[type]}</span>
+                  </label>
+                ))
+              )}
             </Section>
 
             <Section title="Ticket Quantity">
@@ -305,51 +434,74 @@ export default function BookTicket() {
             <div className="seat-selection-info">
               <span>Selected: <strong>{selectedSeats.length} / {quantity}</strong></span>
               {selectedSeats.length === quantity && (
-                <span className="seat-limit-reached"><i className="fa-solid fa-check" /> Limit reached</span>
+                <span className="seat-limit-reached">
+                  <i className="fa-solid fa-check" /> Limit reached
+                </span>
               )}
             </div>
+
             <div className="seat-legend">
-              {LEGEND.map(({ color, label }) => (
+              {LEGEND_ITEMS.map(({ color, label }) => (
                 <span key={label} className="legend-item">
                   <span className="legend-dot" style={{ background: color }} />{label}
                 </span>
               ))}
             </div>
-            <div className="seat-map-wrapper">
-              {ROWS.map(row => (
-                <div key={row} className="seat-row">
-                  <span className="seat-row-label">{row}</span>
-                  {Array.from({ length: COLS }, (_, i) => {
-                    const key    = `${row}${i + 1}`
-                    const status = seats[key] || "available"
-                    const isBlockedByLimit = status === "available" && selectedSeats.length >= quantity
-                    return (
-                      <button key={key} onClick={() => toggleSeat(key)} title={key}
-                        className={`seat-btn ${status}`}
-                        style={{
-                          background: SEAT_COLORS[status],
-                          opacity:    isBlockedByLimit ? 0.35 : 1,
-                          cursor:     isBlockedByLimit || status === "taken" ? "not-allowed" : "pointer",
-                        }}
-                        disabled={status === "taken"}
-                        aria-label={`Seat ${key} — ${status}`}
-                      />
-                    )
-                  })}
-                </div>
-              ))}
-              <div className="theatre-screen">THEATRE SCREEN</div>
-            </div>
+
+            {seatsLoading ? (
+              <p className="book-empty" style={{ padding: "1rem 0" }}>
+                <i className="fa-solid fa-spinner fa-spin" /> Loading seats…
+              </p>
+            ) : Object.keys(seatsByRow).length === 0 ? (
+              <p className="book-empty">No seat data available.</p>
+            ) : (
+              <div className="seat-map-wrapper">
+                {Object.keys(seatsByRow).sort().map(row => (
+                  <div key={row} className="seat-row">
+                    <span className="seat-row-label">{row}</span>
+                    {seatsByRow[row].map(seat => {
+                      const key         = seat.seat_label
+                      const localStatus = seatStatusMap[key] || "available"
+                      const isWrongZone = seat.seat_type !== seatType
+                      const isTaken     = localStatus === "taken"
+                      const isSelected  = localStatus === "selected"
+                      const atLimit     = localStatus === "available" && !isWrongZone && selectedSeats.length >= quantity
+
+                      let bg = ZONE_COLORS[seat.seat_type]
+                      if (isSelected) bg = "#FF9800"
+                      if (isTaken)    bg = "#9E9E9E"
+
+                      const opacity = isTaken ? 0.5 : isWrongZone ? 0.18 : atLimit ? 0.35 : 1
+                      const cursor  = isTaken || isWrongZone || atLimit ? "not-allowed" : "pointer"
+
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => toggleSeat(key)}
+                          title={`${key} — ${SEAT_TYPE_DISPLAY[seat.seat_type]} — BDT ${seat.price}${isTaken ? " — Taken" : isSelected ? " — Selected" : ""}`}
+                          className={`seat-btn ${localStatus}`}
+                          style={{ background: bg, opacity, cursor }}
+                          disabled={isTaken}
+                          aria-label={`Seat ${key}`}
+                        />
+                      )
+                    })}
+                  </div>
+                ))}
+                <div className="theatre-screen">THEATRE SCREEN</div>
+              </div>
+            )}
           </Section>
+
         </div>
 
-        {/* Summary */}
         <div className="book-right">
           <div className="summary-card">
             <div className="summary-header">
               <i className="fa-solid fa-ticket" /> Tickets Summary
             </div>
             <div className="summary-body">
+
               <div className="summary-movie-row">
                 <MoviePoster movie={movie} />
                 <div>
@@ -364,9 +516,9 @@ export default function BookTicket() {
                   ["Theater",        locationDisplay],
                   ["Location",       locationAddress],
                   ["Show Date",      selectedDate || "—"],
-                  ["Hall",           selectedScreening?.hall_name || "—"],
+                  ["Hall",           getHallName(selectedScreening)],
                   ["Show Time",      selectedScreening ? formatTime(selectedScreening.start_time) : "—"],
-                  ["Seat Type",      seatType],
+                  ["Seat Type",      SEAT_TYPE_DISPLAY[seatType]],
                   ["Tickets",        `${quantity}`],
                   ["Selected Seats", selectedSeats.length > 0 ? selectedSeats.join(", ") : "—"],
                 ].map(([k, v]) => (
@@ -381,10 +533,15 @@ export default function BookTicket() {
                 </div>
               </div>
 
-              <button className="purchase-btn"
+              <button
+                className="purchase-btn"
+                onClick={handlePurchase}
                 disabled={selectedSeats.length !== quantity || !selectedScreening}
-                title={selectedSeats.length !== quantity ? `Please select ${quantity} seat(s)` : ""}>
-                <i className="fa-solid fa-credit-card" /> PURCHASE TICKET
+              >
+                {!user
+                  ? <><i className="fa-solid fa-lock" /> Login to Purchase</>
+                  : <><i className="fa-solid fa-credit-card" /> PURCHASE TICKET</>
+                }
               </button>
 
               {selectedSeats.length !== quantity && (
