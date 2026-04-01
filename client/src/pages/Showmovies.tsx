@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import "../CSSfiles/Showmovies.css"
 
-
 interface Movie {
   id: number
   title: string
@@ -18,7 +17,6 @@ interface Movie {
   is_active: boolean
 }
 
-
 const TABS    = ["Now Showing", "Coming Soon"] as const
 type Tab      = typeof TABS[number]
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
@@ -31,6 +29,11 @@ const posterSrc = (url: string | null): string => {
 
 const FALLBACK_COLORS = ["#4e0f1a", "#1a3a5c", "#1a4d2e", "#3b1f5e", "#7a3b00", "#1f4040"]
 
+const formatDate = (dateStr: string | null): string => {
+  if (!dateStr) return ""
+  const d = new Date(dateStr)
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+}
 
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
@@ -55,17 +58,17 @@ function MoviePoster({ movie }: { movie: Movie }) {
   )
 }
 
-
 export default function Showtimes() {
-  const [activeTab,  setActiveTab]  = useState<Tab>("Now Showing")
-  const [movieList,  setMovieList]  = useState<Movie[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState("")
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
+  const [movieList, setMovieList] = useState<Movie[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState("")
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
 
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const isAdmin  = user?.role === "admin"
+  const navigate    = useNavigate()
+  const { user }    = useAuth()
+  const isAdmin     = user?.role === "admin"
+  const isLoggedIn  = !!user
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -91,12 +94,7 @@ export default function Showtimes() {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab)
-    setExpandedId(null)
-  }
-
-  const handleCardClick = (movieId: number) => {
-    
-    setExpandedId(prev => prev === movieId ? null : movieId)
+    setHoveredId(null)
   }
 
   const handleGetTickets = (movieId: number) => {
@@ -110,13 +108,13 @@ export default function Showtimes() {
   return (
     <div className="st-wrapper">
 
-      
+      {/* Header */}
       <div className="st-header">
         <h1 className="st-header-title">View All Movies</h1>
         <p className="st-header-sub">View all the latest movies that are available at CineBook</p>
       </div>
 
-      
+      {/* Tabs */}
       <div className="st-tabs-bar">
         {TABS.map(tab => (
           <button
@@ -129,130 +127,121 @@ export default function Showtimes() {
         ))}
       </div>
 
-     
       {loading && <p className="st-state-msg">Loading movies…</p>}
       {error   && <p className="st-state-msg st-state-error">{error}</p>}
       {!loading && !error && displayed.length === 0 && (
         <p className="st-state-msg">No movies available right now.</p>
       )}
 
-      
+      {/* Movie Grid */}
       {!loading && !error && displayed.length > 0 && (
         <div className="st-grid">
-          {displayed.map(movie => {
-            const isExpanded = expandedId === movie.id
+          {displayed.map(movie => (
+            <div
+              key={movie.id}
+              className={`st-card st-card-poster ${hoveredId === movie.id ? "st-hovered" : ""}`}
+              onMouseEnter={() => setHoveredId(movie.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              {/* Category badge top-left */}
+              <div className="st-category-badge">{movie.category}</div>
 
-           
-            if (isExpanded) {
-              return (
-                <div key={movie.id} className="st-card st-card-info">
-                 
-                  <div className="st-info-top">
-                    {movie.trailer_url ? (
-                      <a
-                        href={movie.trailer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="st-play-btn"
-                        aria-label="Watch trailer"
-                      >
-                        <i className="fa-regular fa-circle-play" />
-                      </a>
-                    ) : (
-                      <div className="st-play-btn st-play-btn-disabled">
-                        <i className="fa-regular fa-circle-play" />
-                      </div>
-                    )}
-                  </div>
+              {/* Status ribbon top-right */}
+              <div className={`st-ribbon ${movie.status === "now_showing" ? "st-ribbon-showing" : "st-ribbon-soon"}`}>
+                {movie.status === "now_showing" ? "Now Showing" : "Coming Soon"}
+              </div>
 
-                  <div className="st-info-body">
-                    <div className="st-info-title">{movie.title}</div>
+              <MoviePoster movie={movie} />
 
-                    {movie.release_date && (
-                      <div className="st-info-row">
-                        <span className="st-info-label">RELEASE :</span>
-                        <span className="st-info-value">{movie.release_date}</span>
-                      </div>
-                    )}
+              {/* Hover detail overlay */}
+              <div className={`st-hover-overlay ${hoveredId === movie.id ? "visible" : ""}`}>
 
-                    {movie.genre && (
-                      <div className="st-info-row">
-                        <span className="st-info-label">GENRE :</span>
-                        <span className="st-info-value">{movie.genre.toUpperCase()}</span>
-                      </div>
-                    )}
+                {/* Title */}
+                <div className="st-hover-title">
+                  {movie.title.length > 28 ? movie.title.substring(0, 28) + "…" : movie.title}
+                </div>
 
-                    {movie.duration_mins && (
-                      <div className="st-info-row">
-                        <span className="st-info-label">DURATION :</span>
-                        <span className="st-info-value">{movie.duration_mins} min</span>
-                      </div>
-                    )}
+                {/* Info rows */}
+                <div className="st-hover-info">
+                  {movie.genre && (
+                    <div className="st-hover-row">
+                      <span className="st-hover-label">
+                        <i className="fa-solid fa-masks-theater" /> Genre
+                      </span>
+                      <span className="st-hover-value">
+                        {movie.genre.length > 18 ? movie.genre.substring(0, 18) + "…" : movie.genre}
+                      </span>
+                    </div>
+                  )}
+                  {movie.language && (
+                    <div className="st-hover-row">
+                      <span className="st-hover-label">
+                        <i className="fa-solid fa-language" /> Language
+                      </span>
+                      <span className="st-hover-value">{movie.language}</span>
+                    </div>
+                  )}
+                  {movie.duration_mins && (
+                    <div className="st-hover-row">
+                      <span className="st-hover-label">
+                        <i className="fa-regular fa-clock" /> Duration
+                      </span>
+                      <span className="st-hover-value">{movie.duration_mins} min</span>
+                    </div>
+                  )}
+                  {movie.release_date && (
+                    <div className="st-hover-row">
+                      <span className="st-hover-label">
+                        <i className="fa-regular fa-calendar" /> Release
+                      </span>
+                      <span className="st-hover-value">{formatDate(movie.release_date)}</span>
+                    </div>
+                  )}
+                </div>
 
-                    {movie.language && (
-                      <div className="st-info-row">
-                        <span className="st-info-label">LANGUAGE :</span>
-                        <span className="st-info-value">{movie.language}</span>
-                      </div>
-                    )}
-                  </div>
+                {/* Divider */}
+                <div className="st-hover-divider" />
 
-                  <div className="st-info-actions">
+                {/* Action buttons */}
+                <div className="st-hover-actions">
+                  {movie.trailer_url && !isAdmin && (
+                    <a
+                      href={movie.trailer_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="st-trailer-btn"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <i className="fa-solid fa-play" /> Trailer
+                    </a>
+                  )}
+                  {isAdmin ? (
+                    <button
+                      className="st-ticket-btn st-edit-btn"
+                      onClick={() => handleGetTickets(movie.id)}
+                    >
+                      <i className="fa-solid fa-pen" /> Edit
+                    </button>
+                  ) : isLoggedIn ? (
                     <button
                       className="st-ticket-btn"
                       onClick={() => handleGetTickets(movie.id)}
                     >
-                      {isAdmin ? (
-                        <>
-                          <i className="fa-solid fa-pencil"></i> Edit
-                        </>
-                      ) : (
-                        "Get Tickets"
-                      )}
+                      <i className="fa-solid fa-ticket" /> Get Tickets
                     </button>
+                  ) : (
                     <button
-                      className="st-details-btn"
-                      onClick={() => setExpandedId(null)}
+                      className="st-ticket-btn st-login-btn"
+                      onClick={() => navigate("/login")}
                     >
-                      Close
+                      <i className="fa-solid fa-user" /> Login to Book
                     </button>
-                  </div>
+                  )}
                 </div>
-              )
-            }
 
-           
-            return (
-              <div
-                key={movie.id}
-                className="st-card st-card-poster"
-                onClick={() => handleCardClick(movie.id)}
-                role="button"
-                tabIndex={0}
-                aria-label={`View details for ${movie.title}`}
-                onKeyDown={e => e.key === "Enter" && handleCardClick(movie.id)}
-              >
-                <MoviePoster movie={movie} />
-                <div className="st-card-overlay">
-                  <button
-                    className="st-ticket-btn"
-                    onClick={e => {
-                      e.stopPropagation() 
-                      handleGetTickets(movie.id)
-                    }}
-                  >
-                    {isAdmin ? (
-                      <>
-                        <i className="fa-solid fa-pencil"></i> Edit
-                      </>
-                    ) : (
-                      "Get Tickets"
-                    )}
-                  </button>
-                </div>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       )}
 
