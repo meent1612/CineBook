@@ -1,56 +1,65 @@
 USE cinebook_db;
+GO
 
-CREATE TABLE IF NOT EXISTS theaters (
-    id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name       VARCHAR(255) NOT NULL,
-    address    VARCHAR(500) NOT NULL,
-    city       VARCHAR(100) NOT NULL DEFAULT 'Dhaka',
-    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='theaters' AND xtype='U')
+CREATE TABLE theaters (
+    id         BIGINT IDENTITY(1,1) PRIMARY KEY,
+    name       NVARCHAR(255) NOT NULL,
+    address    NVARCHAR(500) NOT NULL,
+    city       NVARCHAR(100) NOT NULL DEFAULT 'Dhaka',
+    is_active  BIT           NOT NULL DEFAULT 1,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
 );
+GO
 
-CREATE TABLE IF NOT EXISTS seats (
-    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    hall_id     BIGINT UNSIGNED NOT NULL,
-    row_label   VARCHAR(5)  NOT NULL,
-    seat_number INT         NOT NULL,
-    seat_type   ENUM('standard', 'semi_recliner', 'premium', 'vip') NOT NULL DEFAULT 'standard',
-    is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_seat (hall_id, row_label, seat_number),
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='seats' AND xtype='U')
+CREATE TABLE seats (
+    id          BIGINT IDENTITY(1,1) PRIMARY KEY,
+    hall_id     BIGINT       NOT NULL,
+    row_label   NVARCHAR(5)  NOT NULL,
+    seat_number INT          NOT NULL,
+    seat_type   NVARCHAR(20) NOT NULL DEFAULT 'standard' CHECK (seat_type IN ('standard', 'semi_recliner', 'premium', 'vip')),
+    is_active   BIT          NOT NULL DEFAULT 1,
+    created_at  DATETIME2 DEFAULT GETDATE(),
+    updated_at  DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT unique_seat UNIQUE (hall_id, row_label, seat_number),
     FOREIGN KEY (hall_id) REFERENCES halls(id) ON DELETE CASCADE
 );
+GO
 
-CREATE TABLE IF NOT EXISTS bookings (
-    id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    booking_group_id VARCHAR(36)  NOT NULL,
-    user_id          BIGINT UNSIGNED NOT NULL,
-    screening_id     BIGINT UNSIGNED NOT NULL,
-    seat_id          BIGINT UNSIGNED NOT NULL,
-    seat_label       VARCHAR(10)  NOT NULL,
-    seat_type        ENUM('standard', 'semi_recliner', 'premium', 'vip') NOT NULL,
-    price            INT          NOT NULL,
-    status           ENUM('confirmed', 'cancelled') NOT NULL DEFAULT 'confirmed',
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_booking (screening_id, seat_id),
-    FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE CASCADE,
-    FOREIGN KEY (screening_id) REFERENCES screenings(id) ON DELETE CASCADE,
-    FOREIGN KEY (seat_id)      REFERENCES seats(id)      ON DELETE CASCADE
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='bookings' AND xtype='U')
+CREATE TABLE bookings (
+    id               BIGINT IDENTITY(1,1) PRIMARY KEY,
+    booking_group_id NVARCHAR(36)  NOT NULL,
+    user_id          BIGINT        NOT NULL,
+    screening_id     BIGINT        NOT NULL,
+    seat_id          BIGINT        NOT NULL,
+    seat_label       NVARCHAR(10)  NOT NULL,
+    seat_type        NVARCHAR(20)  NOT NULL CHECK (seat_type IN ('standard', 'semi_recliner', 'premium', 'vip')),
+    price            INT           NOT NULL,
+    status           NVARCHAR(20)  NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled')),
+    created_at       DATETIME2 DEFAULT GETDATE(),
+    updated_at       DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT unique_booking UNIQUE (screening_id, seat_id),
+    FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE NO ACTION,
+    FOREIGN KEY (screening_id) REFERENCES screenings(id) ON DELETE NO ACTION,
+    FOREIGN KEY (seat_id)      REFERENCES seats(id)      ON DELETE NO ACTION
 );
+GO
 
-CREATE TABLE IF NOT EXISTS seat_locks (
-    id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    screening_id BIGINT UNSIGNED NOT NULL,
-    seat_id      BIGINT UNSIGNED NOT NULL,
-    user_id      BIGINT UNSIGNED NOT NULL,
-    locked_until TIMESTAMP      NOT NULL,
-    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_lock (screening_id, seat_id),
-    FOREIGN KEY (screening_id) REFERENCES screenings(id) ON DELETE CASCADE,
-    FOREIGN KEY (seat_id)      REFERENCES seats(id)      ON DELETE CASCADE,
-    FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE CASCADE
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='seat_locks' AND xtype='U')
+CREATE TABLE seat_locks (
+    id           BIGINT IDENTITY(1,1) PRIMARY KEY,
+    screening_id BIGINT    NOT NULL,
+    seat_id      BIGINT    NOT NULL,
+    user_id      BIGINT    NOT NULL,
+    locked_until DATETIME2 NOT NULL,
+    created_at   DATETIME2 DEFAULT GETDATE(),
+    updated_at   DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT unique_lock UNIQUE (screening_id, seat_id),
+    FOREIGN KEY (screening_id) REFERENCES screenings(id) ON DELETE NO ACTION,
+    FOREIGN KEY (seat_id)      REFERENCES seats(id)      ON DELETE NO ACTION,
+    FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE NO ACTION
 );
+GO
