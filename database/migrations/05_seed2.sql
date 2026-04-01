@@ -1,6 +1,8 @@
 USE cinebook_db;
+GO
 
-DELETE FROM screenings;
+IF NOT EXISTS (SELECT 1 FROM screenings)
+BEGIN
 
 INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seats) VALUES
 
@@ -308,15 +310,27 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 (6, 3, '2026-04-14', '10:00:00', 120),
 (6, 3, '2026-04-14', '13:00:00', 120);
 
+END
+GO
+
 -- ════════════════════════════════════════════
 -- Theaters seed
 -- ════════════════════════════════════════════
-INSERT INTO theaters (name, address, city, is_active) VALUES
-('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',            'Dhaka', true),
-('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka', 'Dhaka', true);
+
+IF NOT EXISTS (SELECT 1 FROM theaters)
+BEGIN
+    INSERT INTO theaters (name, address, city, is_active) VALUES
+    ('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',            'Dhaka', 1),
+    ('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka', 'Dhaka', 1);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM seats)
+BEGIN
+INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 
 -- ── HALL 1 ─────────────────────────────────
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+
 (1,'A',1,'standard'),(1,'A',2,'standard'),(1,'A',3,'standard'),(1,'A',4,'standard'),(1,'A',5,'standard'),
 (1,'A',6,'standard'),(1,'A',7,'standard'),(1,'A',8,'standard'),(1,'A',9,'standard'),(1,'A',10,'standard'),
 (1,'B',1,'standard'),(1,'B',2,'standard'),(1,'B',3,'standard'),(1,'B',4,'standard'),(1,'B',5,'standard'),
@@ -336,10 +350,10 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (1,'I',1,'premium'),(1,'I',2,'premium'),(1,'I',3,'premium'),(1,'I',4,'premium'),(1,'I',5,'premium'),
 (1,'I',6,'premium'),(1,'I',7,'premium'),(1,'I',8,'premium'),(1,'I',9,'premium'),(1,'I',10,'premium'),
 (1,'J',1,'vip'),(1,'J',2,'vip'),(1,'J',3,'vip'),(1,'J',4,'vip'),(1,'J',5,'vip'),
-(1,'J',6,'vip'),(1,'J',7,'vip'),(1,'J',8,'vip'),(1,'J',9,'vip'),(1,'J',10,'vip');
+(1,'J',6,'vip'),(1,'J',7,'vip'),(1,'J',8,'vip'),(1,'J',9,'vip'),(1,'J',10,'vip'),
 
 -- ── HALL 2 ─────────────────────────────────
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+
 (2,'A',1,'standard'),(2,'A',2,'standard'),(2,'A',3,'standard'),(2,'A',4,'standard'),(2,'A',5,'standard'),
 (2,'A',6,'standard'),(2,'A',7,'standard'),(2,'A',8,'standard'),(2,'A',9,'standard'),(2,'A',10,'standard'),
 (2,'B',1,'standard'),(2,'B',2,'standard'),(2,'B',3,'standard'),(2,'B',4,'standard'),(2,'B',5,'standard'),
@@ -355,10 +369,11 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (2,'G',1,'premium'),(2,'G',2,'premium'),(2,'G',3,'premium'),(2,'G',4,'premium'),(2,'G',5,'premium'),
 (2,'G',6,'premium'),(2,'G',7,'premium'),(2,'G',8,'premium'),(2,'G',9,'premium'),(2,'G',10,'premium'),
 (2,'H',1,'vip'),(2,'H',2,'vip'),(2,'H',3,'vip'),(2,'H',4,'vip'),(2,'H',5,'vip'),
-(2,'H',6,'vip'),(2,'H',7,'vip'),(2,'H',8,'vip'),(2,'H',9,'vip'),(2,'H',10,'vip');
+(2,'H',6,'vip'),(2,'H',7,'vip'),(2,'H',8,'vip'),(2,'H',9,'vip'),(2,'H',10,'vip'),
+
 
 -- ── HALL 3 ─────────────────────────────────
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+
 (3,'A',1,'standard'),(3,'A',2,'standard'),(3,'A',3,'standard'),(3,'A',4,'standard'),(3,'A',5,'standard'),(3,'A',6,'standard'),
 (3,'A',7,'standard'),(3,'A',8,'standard'),(3,'A',9,'standard'),(3,'A',10,'standard'),(3,'A',11,'standard'),(3,'A',12,'standard'),
 (3,'B',1,'standard'),(3,'B',2,'standard'),(3,'B',3,'standard'),(3,'B',4,'standard'),(3,'B',5,'standard'),(3,'B',6,'standard'),
@@ -379,3 +394,6 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (3,'I',7,'premium'),(3,'I',8,'premium'),(3,'I',9,'premium'),(3,'I',10,'premium'),(3,'I',11,'premium'),(3,'I',12,'premium'),
 (3,'J',1,'vip'),(3,'J',2,'vip'),(3,'J',3,'vip'),(3,'J',4,'vip'),(3,'J',5,'vip'),(3,'J',6,'vip'),
 (3,'J',7,'vip'),(3,'J',8,'vip'),(3,'J',9,'vip'),(3,'J',10,'vip'),(3,'J',11,'vip'),(3,'J',12,'vip');
+END
+GO
+
