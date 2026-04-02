@@ -16,7 +16,11 @@ class Hall extends Model
         'capacity',
     ];
 
-    
+    protected $casts = [
+        'id'       => 'integer',
+        'capacity' => 'integer',
+    ];
+
     public function screenings()
     {
         return $this->hasMany(Screening::class);

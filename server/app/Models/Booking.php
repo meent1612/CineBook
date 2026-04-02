@@ -22,6 +22,14 @@ class Booking extends Model
         'status',
     ];
 
+    protected $casts = [
+        'id'           => 'integer',
+        'user_id'      => 'integer',
+        'screening_id' => 'integer',
+        'seat_id'      => 'integer',
+        'price'        => 'integer',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
