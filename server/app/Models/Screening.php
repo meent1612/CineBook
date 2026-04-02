@@ -19,6 +19,22 @@ class Screening extends Model
         'available_seats',
     ];
 
+    protected $casts = [
+        'id'              => 'integer',
+        'movie_id'        => 'integer',
+        'hall_id'         => 'integer',
+        'available_seats' => 'integer',
+    ];
+
+    // Strip MSSQL microseconds from TIME column (10:00:00.0000000 → 10:00:00)
+    public function getStartTimeAttribute($value)
+    {
+        if ($value && str_contains($value, '.')) {
+            return substr($value, 0, strpos($value, '.'));
+        }
+        return $value;
+    }
+
     public function movie()
     {
         return $this->belongsTo(Movie::class);

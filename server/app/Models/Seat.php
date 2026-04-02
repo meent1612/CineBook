@@ -19,6 +19,13 @@ class Seat extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'id'          => 'integer',
+        'hall_id'     => 'integer',
+        'seat_number' => 'integer',
+        'is_active'   => 'boolean',
+    ];
+
     public function hall()
     {
         return $this->belongsTo(Hall::class);

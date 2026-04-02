@@ -17,4 +17,9 @@ class Theater extends Model
         'city',
         'is_active',
     ];
+
+    protected $casts = [
+        'id'        => 'integer',
+        'is_active' => 'boolean',
+    ];
 }
