@@ -22,7 +22,9 @@ class ScreeningController extends Controller
             if ($request->has('date')) {
                 $query->where('show_date', $request->date);
             }
-
+            if ($request->has('hall_id')) {
+                $query->where('hall_id', $request->hall_id);
+            }
             // Filter by theater — only return screenings from halls in that theater
             if ($request->has('theater_id')) {
                 $query->whereHas('hall', function ($q) use ($request) {
