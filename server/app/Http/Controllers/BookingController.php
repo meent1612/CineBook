@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Seat;
 use App\Models\SeatLock;
+use App\Models\TicketPrice;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +15,8 @@ class BookingController extends Controller
 {
     private function getPrice(string $seatType): int
     {
-        return match($seatType) {
-            'standard'      => 400,
-            'semi_recliner' => 615,
-            'premium'       => 815,
-            'vip'           => 1200,
-            default         => 400,
-        };
+        $record = TicketPrice::where('seat_type', $seatType)->first();
+        return $record ? $record->price : 400;
     }
 
     // ═══════════════════════════════════════════════════════
