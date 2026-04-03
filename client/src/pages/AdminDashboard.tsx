@@ -181,7 +181,7 @@ export default function AdminDashboard() {
   const { token } = useAuth()
   const location  = useLocation()
 
-  const [selectedMonth, setSelectedMonth] = useState("March")
+  const [selectedMonth, setSelectedMonth] = useState("April")
   const [movieList,     setMovieList]     = useState<Movie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(true)
   const [movieError,    setMovieError]    = useState("")
