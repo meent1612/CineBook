@@ -1,5 +1,3 @@
-// File: src/context/BranchContext.tsx
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
 export interface Theater {
