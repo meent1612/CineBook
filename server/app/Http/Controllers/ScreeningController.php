@@ -15,14 +15,19 @@ class ScreeningController extends Controller
         try {
             $query = Screening::with(['movie', 'hall']);
 
-            
             if ($request->has('movie_id')) {
                 $query->where('movie_id', $request->movie_id);
             }
 
-            
             if ($request->has('date')) {
                 $query->where('show_date', $request->date);
+            }
+
+            // Filter by theater — only return screenings from halls in that theater
+            if ($request->has('theater_id')) {
+                $query->whereHas('hall', function ($q) use ($request) {
+                    $q->where('theater_id', $request->theater_id);
+                });
             }
 
             $screenings = $query->get();

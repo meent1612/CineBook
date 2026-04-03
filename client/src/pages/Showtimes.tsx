@@ -106,9 +106,12 @@ export default function ShowTimes() {
       setLoading(true)
       setError("")
       try {
+        const screeningsUrl = selectedTheater
+          ? `${API_URL}/screenings?theater_id=${selectedTheater.id}`
+          : `${API_URL}/screenings`
         const [moviesRes, screeningsRes] = await Promise.all([
           fetch(`${API_URL}/movies`),
-          fetch(`${API_URL}/screenings`),
+          fetch(screeningsUrl),
         ])
         const moviesData     = await moviesRes.json()
         const screeningsData = await screeningsRes.json()
@@ -125,7 +128,7 @@ export default function ShowTimes() {
       }
     }
     fetchData()
-  }, [])
+  }, [selectedTheater])
 
   const weekDates      = WEEK_DAYS.map(d => d.dateStr)
   const moviesThisWeek = movies.filter(movie =>
