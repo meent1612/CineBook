@@ -117,8 +117,6 @@ const EMPTY_MOVIE = {
   poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
 }
 
-const SLOTS = ["10:00", "15:00", "20:00"]
-
 const formatTime12 = (time: string): string => {
   const [h, m] = time.split(":")
   const hour   = parseInt(h)
@@ -132,6 +130,8 @@ const formatDateDisplay = (dateStr: string): string => {
   return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
 }
 
+const SLOTS = ["10:00", "15:00", "20:00"]
+
 // ── Slot buttons shared component ─────────────────────
 function SlotButtons({
   selected, takenSlots, onSelect,
@@ -141,24 +141,17 @@ function SlotButtons({
   onSelect: (slot: string) => void
 }) {
   return (
-    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+    <div className="slot-btn-row">
       {SLOTS.map(slot => {
-        const taken    = takenSlots.includes(slot)
+        const taken      = takenSlots.includes(slot)
         const isSelected = selected === slot
         return (
           <button key={slot} type="button"
             disabled={taken}
             onClick={() => !taken && onSelect(slot)}
-            style={{
-              flex: 1, padding: "0.5rem", borderRadius: "6px", border: "2px solid",
-              borderColor: taken ? "#555" : isSelected ? "#e50914" : "#666",
-              background:  taken ? "#2a2a2a" : isSelected ? "#e50914" : "#1a1a1a",
-              color:       taken ? "#555" : "#fff",
-              cursor:      taken ? "not-allowed" : "pointer",
-              fontWeight:  isSelected ? 700 : 400,
-            }}>
+            className={`slot-btn ${isSelected ? "slot-selected" : ""} ${taken ? "slot-taken" : ""}`}>
             {formatTime12(slot + ":00")}
-            {taken && <div style={{ fontSize: "0.65rem", color: "#e57373" }}>Taken</div>}
+            {taken && <span className="slot-taken-label">Taken</span>}
           </button>
         )
       })}
@@ -209,39 +202,18 @@ export default function AdminDashboard() {
   })
 
   // ── Edit Screening state ──
-  const [showEditScreening,  setShowEditScreening]  = useState(false)
-  const [editScreeningMovie, setEditScreeningMovie] = useState<Movie | null>(null)
-  const [editScreeningDate,  setEditScreeningDate]  = useState("")
-  const [editScreeningList,  setEditScreeningList]  = useState<Screening[]>([])
-  const [loadingScreenings,  setLoadingScreenings]  = useState(false)
-  const [editingScreeningId, setEditingScreeningId] = useState<number | null>(null)
-  const [editScreeningForm,  setEditScreeningForm]  = useState({
+  const [showEditScreening,   setShowEditScreening]   = useState(false)
+  const [editScreeningMovie,  setEditScreeningMovie]  = useState<Movie | null>(null)
+  const [editScreeningDate,   setEditScreeningDate]   = useState("")
+  const [editScreeningList,   setEditScreeningList]   = useState<Screening[]>([])
+  const [loadingScreenings,   setLoadingScreenings]   = useState(false)
+  const [editingScreeningId,  setEditingScreeningId]  = useState<number | null>(null)
+  const [editScreeningForm,   setEditScreeningForm]   = useState({
     hall_id: "", start_time: "", available_seats: "",
   })
 
-  // ── Inline add state ──
-  const [showInlineAdd,      setShowInlineAdd]      = useState(false)
-  const [inlineNewScreening, setInlineNewScreening] = useState({
-    hall_id: "", start_time: "", available_seats: "",
-  })
-
-  // ── Taken slots state (shared for both add modals) ──
+  // ── Taken slots state (for slot buttons) ──
   const [takenSlots, setTakenSlots] = useState<string[]>([])
-
-  // ── Fetch taken slots for a hall on a date ──────────
-  const fetchTakenSlots = async (hallId: string, date: string) => {
-    if (!hallId || !date) { setTakenSlots([]); return }
-    try {
-      const res  = await fetch(`${API_URL}/screenings?hall_id=${hallId}&date=${date}`)
-      const data = await res.json()
-      if (!data.success) return
-      const times = (data.screenings as { start_time: string }[])
-        .map(s => s.start_time.slice(0, 5))
-      setTakenSlots(times)
-    } catch {
-      setTakenSlots([])
-    }
-  }
 
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
@@ -250,20 +222,26 @@ export default function AdminDashboard() {
     const state = location.state as any
     if (!state) return
 
+    // From Showtimes "Edit Screening" button — open edit modal with movie+date context
     if (state.openScreeningModal && state.editMovieId && state.editDate) {
+      // Wait for movies to load before opening edit modal
       if (movieList.length === 0) return
       const movie = movieList.find(m => m.id === state.editMovieId)
-      if (movie) openEditScreeningModal(movie, state.editDate)
+      if (movie) {
+        openEditScreeningModal(movie, state.editDate)
+      }
       window.history.replaceState({}, "")
       return
     }
 
+    // From Showtimes with just openScreeningModal (no context) — open add modal
     if (state.openScreeningModal) {
       setShowAddScreening(true)
       window.history.replaceState({}, "")
       return
     }
 
+    // From Home "Edit Movie" button
     if (state.editMovieId && movieList.length > 0) {
       const target = movieList.find(m => m.id === state.editMovieId)
       if (target) {
@@ -301,6 +279,22 @@ export default function AdminDashboard() {
     }
   }
 
+  // ── Fetch taken slots for a hall on a date ──
+  const fetchTakenSlots = async (hallId: string, date: string) => {
+    if (!hallId || !date) { setTakenSlots([]); return }
+    try {
+      const res  = await fetch(`${API_URL}/screenings?hall_id=${hallId}&date=${date}`)
+      const data = await res.json()
+      if (!data.success) return
+      const times = (data.screenings as { start_time: string }[])
+        .map(s => s.start_time.slice(0, 5))
+      setTakenSlots(times)
+    } catch {
+      setTakenSlots([])
+    }
+  }
+
+  // ── Fetch screenings for a specific movie on a specific date ──
   const fetchScreeningsForEdit = async (movieId: number, dateStr: string) => {
     setLoadingScreenings(true)
     try {
@@ -327,17 +321,20 @@ export default function AdminDashboard() {
     fetchScreeningsForEdit(movie.id, dateStr)
   }
 
+  // ── Edit a single screening (inline) ──
   const startEditingScreening = (screening: Screening) => {
     const hallMatch = hallList.find(h => h.name === screening.hall_name)
     setEditingScreeningId(screening.id)
     setEditScreeningForm({
       hall_id:         hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
-      start_time:      screening.start_time.slice(0, 5),
+      start_time:      screening.start_time.slice(0, 5), // HH:MM
       available_seats: String(screening.available_seats),
     })
   }
 
-  const cancelEditingScreening = () => setEditingScreeningId(null)
+  const cancelEditingScreening = () => {
+    setEditingScreeningId(null)
+  }
 
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
@@ -359,12 +356,15 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setEditingScreeningId(null)
-      if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      if (editScreeningMovie) {
+        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      }
     } catch (err: any) {
       alert(err.message || "Failed to update screening.")
     }
   }
 
+  // ── Delete a screening ──
   const handleDeleteScreening = async (screeningId: number) => {
     if (!confirm("Are you sure you want to delete this screening?")) return
     try {
@@ -374,7 +374,9 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      if (editScreeningMovie) {
+        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+      }
     } catch (err: any) {
       alert(err.message || "Failed to delete screening.")
     }
@@ -528,6 +530,12 @@ export default function AdminDashboard() {
     }
   }
 
+  // ── Add a screening from within the Edit Screening modal ──
+  const [showInlineAdd, setShowInlineAdd] = useState(false)
+  const [inlineNewScreening, setInlineNewScreening] = useState({
+    hall_id: "", start_time: "", available_seats: "",
+  })
+
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
     const { hall_id, start_time } = inlineNewScreening
@@ -582,11 +590,11 @@ export default function AdminDashboard() {
   const activeMovies = movieList.filter(m => m.is_active)
 
   const stats = [
-    { label: "Tickets Sold",      value: "15,000",                       icon: "fa-ticket" },
-    { label: "Total Movies",      value: movieList.length.toString(),    icon: "fa-film" },
-    { label: "Active Movies",     value: activeMovies.length.toString(), icon: "fa-circle-play" },
-    { label: "Revenue",           value: "40M BDT",                      icon: "fa-sack-dollar" },
-    { label: "Active Screenings", value: "500",                          icon: "fa-clapperboard" },
+    { label: "Tickets Sold",      value: "15,000",                        icon: "fa-ticket" },
+    { label: "Total Movies",      value: movieList.length.toString(),     icon: "fa-film" },
+    { label: "Active Movies",     value: activeMovies.length.toString(),  icon: "fa-circle-play" },
+    { label: "Revenue",           value: "40M BDT",                       icon: "fa-sack-dollar" },
+    { label: "Active Screenings", value: "500",                           icon: "fa-clapperboard" },
   ]
 
   const mgmt = [
@@ -737,7 +745,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* Add Screening Modal                            */}
+      {/* Add Screening Modal (blank — from management)  */}
       {/* ═══════════════════════════════════════════════ */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
@@ -775,19 +783,15 @@ export default function AdminDashboard() {
             />
 
             <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
-                Cancel
-              </button>
-              <button className="modal-confirm-btn" onClick={handleAddScreening}>
-                Add Screening
-              </button>
+              <button className="modal-cancel-btn" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>Cancel</button>
+              <button className="modal-confirm-btn" onClick={handleAddScreening}>Add Screening</button>
             </div>
           </div>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* Edit Screening Modal                           */}
+      {/* Edit Screening Modal (from Showtimes page)     */}
       {/* ═══════════════════════════════════════════════ */}
       {showEditScreening && editScreeningMovie && (
         <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
@@ -812,64 +816,63 @@ export default function AdminDashboard() {
                     <tr>
                       <th>Time</th>
                       <th>Hall</th>
-                      <th>Seats</th>
+                      <th>Theater</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {editScreeningList.map(s => (
-                      <tr key={s.id}>
-                        {editingScreeningId === s.id ? (
-                          <>
-                            <td>
-                              <select className="modal-input" style={{ margin: 0 }}
-                                value={editScreeningForm.start_time}
-                                onChange={e => setEditScreeningForm(p => ({ ...p, start_time: e.target.value }))}>
-                                <option value="" disabled>Select Slot</option>
-                                {SLOTS.map(slot => (
-                                  <option key={slot} value={slot}>{formatTime12(slot + ":00")}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              <select className="modal-input" style={{ margin: 0 }}
-                                value={editScreeningForm.hall_id}
-                                onChange={e => setEditScreeningForm(p => ({ ...p, hall_id: e.target.value }))}>
-                                <HallOptions hallList={hallList} />
-                              </select>
-                            </td>
-                            <td>
-                              <input type="number" className="modal-input" style={{ margin: 0, width: "80px" }}
-                                value={editScreeningForm.available_seats}
-                                onChange={e => setEditScreeningForm(p => ({ ...p, available_seats: e.target.value }))}
-                                min={1} />
-                            </td>
-                            <td>
-                              <div className="edit-screening-actions">
-                                <button className="screening-save-btn" onClick={saveEditingScreening}
-                                  title="Save"><i className="fa-solid fa-check" /></button>
-                                <button className="screening-cancel-btn" onClick={cancelEditingScreening}
-                                  title="Cancel"><i className="fa-solid fa-xmark" /></button>
-                              </div>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td><strong>{formatTime12(s.start_time)}</strong></td>
-                            <td>{s.hall_name}</td>
-                            <td>{s.available_seats}</td>
-                            <td>
-                              <div className="edit-screening-actions">
-                                <button className="screening-edit-btn" onClick={() => startEditingScreening(s)}
-                                  title="Edit"><i className="fa-solid fa-pen" /></button>
-                                <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)}
-                                  title="Delete"><i className="fa-solid fa-trash" /></button>
-                              </div>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
+                    {editScreeningList.map(s => {
+                      const matchedHall = hallList.find(h => h.name === s.hall_name || h.id === s.hall_id)
+                      const theaterName = matchedHall?.theater?.name || "—"
+
+                      return (
+                        <tr key={s.id}>
+                          {editingScreeningId === s.id ? (
+                            <>
+                              <td>
+                                <select className="modal-input" style={{ margin: 0 }}
+                                  value={editScreeningForm.start_time}
+                                  onChange={e => setEditScreeningForm(p => ({ ...p, start_time: e.target.value }))}>
+                                  <option value="" disabled>Select Slot</option>
+                                  {SLOTS.map(slot => (
+                                    <option key={slot} value={slot}>{formatTime12(slot + ":00")}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td colSpan={2}>
+                                <select className="modal-input" style={{ margin: 0 }}
+                                  value={editScreeningForm.hall_id}
+                                  onChange={e => setEditScreeningForm(p => ({ ...p, hall_id: e.target.value }))}>
+                                  <HallOptions hallList={hallList} />
+                                </select>
+                              </td>
+                              <td>
+                                <div className="edit-screening-actions">
+                                  <button className="screening-save-btn" onClick={saveEditingScreening}
+                                    title="Save"><i className="fa-solid fa-check" /></button>
+                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening}
+                                    title="Cancel"><i className="fa-solid fa-xmark" /></button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td><strong>{formatTime12(s.start_time)}</strong></td>
+                              <td>{s.hall_name || matchedHall?.name || "—"}</td>
+                              <td>{theaterName}</td>
+                              <td>
+                                <div className="edit-screening-actions">
+                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)}
+                                    title="Edit"><i className="fa-solid fa-pen" /></button>
+                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)}
+                                    title="Delete"><i className="fa-solid fa-trash" /></button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -898,10 +901,7 @@ export default function AdminDashboard() {
                 />
 
                 <div className="inline-add-actions">
-                  <button className="modal-cancel-btn"
-                    onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }}>
-                    Cancel
-                  </button>
+                  <button className="modal-cancel-btn" onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }}>Cancel</button>
                   <button className="modal-confirm-btn" onClick={handleInlineAddScreening}>Add</button>
                 </div>
               </div>
@@ -913,8 +913,7 @@ export default function AdminDashboard() {
             )}
 
             <div className="modal-actions">
-              <button className="modal-cancel-btn"
-                onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
+              <button className="modal-cancel-btn" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
                 Close
               </button>
             </div>
