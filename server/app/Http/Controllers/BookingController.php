@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Seat;
 use App\Models\SeatLock;
 use App\Models\TicketPrice;
+use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -267,16 +268,20 @@ class BookingController extends Controller
                 }
             }
 
+            // Fetch payment method for this booking group
+            $payment = Payment::where('booking_group_id', $first->booking_group_id)->first();
+
             return [
-                'id'           => $first->id,
-                'movie_title'  => $movie?->title      ?? 'Unknown',
-                'movie_poster' => $movie?->poster_url ?? null,
-                'show_date'    => $screening?->show_date  ?? '',
-                'start_time'   => $screening?->start_time ?? '',
-                'hall_name'    => $screening?->hall?->name ?? '',
-                'seats'        => $groupBookings->pluck('seat_label')->toArray(),
-                'total_price'  => $groupBookings->sum('price'),
-                'status'       => $status,
+                'id'             => $first->id,
+                'movie_title'    => $movie?->title      ?? 'Unknown',
+                'movie_poster'   => $movie?->poster_url ?? null,
+                'show_date'      => $screening?->show_date  ?? '',
+                'start_time'     => $screening?->start_time ?? '',
+                'hall_name'      => $screening?->hall?->name ?? '',
+                'seats'          => $groupBookings->pluck('seat_label')->toArray(),
+                'total_price'    => $groupBookings->sum('price'),
+                'status'         => $status,
+                'payment_method' => $payment?->method ?? null,
             ];
         })->values();
 
