@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useBranch } from "../context/BranchContext"
@@ -22,7 +22,8 @@ interface Screening {
   movie_id: number
   show_date: string
   start_time: string
-  hall_name: string
+  hall_name: string | null
+  hall?: { name: string }
 }
 
 // ── Constants ──────────────────────────────────────────
@@ -32,6 +33,16 @@ const FALLBACK_COLORS = ["#4e0f1a", "#1a3a5c", "#1a4d2e", "#3b1f5e", "#7a3b00"]
 const MONTH_NAMES     = ["January","February","March","April","May","June",
                          "July","August","September","October","November","December"]
 const FULL_DAY        = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+
+// Distinct hall colors — readable on dark bg and matching the dark CineBook theme
+const HALL_PALETTE = [
+  { bg: "#f5c518", text: "#111" },  // yellow
+  { bg: "#00bcd4", text: "#111" },  // cyan
+  { bg: "#4caf50", text: "#111" },  // green
+  { bg: "#9c27b0", text: "#fff" },  // purple
+  { bg: "#ff5722", text: "#fff" },  // orange
+  { bg: "#e91e63", text: "#fff" },  // pink
+]
 
 const ordinal = (n: number): string => {
   const s = ["th","st","nd","rd"]
@@ -62,17 +73,22 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
-const HALL_COLORS = ["#f5c518", "#00bcd4", "#4caf50", "#9c27b0", "#ff5722"]
-const hallColorMap: Record<string, string> = {}
-let hallColorIdx = 0
-const getHallColor = (hall: string): string => {
-  if (!hallColorMap[hall]) {
-    hallColorMap[hall] = HALL_COLORS[hallColorIdx % HALL_COLORS.length]
-    hallColorIdx++
-  }
-  return hallColorMap[hall]
+// Resolve hall name — handles both flat hall_name and nested hall object
+const getHallName = (s: Screening): string =>
+  s.hall_name || s.hall?.name || "Unknown Hall"
+
+// ── Build a hall→color map from the actual screenings data ────────────────
+// Done inside the component so it resets when screenings change (theater switch)
+const buildHallColorMap = (screenings: Screening[]): Record<string, { bg: string; text: string }> => {
+  const halls  = [...new Set(screenings.map(getHallName))].sort()
+  const result: Record<string, { bg: string; text: string }> = {}
+  halls.forEach((hall, i) => {
+    result[hall] = HALL_PALETTE[i % HALL_PALETTE.length]
+  })
+  return result
 }
 
+// ── Poster component ───────────────────────────────────
 function Poster({ title, url }: { title: string; url: string | null }) {
   const [failed, setFailed] = useState(false)
   const src = url ? (url.startsWith("/") ? `${BACKEND}${url}` : url) : ""
@@ -109,6 +125,7 @@ export default function ShowTimes() {
         const screeningsUrl = selectedTheater
           ? `${API_URL}/screenings?theater_id=${selectedTheater.id}`
           : `${API_URL}/screenings`
+
         const [moviesRes, screeningsRes] = await Promise.all([
           fetch(`${API_URL}/movies`),
           fetch(screeningsUrl),
@@ -130,6 +147,12 @@ export default function ShowTimes() {
     fetchData()
   }, [selectedTheater])
 
+  // ── Hall color map — rebuilt whenever screenings change ──
+  const hallColorMap = useMemo(() => buildHallColorMap(screenings), [screenings])
+
+  const getColor = (screening: Screening) =>
+    hallColorMap[getHallName(screening)] ?? HALL_PALETTE[0]
+
   const weekDates      = WEEK_DAYS.map(d => d.dateStr)
   const moviesThisWeek = movies.filter(movie =>
     screenings.some(s => s.movie_id === movie.id && weekDates.includes(s.show_date))
@@ -140,19 +163,19 @@ export default function ShowTimes() {
       .filter(s => s.movie_id === movieId && s.show_date === dateStr)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const allHalls = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
+  // All unique halls that actually appear in this week's screenings
+  const allHalls = [...new Set(
+    screenings
+      .filter(s => weekDates.includes(s.show_date))
+      .map(getHallName)
+  )].sort()
 
-  // Details → movie detail page
-  const handleDetails = (movieId: number) => {
+  const handleDetails   = (movieId: number) => {
     if (isAdmin) navigate("/admin", { state: { editMovieId: movieId } })
     else navigate(`/movie/${movieId}`)
   }
-
-  // Get Tickets → booking page
   const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
-
-  // Edit Data (admin) → opens Screening Management modal in AdminDashboard with context
-  const handleEditData = (movieId: number, dateStr: string) => {
+  const handleEditData   = (movieId: number, dateStr: string) => {
     navigate("/admin", { state: { openScreeningModal: true, editMovieId: movieId, editDate: dateStr } })
   }
 
@@ -173,14 +196,21 @@ export default function ShowTimes() {
           </div>
         </div>
 
+        {/* Hall Legend — color-coded boxes like Star Cineplex */}
         {allHalls.length > 0 && (
           <div className="st-hall-legend">
-            {allHalls.map(hall => (
-              <div key={hall} className="st-hall-badge">
-                <span className="st-hall-dot" style={{ background: getHallColor(hall) }} />
-                {hall}
-              </div>
-            ))}
+            {allHalls.map(hall => {
+              const color = hallColorMap[hall] ?? HALL_PALETTE[0]
+              return (
+                <div key={hall} className="st-hall-badge">
+                  <span
+                    className="st-hall-dot"
+                    style={{ background: color.bg }}
+                  />
+                  <span>{hall}</span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -198,6 +228,7 @@ export default function ShowTimes() {
           {moviesThisWeek.map(movie => (
             <div key={movie.id} className="st-movie-row">
 
+              {/* Left: Poster + Info */}
               <div className="st-movie-left">
                 <div className="st-poster-wrap">
                   <Poster title={movie.title} url={movie.poster_url} />
@@ -252,6 +283,7 @@ export default function ShowTimes() {
                 </div>
               </div>
 
+              {/* Right: 7-day schedule grid */}
               <div className="st-schedule-grid">
                 {WEEK_DAYS.map(({ dateStr, fullDay, ordDate, month, year }) => {
                   const dayScreenings = getScreeningsForDay(movie.id, dateStr)
@@ -261,23 +293,35 @@ export default function ShowTimes() {
                         <div className="st-day-name">{fullDay}</div>
                         <div className="st-day-date">{ordDate}, {month} {year}</div>
                       </div>
+
                       <div className="st-slots">
                         {dayScreenings.length === 0 ? (
                           <div className="st-no-show">—</div>
                         ) : (
-                          dayScreenings.map(s => (
-                            <button key={s.id} className="st-time-btn"
-                              style={{ background: getHallColor(s.hall_name) }} title={s.hall_name}>
-                              <i className="fa-solid fa-ticket" /> {formatTime(s.start_time)}
-                            </button>
-                          ))
+                          dayScreenings.map(s => {
+                            const color = getColor(s)
+                            return (
+                              <button
+                                key={s.id}
+                                className="st-time-btn"
+                                style={{ background: color.bg, color: color.text }}
+                                title={getHallName(s)}
+                              >
+                                <span>{formatTime(s.start_time)}</span>
+                              </button>
+                            )
+                          })
                         )}
                       </div>
 
                       {dayScreenings.length > 0 && (
                         <button
                           className={`st-get-ticket-btn ${isAdmin ? "st-edit-btn" : ""}`}
-                          onClick={() => isAdmin ? handleEditData(movie.id, dateStr) : handleGetTickets(movie.id)}
+                          onClick={() =>
+                            isAdmin
+                              ? handleEditData(movie.id, dateStr)
+                              : handleGetTickets(movie.id)
+                          }
                         >
                           {isAdmin
                             ? <><i className="fa-solid fa-clapperboard" /> Edit Screening</>
