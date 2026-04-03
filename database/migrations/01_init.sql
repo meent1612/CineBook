@@ -73,6 +73,7 @@ CREATE TABLE screenings (
     available_seats INT    NOT NULL,
     created_at      DATETIME2 DEFAULT GETDATE(),
     updated_at      DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT unique_screening UNIQUE (hall_id, show_date, start_time),
     FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
     FOREIGN KEY (hall_id)  REFERENCES halls(id)  ON DELETE CASCADE
 );
