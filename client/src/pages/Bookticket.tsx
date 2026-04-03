@@ -76,6 +76,18 @@ const LEGEND_ITEMS = [
   { color: "#9E9E9E", label: "Taken"         },
 ]
 
+// ── Same 7-day window as ShowTimes ─────────────────────
+const WEEK_DATES = new Set(
+  Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    const yyyy = d.getFullYear()
+    const mm   = String(d.getMonth() + 1).padStart(2, "0")
+    const dd   = String(d.getDate()).padStart(2, "0")
+    return `${yyyy}-${mm}-${dd}`
+  })
+)
+
 const formatTime = (time: string): string => {
   const [h, m] = time.split(":")
   const hour   = parseInt(h)
@@ -177,8 +189,10 @@ export default function BookTicket() {
         setMovie(found)
         setScreenings(movieScreenings)
 
-        if (movieScreenings.length > 0) {
-          const sorted = [...movieScreenings].sort((a, b) =>
+        // ── Only pick the first screening within the 7-day window ──
+        const weekScreenings = movieScreenings.filter(s => WEEK_DATES.has(s.show_date))
+        if (weekScreenings.length > 0) {
+          const sorted = [...weekScreenings].sort((a, b) =>
             a.show_date.localeCompare(b.show_date) || a.start_time.localeCompare(b.start_time)
           )
           setSelectedDate(sorted[0].show_date)
@@ -241,7 +255,11 @@ export default function BookTicket() {
   }, [selectedScreening?.id])
 
   // ── Derived values ────────────────────────────────────
-  const availableDates    = [...new Set(screenings.map(s => s.show_date))].sort()
+  // Filter to only the same 7-day window as ShowTimes
+  const availableDates = [...new Set(screenings.map(s => s.show_date))]
+    .filter(d => WEEK_DATES.has(d))
+    .sort()
+
   const screeningsForDate = screenings
     .filter(s => s.show_date === selectedDate)
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
