@@ -313,17 +313,6 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time, available_seat
 END
 GO
 
--- ════════════════════════════════════════════
--- Theaters seed
--- ════════════════════════════════════════════
-
-IF NOT EXISTS (SELECT 1 FROM theaters)
-BEGIN
-    INSERT INTO theaters (name, address, city, is_active) VALUES
-    ('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',            'Dhaka', 1),
-    ('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka', 'Dhaka', 1);
-END
-GO
 
 IF NOT EXISTS (SELECT 1 FROM seats)
 BEGIN
@@ -394,6 +383,18 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (3,'I',7,'premium'),(3,'I',8,'premium'),(3,'I',9,'premium'),(3,'I',10,'premium'),(3,'I',11,'premium'),(3,'I',12,'premium'),
 (3,'J',1,'vip'),(3,'J',2,'vip'),(3,'J',3,'vip'),(3,'J',4,'vip'),(3,'J',5,'vip'),(3,'J',6,'vip'),
 (3,'J',7,'vip'),(3,'J',8,'vip'),(3,'J',9,'vip'),(3,'J',10,'vip'),(3,'J',11,'vip'),(3,'J',12,'vip');
+END
+GO
+
+-- theaters seeded in 02_seed.sql
+
+IF NOT EXISTS (SELECT 1 FROM ticket_prices)
+BEGIN
+    INSERT INTO ticket_prices (seat_type, price) VALUES
+    ('standard',      400),
+    ('semi_recliner', 615),
+    ('premium',       815),
+    ('vip',          1200);
 END
 GO
 

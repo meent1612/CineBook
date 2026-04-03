@@ -12,12 +12,24 @@ BEGIN
 END
 GO
 
+-- theaters must be seeded before halls
+IF NOT EXISTS (SELECT 1 FROM theaters)
+BEGIN
+    INSERT INTO theaters (name, address, city, is_active) VALUES
+    ('Dhanmondi',   'Road 27, Dhanmondi, Dhaka',            'Dhaka', 1),
+    ('Shantinagar', 'Shantinagar Road, Shantinagar, Dhaka', 'Dhaka', 1);
+END
+GO
+
 IF NOT EXISTS (SELECT 1 FROM halls)
 BEGIN
-    INSERT INTO halls (name, capacity) VALUES
-        ('Hall 1', 100),
-        ('Hall 2', 80),
-        ('Hall 3', 120);
+    INSERT INTO halls (name, capacity, theater_id) VALUES
+    ('Hall 1', 100, 1),
+    ('Hall 2', 80,  1),
+    ('Hall 3', 120, 1),
+    ('Hall 1', 100, 2),
+    ('Hall 2', 80,  2),
+    ('Hall 3', 120, 2);
 END
 GO
 
