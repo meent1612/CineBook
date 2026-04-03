@@ -13,6 +13,7 @@ interface Booking {
   seats: string[]
   total_price: number
   status: "upcoming" | "watched" | "cancelled"
+  payment_method: "bkash" | "nagad" | "card" | null  // ADD
 }
 
 interface ProfileData {
@@ -97,6 +98,11 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
         <div className="ud-ticket-total">
           {booking.total_price.toLocaleString()} BDT
         </div>
+        {booking.payment_method && (
+          <div className="ud-ticket-method">
+            <i className="fa-solid fa-credit-card" /> {booking.payment_method.charAt(0).toUpperCase() + booking.payment_method.slice(1)}
+          </div>
+        )}
       </div>
     </div>
   )
