@@ -15,34 +15,31 @@ class ScreeningController extends Controller
         try {
             $query = Screening::with(['movie', 'hall']);
 
-            if ($request->has('movie_id')) {
-                $query->where('movie_id', $request->movie_id);
-            }
-
-            if ($request->has('date')) {
-                $query->where('show_date', $request->date);
-            }
-            if ($request->has('hall_id')) {
-                $query->where('hall_id', $request->hall_id);
-            }
-            // Filter by theater — only return screenings from halls in that theater
+            if ($request->has('movie_id'))   { $query->where('movie_id',  $request->movie_id); }
+            if ($request->has('date'))       { $query->where('show_date', $request->date); }
+            if ($request->has('hall_id'))    { $query->where('hall_id',   $request->hall_id); }
             if ($request->has('theater_id')) {
                 $query->whereHas('hall', function ($q) use ($request) {
                     $q->where('theater_id', $request->theater_id);
                 });
             }
 
+            // Only return screenings that haven't started yet
+            $now = \Carbon\Carbon::now('Asia/Dhaka');
+            $query->where(function ($q) use ($now) {
+                $q->where('show_date', '>', $now->toDateString())
+                ->orWhere(function ($q2) use ($now) {
+                    $q2->where('show_date', '=', $now->toDateString())
+                        ->where('start_time', '>=', $now->format('H:i:s'));
+                });
+            });
+
             $screenings = $query->get();
 
-            return response()->json([
-                'success'    => true,
-                'screenings' => $screenings,
-            ]);
+            return response()->json(['success' => true, 'screenings' => $screenings]);
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
