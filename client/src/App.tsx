@@ -14,6 +14,7 @@ import Contacts from "./pages/Contacts"
 import Showmovies from "./pages/Showmovies"
 import BookTicket from "./pages/Bookticket"
 import MovieDetail from "./pages/MovieDetail"
+import Payment from "./pages/Payment"
 
 export default function App() {
   return (
@@ -31,7 +32,7 @@ export default function App() {
           <Route path="/showmovies"   element={<Showmovies />} />
           <Route path="/movie/:id"    element={<MovieDetail />} />
           <Route path="/book/:id"     element={<BookTicket />} />
-
+          <Route path="/payment"      element={<Payment />} />
           <Route path="/user" element={
             <ProtectedRoute requiredRole="user">
               <UserDashboard />

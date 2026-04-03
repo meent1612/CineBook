@@ -84,7 +84,6 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
-// Reads hall name from either hall_name (flat) or hall.name (nested)
 const getHallName = (screening: Screening | null): string => {
   if (!screening) return "—"
   return screening.hall_name || screening.hall?.name || "—"
@@ -335,11 +334,30 @@ export default function BookTicket() {
     setSelectedScreening(screening)
   }
 
-  // ── Purchase — redirects to home (payment in checkpoint 3) ──
+  // ── Purchase → navigate to Payment page with booking data ──
   const handlePurchase = () => {
     if (!user || !token) { navigate("/login"); return }
-    if (!selectedScreening || selectedSeatIds.length === 0) return
-    navigate("/")
+    if (!selectedScreening || selectedSeatIds.length === 0 || !movie) return
+
+    navigate("/payment", {
+      state: {
+        movieTitle:      movie.title,
+        movieCategory:   movie.category,
+        movieGenre:      movie.genre || "—",
+        theaterName:     locationDisplay,
+        theaterAddress:  locationAddress,
+        hallName:        getHallName(selectedScreening),
+        showDate:        selectedDate,
+        showTime:        formatTime(selectedScreening.start_time),
+        seatType:        SEAT_TYPE_DISPLAY[seatType],
+        seatLabels:      selectedSeats,
+        seatIds:         selectedSeatIds,
+        screeningId:     selectedScreening.id,
+        quantity:        quantity,
+        unitPrice:       PRICES[seatType],
+        totalAmount:     TOTAL,
+      },
+    })
   }
 
   // ── Render guards ─────────────────────────────────────
