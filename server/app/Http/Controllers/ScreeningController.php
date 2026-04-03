@@ -87,14 +87,32 @@ class ScreeningController extends Controller
             $request->validate([
                 'movie_id'        => 'required|exists:movies,id',
                 'hall_id'         => 'required|exists:halls,id',
-                'start_time'      => 'required|date_format:H:i',
+                'start_time'      => 'required|in:10:00,15:00,20:00',
                 'show_date'       => 'required|date',
                 'available_seats' => 'required|integer|min:1',
             ]);
 
-            $screening = Screening::create($request->all());
+            // Check for duplicate before inserting — gives clean error message
+            $exists = \App\Models\Screening::where('hall_id',    $request->hall_id)
+                ->where('show_date',   $request->show_date)
+                ->where('start_time',  $request->start_time . ':00')
+                ->exists();
 
-            
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This slot is already booked for that hall on that date.',
+                ], 409);
+            }
+
+            $screening = \App\Models\Screening::create([
+                'movie_id'        => $request->movie_id,
+                'hall_id'         => $request->hall_id,
+                'start_time'      => $request->start_time . ':00',
+                'show_date'       => $request->show_date,
+                'available_seats' => $request->available_seats,
+            ]);
+
             $screening->load(['movie', 'hall']);
 
             return response()->json([
@@ -102,6 +120,12 @@ class ScreeningController extends Controller
                 'message'   => 'Screening created successfully.',
                 'screening' => $screening,
             ], 201);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
