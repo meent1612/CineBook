@@ -24,7 +24,6 @@ interface Screening {
   start_time: string
   hall_name: string | null
   hall?: { id: number; name: string; capacity: number }
-  available_seats: number
 }
 
 interface ApiSeat {
@@ -429,7 +428,8 @@ export default function BookTicket() {
                 {screeningsForDate.map(s => (
                   <button key={s.id} onClick={() => handleScreeningChange(s)}
                     className={`showtime-btn ${selectedScreening?.id === s.id ? "active" : ""}`}
-                    title={`${s.available_seats} seats available`}>
+                    title={`${getHallName(s)}`}
+                  >
                     {formatTime(s.start_time)}
                   </button>
                 ))}

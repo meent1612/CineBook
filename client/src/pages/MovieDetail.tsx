@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useBranch } from "../context/BranchContext"
@@ -25,8 +25,8 @@ interface Screening {
   movie_id: number
   show_date: string
   start_time: string
-  hall_name: string
-  available_seats: number
+  hall_name: string | null
+  hall?: { name: string }
 }
 
 // ── Constants ──────────────────────────────────────────
@@ -35,6 +35,16 @@ const BACKEND     = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8
 const FULL_DAY    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 const MONTH_NAMES = ["January","February","March","April","May","June",
                      "July","August","September","October","November","December"]
+
+// ── Same palette as Showtimes so colors are consistent ──
+const HALL_PALETTE = [
+  { bg: "#f5c518", text: "#111" },
+  { bg: "#00bcd4", text: "#111" },
+  { bg: "#4caf50", text: "#111" },
+  { bg: "#9c27b0", text: "#fff" },
+  { bg: "#ff5722", text: "#fff" },
+  { bg: "#e91e63", text: "#fff" },
+]
 
 const ordinal = (n: number): string => {
   const s = ["th","st","nd","rd"]
@@ -65,15 +75,16 @@ const formatTime = (time: string): string => {
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
 
-const HALL_COLORS = ["#f5c518", "#00bcd4", "#4caf50", "#9c27b0", "#ff5722"]
-const hallColorMap: Record<string, string> = {}
-let hallColorIdx = 0
-const getHallColor = (hall: string): string => {
-  if (!hallColorMap[hall]) {
-    hallColorMap[hall] = HALL_COLORS[hallColorIdx % HALL_COLORS.length]
-    hallColorIdx++
-  }
-  return hallColorMap[hall]
+// Resolve hall name — handles both flat and nested shape
+const getHallName = (s: Screening): string =>
+  s.hall_name || s.hall?.name || "Unknown Hall"
+
+// Build hall→color map from actual screenings (same logic as Showtimes)
+const buildHallColorMap = (screenings: Screening[]): Record<string, { bg: string; text: string }> => {
+  const halls  = [...new Set(screenings.map(getHallName))].sort()
+  const result: Record<string, { bg: string; text: string }> = {}
+  halls.forEach((hall, i) => { result[hall] = HALL_PALETTE[i % HALL_PALETTE.length] })
+  return result
 }
 
 const posterSrc = (url: string | null): string => {
@@ -86,24 +97,30 @@ export default function MovieDetail() {
   const { id }              = useParams<{ id: string }>()
   const navigate            = useNavigate()
   const { user }            = useAuth()
-  const { selectedTheater } = useBranch()           // ← branch context
+  const { selectedTheater } = useBranch()
   const isAdmin             = user?.role === "admin"
 
-  const [movie,      setMovie]      = useState<Movie | null>(null)
+  const [movie,     setMovie]     = useState<Movie | null>(null)
   const [screenings, setScreenings] = useState<Screening[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState("")
-  const [posterErr,  setPosterErr]  = useState(false)
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState("")
+  const [posterErr, setPosterErr] = useState(false)
 
+  // Re-fetch when movie id OR selected theater changes
   useEffect(() => {
     if (!id) return
     const fetchData = async () => {
       setLoading(true)
       setError("")
       try {
+        // Filter screenings by theater just like Showtimes does
+        const screeningsUrl = selectedTheater
+          ? `${API_URL}/screenings?theater_id=${selectedTheater.id}`
+          : `${API_URL}/screenings`
+
         const [movieRes, screeningsRes] = await Promise.all([
           fetch(`${API_URL}/movies`),
-          fetch(`${API_URL}/screenings`),
+          fetch(screeningsUrl),
         ])
         const moviesData     = await movieRes.json()
         const screeningsData = await screeningsRes.json()
@@ -125,14 +142,19 @@ export default function MovieDetail() {
       }
     }
     fetchData()
-  }, [id])
+  }, [id, selectedTheater])  // ← re-fetch on theater change too
+
+  // Build color map reactively — resets whenever screenings change
+  const hallColorMap = useMemo(() => buildHallColorMap(screenings), [screenings])
+  const getColor     = (s: Screening) => hallColorMap[getHallName(s)] ?? HALL_PALETTE[0]
 
   const getScreeningsForDay = (dateStr: string): Screening[] =>
     screenings
       .filter(s => s.show_date === dateStr)
       .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const allHalls       = [...new Set(screenings.map(s => s.hall_name).filter(Boolean))]
+  const allHalls = [...new Set(screenings.map(getHallName).filter(Boolean))].sort()
+
   const src            = posterSrc(movie?.poster_url ?? null)
   const locationDisplay = selectedTheater
     ? `${selectedTheater.name}, ${selectedTheater.address}`
@@ -223,27 +245,30 @@ export default function MovieDetail() {
         <div className="md-showtime-header">
           <div className="md-showtime-title-row">
             <h2 className="md-showtime-title">Showtime</h2>
-            {/* ── Selected theater shown here ── */}
             <div className="md-location">
               <i className="fa-solid fa-location-dot" />
               <span>[ {locationDisplay} ]</span>
             </div>
           </div>
 
+          {/* Hall legend — color-coded, same as Showtimes */}
           {allHalls.length > 0 && (
             <div className="md-hall-legend">
-              {allHalls.map(hall => (
-                <div key={hall} className="md-hall-badge">
-                  <span className="md-hall-dot" style={{ background: getHallColor(hall) }} />
-                  {hall}
-                </div>
-              ))}
+              {allHalls.map(hall => {
+                const color = hallColorMap[hall] ?? HALL_PALETTE[0]
+                return (
+                  <div key={hall} className="md-hall-badge">
+                    <span className="md-hall-dot" style={{ background: color.bg }} />
+                    {hall}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
 
         {screenings.length === 0 ? (
-          <p className="md-no-screenings">No screenings scheduled this week.</p>
+          <p className="md-no-screenings">No screenings scheduled for this theater this week.</p>
         ) : (
           <div className="md-schedule-grid">
             {WEEK_DAYS.map(({ dateStr, fullDay, ordDate, month, year }) => {
@@ -258,13 +283,19 @@ export default function MovieDetail() {
                     {dayScreenings.length === 0 ? (
                       <div className="md-no-show">—</div>
                     ) : (
-                      dayScreenings.map(s => (
-                        <button key={s.id} className="md-time-btn"
-                          style={{ background: getHallColor(s.hall_name) }}
-                          title={`${s.hall_name} — ${s.available_seats} seats`}>
-                          <i className="fa-solid fa-ticket" /> {formatTime(s.start_time)}
-                        </button>
-                      ))
+                      dayScreenings.map(s => {
+                        const color = getColor(s)
+                        return (
+                          <button
+                            key={s.id}
+                            className="md-time-btn"
+                            style={{ background: color.bg, color: color.text }}
+                            title={getHallName(s)}
+                          >
+                            <span>{formatTime(s.start_time)}</span>
+                          </button>
+                        )
+                      })
                     )}
                   </div>
                   {dayScreenings.length > 0 && (
