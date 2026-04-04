@@ -179,6 +179,19 @@ export default function Payment() {
     setCardExpiry(digits.length >= 3 ? digits.slice(0, 2) + "/" + digits.slice(2) : digits)
   }
 
+  const handleBack = async () => {
+  if (token && booking) {
+    await fetch(`${API_URL}/seats/unlock`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({
+        screening_id: booking.screeningId,
+        seat_ids:     booking.seatIds,
+      }),
+    }).catch(() => {})
+  }
+  navigate(-1)
+}
   // ═══════════════════════════════════════════════════════
   // SUCCESS SCREEN
   // ═══════════════════════════════════════════════════════
@@ -405,7 +418,7 @@ export default function Payment() {
               : <><i className="fa-solid fa-lock" /> Pay {grandTotal.toLocaleString()} BDT</>}
           </button>
 
-          <button className="pay-back-btn" onClick={() => navigate(-1)}>
+          <button className="pay-back-btn" onClick={handleBack}>
             <i className="fa-solid fa-arrow-left" /> Back to Seat Selection
           </button>
 
