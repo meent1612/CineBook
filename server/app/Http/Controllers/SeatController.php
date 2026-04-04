@@ -87,12 +87,14 @@ class SeatController extends Controller
 
     private function getPrice(string $seatType): int
     {
-        return match($seatType) {
-            'standard'      => 400,
-            'semi_recliner' => 615,
-            'premium'       => 815,
-            'vip'           => 1200,
-            default         => 400,
-        };
+        static $priceMap = null;
+
+        if ($priceMap === null) {
+            $priceMap = \App\Models\TicketPrice::pluck('price', 'seat_type')
+                ->map(fn($p) => (int) $p)
+                ->toArray();
+        }
+
+        return $priceMap[$seatType] ?? 400;
     }
 }
