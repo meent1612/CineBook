@@ -1,38 +1,45 @@
+import { useState, useEffect } from "react"
+
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+
+const METADATA: Record<string, { type: string; desc: string; icon: string; features: string[]; highlight: boolean }> = {
+  standard: {
+    type: "Standard", icon: "fa-solid fa-chair", highlight: false,
+    desc: "Regular comfortable seating for the everyday movie lover.",
+    features: ["Standard seat", "Regular screen", "Basic amenities"],
+  },
+  semi_recliner: {
+    type: "Semi-Recliner", icon: "fa-solid fa-couch", highlight: false,
+    desc: "Upgraded seating with partial recliner function for extra comfort.",
+    features: ["Semi-recliner seat", "Premium screen", "Armrest table"],
+  },
+  premium: {
+    type: "Premium", icon: "fa-solid fa-star", highlight: true,
+    desc: "Full recliner seats with extra legroom and a superior view.",
+    features: ["Full recliner seat", "4K screen", "Extra legroom", "Priority entry"],
+  },
+  vip: {
+    type: "VIP", icon: "fa-solid fa-crown", highlight: false,
+    desc: "Luxury private lounge seating with dedicated concierge service.",
+    features: ["Private lounge pod", "IMAX screen", "Concierge service", "Complimentary snacks"],
+  },
+}
+
 export default function TicketPrice() {
-  const prices = [
-    {
-      type: "Standard",
-      price: 400,
-      desc: "Regular comfortable seating for the everyday movie lover.",
-      icon: "fa-solid fa-chair",
-      features: ["Standard seat", "Regular screen", "Basic amenities"],
-      highlight: false,
-    },
-    {
-      type: "Semi-Recliner",
-      price: 615,
-      desc: "Upgraded seating with partial recliner function for extra comfort.",
-      icon: "fa-solid fa-couch",
-      features: ["Semi-recliner seat", "Premium screen", "Armrest table"],
-      highlight: false,
-    },
-    {
-      type: "Premium",
-      price: 815,
-      desc: "Full recliner seats with extra legroom and a superior view.",
-      icon: "fa-solid fa-star",
-      features: ["Full recliner seat", "4K screen", "Extra legroom", "Priority entry"],
-      highlight: true,
-    },
-    {
-      type: "VIP",
-      price: 1200,
-      desc: "Luxury private lounge seating with dedicated concierge service.",
-      icon: "fa-solid fa-crown",
-      features: ["Private lounge pod", "IMAX screen", "Concierge service", "Complimentary snacks"],
-      highlight: false,
-    },
-  ];
+  const [prices, setPrices] = useState<{ seat_type: string; price: number }[]>([])
+
+  useEffect(() => {
+    fetch(`${API_URL}/ticket-prices`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setPrices(data.prices.map((p: any) => ({ ...p, price: parseInt(p.price) })))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const cards = prices.map(p => ({ ...METADATA[p.seat_type], price: p.price }))
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f0f0f", fontFamily: "'Georgia', serif" }}>
@@ -60,7 +67,7 @@ export default function TicketPrice() {
 
       {/* Cards */}
       <div style={{ display: "flex", gap: "1.25rem", justifyContent: "center", flexWrap: "wrap", padding: "3.5rem 2rem", maxWidth: "1100px", margin: "0 auto" }}>
-        {prices.map(p => (
+        {cards.map(p => (
           <div
             key={p.type}
             style={{
