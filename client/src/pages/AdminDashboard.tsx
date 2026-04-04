@@ -209,7 +209,7 @@ export default function AdminDashboard() {
   const [loadingScreenings,   setLoadingScreenings]   = useState(false)
   const [editingScreeningId,  setEditingScreeningId]  = useState<number | null>(null)
   const [editScreeningForm,   setEditScreeningForm]   = useState({
-    hall_id: "", start_time: "", available_seats: "",
+    hall_id: "", start_time: "",
   })
 
   // ── Taken slots state (for slot buttons) ──
@@ -328,7 +328,6 @@ export default function AdminDashboard() {
     setEditScreeningForm({
       hall_id:         hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
       start_time:      screening.start_time.slice(0, 5), // HH:MM
-      available_seats: String(screening.available_seats),
     })
   }
 
@@ -338,7 +337,7 @@ export default function AdminDashboard() {
 
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
-    const { hall_id, start_time, available_seats } = editScreeningForm
+    const { hall_id, start_time} = editScreeningForm
     if (!hall_id || !start_time) {
       alert("Hall and start time are required.")
       return
@@ -349,8 +348,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           hall_id:         parseInt(hall_id),
-          start_time,
-          available_seats: available_seats ? parseInt(available_seats) : undefined,
+          start_time
         }),
       })
       const data = await res.json()
