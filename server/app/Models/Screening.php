@@ -16,14 +16,12 @@ class Screening extends Model
         'hall_id',
         'start_time',
         'show_date',
-        'available_seats',
     ];
 
     protected $casts = [
-        'id'              => 'integer',
-        'movie_id'        => 'integer',
-        'hall_id'         => 'integer',
-        'available_seats' => 'integer',
+        'id'       => 'integer',
+        'movie_id' => 'integer',
+        'hall_id'  => 'integer',
     ];
 
     // Strip MSSQL microseconds from TIME column (10:00:00.0000000 → 10:00:00)

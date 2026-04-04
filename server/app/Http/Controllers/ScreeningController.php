@@ -84,33 +84,30 @@ class ScreeningController extends Controller
     {
         try {
             $request->validate([
-                'movie_id'        => 'required|exists:movies,id',
-                'hall_id'         => 'required|exists:halls,id',
-                'start_time'      => 'required|in:10:00,15:00,20:00',
-                'show_date'       => 'required|date',
-                'available_seats' => 'required|integer|min:1',
-            ]);
+            'movie_id'   => 'required|exists:movies,id',
+            'hall_id'    => 'required|exists:halls,id',
+            'start_time' => 'required|in:10:00,15:00,20:00',
+            'show_date'  => 'required|date',
+        ]);
 
-            // Check for duplicate before inserting — gives clean error message
-            $exists = \App\Models\Screening::where('hall_id',    $request->hall_id)
-                ->where('show_date',   $request->show_date)
-                ->where('start_time',  $request->start_time . ':00')
-                ->exists();
+        $exists = \App\Models\Screening::where('hall_id',   $request->hall_id)
+            ->where('show_date',  $request->show_date)
+            ->where('start_time', $request->start_time . ':00')
+            ->exists();
 
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This slot is already booked for that hall on that date.',
-                ], 409);
-            }
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This slot is already booked for that hall on that date.',
+            ], 409);
+        }
 
-            $screening = \App\Models\Screening::create([
-                'movie_id'        => $request->movie_id,
-                'hall_id'         => $request->hall_id,
-                'start_time'      => $request->start_time . ':00',
-                'show_date'       => $request->show_date,
-                'available_seats' => $request->available_seats,
-            ]);
+        $screening = \App\Models\Screening::create([
+            'movie_id'   => $request->movie_id,
+            'hall_id'    => $request->hall_id,
+            'start_time' => $request->start_time . ':00',
+            'show_date'  => $request->show_date,
+        ]);
 
             $screening->load(['movie', 'hall']);
 
@@ -140,12 +137,11 @@ class ScreeningController extends Controller
             $screening = Screening::findOrFail($id);
 
             $request->validate([
-                'movie_id'        => 'sometimes|exists:movies,id',
-                'hall_id'         => 'sometimes|exists:halls,id',
-                'start_time'      => 'sometimes|date_format:H:i',
-                'show_date'       => 'sometimes|date',
-                'available_seats' => 'sometimes|integer|min:1',
-            ]);
+            'movie_id'   => 'sometimes|exists:movies,id',
+            'hall_id'    => 'sometimes|exists:halls,id',
+            'start_time' => 'sometimes|date_format:H:i',
+            'show_date'  => 'sometimes|date',
+        ]);
 
             $screening->update($request->all());
             $screening->load(['movie', 'hall']);
