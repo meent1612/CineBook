@@ -113,6 +113,33 @@ BEGIN
         'https://youtu.be/XdPt8QWTypI?si=2QXY_D87awvZEoJ5',
         'now_showing',
         1
+    ),
+    (
+        'Crime 101',
+        'A detective hunts a meticulous freeway jewel thief..',
+        'Thriller',
+        '2D',
+        'English',
+        139,
+        '2026-02-13',
+        '/posters/crime101.jpg',
+        'https://www.youtube.com/watch?v=f5y-cziwmMw',
+        'coming_soon',
+        1
+    ),
+    (
+        'Domm',
+        'A man fights for survival against abductors to reunite with his family in this true-story thriller. ',
+        'Thriller',
+        '2D',
+        'Bangla',
+        139,
+        '2026-03-21',
+        '/posters/domm.jpg',
+        'https://www.youtube.com/watch?v=lK01xRLuo54',
+        'coming_soon',
+        1
     );
+
 END
 GO

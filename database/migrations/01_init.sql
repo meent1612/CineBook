@@ -70,7 +70,6 @@ CREATE TABLE screenings (
     hall_id         BIGINT NOT NULL,
     start_time      TIME   NOT NULL,
     show_date       DATE   NOT NULL,
-    available_seats INT    NOT NULL,
     created_at      DATETIME2 DEFAULT GETDATE(),
     updated_at      DATETIME2 DEFAULT GETDATE(),
     CONSTRAINT unique_screening UNIQUE (hall_id, show_date, start_time),
