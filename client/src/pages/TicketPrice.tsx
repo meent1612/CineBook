@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 
@@ -26,6 +27,7 @@ const METADATA: Record<string, { type: string; desc: string; icon: string; featu
 }
 
 export default function TicketPrice() {
+  const navigate = useNavigate()
   const [prices, setPrices] = useState<{ seat_type: string; price: number }[]>([])
 
   useEffect(() => {
@@ -86,20 +88,20 @@ export default function TicketPrice() {
               cursor: "default",
             }}
             onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
+              const el = e.currentTarget as HTMLElement
               if (!p.highlight) {
-                el.style.transform = "translateY(-8px)";
-                el.style.boxShadow = "0 16px 48px rgba(107,24,41,0.4), 0 0 0 1px rgba(107,24,41,0.5)";
+                el.style.transform = "translateY(-8px)"
+                el.style.boxShadow = "0 16px 48px rgba(107,24,41,0.4), 0 0 0 1px rgba(107,24,41,0.5)"
               } else {
-                el.style.transform = "translateY(-16px) scale(1.04)";
+                el.style.transform = "translateY(-16px) scale(1.04)"
               }
             }}
             onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = p.highlight ? "translateY(-12px) scale(1.03)" : "translateY(0)";
+              const el = e.currentTarget as HTMLElement
+              el.style.transform = p.highlight ? "translateY(-12px) scale(1.03)" : "translateY(0)"
               el.style.boxShadow = p.highlight
                 ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)"
-                : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)";
+                : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)"
             }}
           >
             {p.highlight && (
@@ -137,8 +139,9 @@ export default function TicketPrice() {
                 ))}
               </div>
 
-              {/* Book Now — no navigation, just display only */}
+              {/* Book Now → navigates to /showtimes */}
               <button
+                onClick={() => navigate("/showtimes")}
                 style={{
                   width: "100%",
                   padding: "0.65rem",
@@ -148,10 +151,12 @@ export default function TicketPrice() {
                   borderRadius: "8px",
                   fontSize: "0.78rem",
                   fontWeight: 700,
-                  cursor: "default",
+                  cursor: "pointer",
                   letterSpacing: "0.05em",
-                  pointerEvents: "none",
+                  transition: "opacity 0.2s",
                 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.82" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1" }}
               >
                 Book Now <i className="fa-solid fa-arrow-right" style={{ marginLeft: "0.3rem" }} />
               </button>
@@ -168,8 +173,8 @@ export default function TicketPrice() {
       </div>
 
       <div style={{ background: "#0a0a0a", borderTop: "1px solid #1a1a1a", color: "#555", textAlign: "center", padding: "1rem", fontSize: "0.78rem" }}>
-        Copyright© 2026 CineBook Limited . All Rights Reserved.
+        Copyright© 2026 CineBook Limited. All Rights Reserved.
       </div>
     </div>
-  );
+  )
 }
