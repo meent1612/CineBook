@@ -83,7 +83,7 @@ export default function Payment() {
     setError("")
 
     if (method === "bkash" || method === "nagad") {
-      if (!phone || phone.length < 11) {
+      if (!phone || phone.length < 10) {
         setError("Please enter a valid phone number.")
         return
       }
