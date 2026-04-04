@@ -9,6 +9,7 @@ use App\Http\Controllers\TheaterController;
 use App\Http\Controllers\SeatController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TicketPriceController;
 
 // ══════════════════════════════════════════════
 // Public routes
@@ -25,7 +26,7 @@ Route::get('/halls/{id}',      [HallController::class,      'show']);
 Route::get('/theaters',        [TheaterController::class,   'index']);
 
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
-
+Route::get('/ticket-prices', [TicketPriceController::class, 'index']);
 // ══════════════════════════════════════════════
 // Authenticated routes
 // ══════════════════════════════════════════════
