@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import "../CSSfiles/AdminDashboard.css"
 
+// ─── Constants ───────────────────────────────────────────────────────────────
 const MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
@@ -12,165 +12,97 @@ const API_URL       = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND       = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const POSTER_COLORS = ["#6B1829","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00","#1f4040"]
 
-const SUBJECT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  "Booking Issue":     { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
-  "Refund Request":    { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5" },
-  "Movie Inquiry":     { bg: "#ede9fe", color: "#5b21b6", border: "#c4b5fd" },
-  "Technical Support": { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" },
-  "General Feedback":  { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7" },
-  "Other":             { bg: "#f3f4f6", color: "#374151", border: "#d1d5db" },
+const SUBJECT_COLORS: Record<string, { bg: string; color: string }> = {
+  "Booking Issue":     { bg: "#fef3c7", color: "#92400e" },
+  "Refund Request":    { bg: "#fee2e2", color: "#991b1b" },
+  "Movie Inquiry":     { bg: "#ede9fe", color: "#5b21b6" },
+  "Technical Support": { bg: "#dbeafe", color: "#1e40af" },
+  "General Feedback":  { bg: "#d1fae5", color: "#065f46" },
+  "Other":             { bg: "#f3f4f6", color: "#374151" },
 }
 
+const THEATERS = [
+  { id: 1, name: "Dhanmondi" },
+  { id: 2, name: "Shantinagar" },
+]
+
+const SLOTS = ["10:00", "15:00", "20:00"]
+
+// ─── Bangladesh timezone helper ───────────────────────────────────────────────
+const getBDDate = (): Date => {
+  const now = new Date()
+  // UTC+6
+  const bdOffset = 6 * 60
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000
+  return new Date(utc + bdOffset * 60000)
+}
+
+const getTodayBDStr = (): string => {
+  const bd = getBDDate()
+  return `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, "0")}-${String(bd.getDate()).padStart(2, "0")}`
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Movie {
-  id: number
-  title: string
-  description: string | null
-  genre: string | null
-  category: string
-  language: string | null
-  duration_mins: number | null
-  release_date: string | null
-  poster_url: string | null
-  trailer_url: string | null
-  status: "now_showing" | "coming_soon"
-  is_active: boolean
+  id: number; title: string; description: string | null; genre: string | null
+  category: string; language: string | null; duration_mins: number | null
+  release_date: string | null; poster_url: string | null; trailer_url: string | null
+  status: "now_showing" | "coming_soon"; is_active: boolean
 }
-
 interface Hall {
-  id: number
-  name: string
-  capacity: number
+  id: number; name: string; capacity: number
   theater?: { id: number; name: string }
 }
-
 interface Screening {
-  id: number
-  movie_id: number
-  hall_id?: number
-  hall_name: string
-  show_date: string
-  start_time: string
-  available_seats: number
+  id: number; movie_id: number; hall_id?: number; hall_name: string
+  show_date: string; start_time: string; available_seats: number
 }
-
 interface ContactMessage {
-  id: number
-  user_id: number
-  name: string
-  email: string
-  subject: string
-  message: string
-  is_read: boolean
-  created_at: string
+  id: number; user_id: number; name: string; email: string; subject: string
+  message: string; is_read: boolean; created_at: string
 }
 
-function MoviePoster({ movie }: { movie: Movie }) {
-  const [failed, setFailed] = useState(false)
-  const bg  = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
-  const src = movie.poster_url
-    ? movie.poster_url.startsWith("/") ? `${BACKEND}${movie.poster_url}` : movie.poster_url
-    : null
-
-  if (!src || failed) {
-    return (
-      <div className="movie-poster-fallback" style={{ background: bg }}>
-        <div className="movie-poster-fallback-icon"><i className="fa-solid fa-film" /></div>
-        <div className="movie-poster-fallback-title">{movie.title}</div>
-      </div>
-    )
-  }
-  return <img src={src} alt={movie.title} className="movie-card-img" onError={() => setFailed(true)} />
-}
-
-interface MovieCardProps {
-  movie: Movie
-  onDelete: (id: number) => void
-  onToggleActive: (movie: Movie) => void
-  onEdit: (movie: Movie) => void
-}
-
-function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) {
-  return (
-    <div className="movie-card">
-      <div className="movie-card-img-wrap"><MoviePoster movie={movie} /></div>
-      <div className="movie-card-body">
-        <div className="movie-card-title">{movie.title}</div>
-        <div className="movie-card-meta">
-          {movie.genre || "—"} • {movie.category}
-          {movie.duration_mins ? ` • ${movie.duration_mins} min` : ""}
-        </div>
-        {movie.release_date && (
-          <div className="movie-card-date">
-            {new Date(movie.release_date).toLocaleDateString("en-GB", {
-              day: "numeric", month: "short", year: "numeric",
-            })}
-          </div>
-        )}
-        <div className="movie-toggle-row">
-          <span className={`movie-toggle-label ${movie.is_active ? "label-active" : "label-inactive"}`}>
-            {movie.is_active ? "Active" : "Inactive"}
-          </span>
-          <button
-            className={`toggle-switch ${movie.is_active ? "toggle-on" : "toggle-off"}`}
-            onClick={() => onToggleActive(movie)}
-            aria-label={`Mark movie as ${movie.is_active ? "inactive" : "active"}`}
-          >
-            <span className="toggle-thumb" />
-          </button>
-        </div>
-        <div className="movie-card-actions">
-          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
-            <i className="fa-solid fa-pen" /> Edit
-          </button>
-          <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
-            <i className="fa-solid fa-trash" /> Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const EMPTY_MOVIE = {
-  title: "", description: "", genre: "", category: "2D",
-  language: "English", duration_mins: "", release_date: "",
-  poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
-}
-
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatTime12 = (time: string): string => {
   const [h, m] = time.split(":")
-  const hour   = parseInt(h)
-  const ampm   = hour >= 12 ? "PM" : "AM"
+  const hour = parseInt(h); const ampm = hour >= 12 ? "PM" : "AM"
   const hour12 = hour % 12 || 12
   return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
 }
-
 const formatDateDisplay = (dateStr: string): string => {
   const d = new Date(dateStr + "T00:00:00")
   return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
 }
+const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate()
+const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay()
 
-const SLOTS = ["10:00", "15:00", "20:00"]
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function MoviePoster({ movie }: { movie: Movie }) {
+  const [failed, setFailed] = useState(false)
+  const bg = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
+  const src = movie.poster_url
+    ? movie.poster_url.startsWith("/") ? `${BACKEND}${movie.poster_url}` : movie.poster_url
+    : null
+  if (!src || failed) {
+    return (
+      <div style={{ background: bg, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+        <i className="fa-solid fa-film" style={{ color: "rgba(255,255,255,0.5)", fontSize: "1.5rem" }} />
+        <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.65rem", textAlign: "center", padding: "0 0.5rem", fontWeight: 600, lineHeight: 1.3 }}>{movie.title}</span>
+      </div>
+    )
+  }
+  return <img src={src} alt={movie.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => setFailed(true)} />
+}
 
-function SlotButtons({
-  selected, takenSlots, onSelect,
-}: {
-  selected: string
-  takenSlots: string[]
-  onSelect: (slot: string) => void
-}) {
+function SlotButtons({ selected, takenSlots, onSelect }: { selected: string; takenSlots: string[]; onSelect: (s: string) => void }) {
   return (
-    <div className="slot-btn-row">
+    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
       {SLOTS.map(slot => {
-        const taken      = takenSlots.includes(slot)
-        const isSelected = selected === slot
+        const taken = takenSlots.includes(slot); const isSel = selected === slot
         return (
-          <button key={slot} type="button"
-            disabled={taken}
-            onClick={() => !taken && onSelect(slot)}
-            className={`slot-btn ${isSelected ? "slot-selected" : ""} ${taken ? "slot-taken" : ""}`}>
-            {formatTime12(slot + ":00")}
-            {taken && <span className="slot-taken-label">Taken</span>}
+          <button key={slot} type="button" disabled={taken} onClick={() => !taken && onSelect(slot)}
+            style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: `1.5px solid ${taken ? "#e5e7eb" : isSel ? "#6B1829" : "#d1d5db"}`, background: taken ? "#f9fafb" : isSel ? "#6B1829" : "white", color: taken ? "#9ca3af" : isSel ? "white" : "#374151", fontSize: "0.75rem", fontWeight: 600, cursor: taken ? "not-allowed" : "pointer", transition: "all 0.15s" }}>
+            {formatTime12(slot + ":00")}{taken ? " ✗" : ""}
           </button>
         )
       })}
@@ -183,41 +115,96 @@ function HallOptions({ hallList }: { hallList: Hall[] }) {
   return (
     <>
       <option value="" disabled>Select Hall</option>
-      {theaterNames.map(theaterName => (
-        <optgroup key={theaterName} label={theaterName}>
-          {hallList
-            .filter(h => (h.theater?.name ?? "Unknown") === theaterName)
-            .map(h => <option key={h.id} value={h.id}>{h.name} (cap: {h.capacity})</option>)
-          }
+      {theaterNames.map(tn => (
+        <optgroup key={tn} label={tn}>
+          {hallList.filter(h => (h.theater?.name ?? "Unknown") === tn)
+            .map(h => <option key={h.id} value={h.id}>{h.name} (cap: {h.capacity})</option>)}
         </optgroup>
       ))}
     </>
   )
 }
 
+// ─── Shared modal styles ───────────────────────────────────────────────────────
+const modalBackdrop: React.CSSProperties = {
+  position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem",
+}
+const modalCard: React.CSSProperties = {
+  background: "white", borderRadius: "16px", width: "100%", maxWidth: "520px",
+  maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 80px rgba(0,0,0,0.25)",
+}
+const modalWide: React.CSSProperties = { ...modalCard, maxWidth: "720px" }
+const inp: React.CSSProperties = {
+  width: "100%", padding: "0.6rem 0.85rem", border: "1.5px solid #e5e7eb", borderRadius: "8px",
+  fontSize: "0.82rem", color: "#1a1a1a", background: "#fafafa", marginBottom: "0.6rem",
+  outline: "none", boxSizing: "border-box",
+}
+const lbl: React.CSSProperties = { display: "block", fontSize: "0.72rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }
+
+const EMPTY_MOVIE = {
+  title: "", description: "", genre: "", category: "2D",
+  language: "English", duration_mins: "", release_date: "",
+  poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
+}
+
+// ─── Color palette (matches screenshot) ──────────────────────────────────────
+// Primary dark red: #6B1829
+// Light bg: #f5f5f5 / white
+// Text dark: #1a1a1a / #333
+// Accent gold: #c9a227 (for highlights)
+// Cards: white with subtle shadow
+// Tab active: #6B1829 white text; inactive: transparent dark text
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { token } = useAuth()
   const location  = useLocation()
 
-  const [selectedMonth, setSelectedMonth] = useState("April")
+  // Nav — no separate navbar; tabs sit below the existing site navbar
+  const [activeTab, setActiveTab] = useState<"overview" | "management" | "inbox" | "movies">("overview")
+
+  // Data
   const [movieList,     setMovieList]     = useState<Movie[]>([])
   const [loadingMovies, setLoadingMovies] = useState(true)
   const [movieError,    setMovieError]    = useState("")
   const [hallList,      setHallList]      = useState<Hall[]>([])
 
+  // Calendar — use Bangladesh time
+  const todayBD = getBDDate()
+  const [calYear,  setCalYear]  = useState(todayBD.getFullYear())
+  const [calMonth, setCalMonth] = useState(todayBD.getMonth())
+  const [calSelectedDate, setCalSelectedDate] = useState(getTodayBDStr())
+  const [calScreenings, setCalScreenings] = useState<Screening[]>([])
+  const [loadingCalScreenings, setLoadingCalScreenings] = useState(false)
+
+  // Discount widget
+  const [discountTheater,   setDiscountTheater]   = useState("1")
+  const [discountRegular,   setDiscountRegular]   = useState("")
+  const [discountPremium,   setDiscountPremium]   = useState("")
+  const [discountVip,       setDiscountVip]       = useState("")
+  const [discountStartDate, setDiscountStartDate] = useState("")
+  const [discountEndDate,   setDiscountEndDate]   = useState("")
+  const [applyingDiscount,  setApplyingDiscount]  = useState(false)
+
+  // Income filter
+  const [incomeMonth,   setIncomeMonth]   = useState(MONTHS[todayBD.getMonth()])
+  const [incomeTheater, setIncomeTheater] = useState("all")
+  const [incomeMovie,   setIncomeMovie]   = useState("all")
+
+  // Add/Edit Movie modals
   const [showAddMovie,  setShowAddMovie]  = useState(false)
   const [addingMovie,   setAddingMovie]   = useState(false)
   const [newMovie,      setNewMovie]      = useState({ ...EMPTY_MOVIE })
-
   const [showEditMovie, setShowEditMovie] = useState(false)
   const [editingMovie,  setEditingMovie]  = useState(false)
   const [editMovie,     setEditMovie]     = useState({ ...EMPTY_MOVIE, id: 0 })
 
+  // Add Screening modal
   const [showAddScreening, setShowAddScreening] = useState(false)
-  const [newScreening,     setNewScreening]     = useState({
-    movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "",
-  })
+  const [newScreening,     setNewScreening]     = useState({ movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "" })
 
+  // Edit Screening modal
   const [showEditScreening,  setShowEditScreening]  = useState(false)
   const [editScreeningMovie, setEditScreeningMovie] = useState<Movie | null>(null)
   const [editScreeningDate,  setEditScreeningDate]  = useState("")
@@ -225,11 +212,11 @@ export default function AdminDashboard() {
   const [loadingScreenings,  setLoadingScreenings]  = useState(false)
   const [editingScreeningId, setEditingScreeningId] = useState<number | null>(null)
   const [editScreeningForm,  setEditScreeningForm]  = useState({ hall_id: "", start_time: "" })
+  const [showInlineAdd,      setShowInlineAdd]      = useState(false)
+  const [inlineNewScreening, setInlineNewScreening] = useState({ hall_id: "", start_time: "", available_seats: "" })
+  const [takenSlots,         setTakenSlots]         = useState<string[]>([])
 
-  const [takenSlots, setTakenSlots] = useState<string[]>([])
-
-  // ── Inbox state ──
-  const [showInbox,     setShowInbox]     = useState(false)
+  // Inbox
   const [inboxMessages, setInboxMessages] = useState<ContactMessage[]>([])
   const [loadingInbox,  setLoadingInbox]  = useState(false)
   const [markingReadId, setMarkingReadId] = useState<number | null>(null)
@@ -240,44 +227,35 @@ export default function AdminDashboard() {
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
   useEffect(() => {
+    fetchCalScreenings(calSelectedDate)
+  }, [calSelectedDate])
+
+  useEffect(() => {
     const state = location.state as any
     if (!state) return
-
     if (state.openScreeningModal && state.editMovieId && state.editDate) {
       if (movieList.length === 0) return
       const movie = movieList.find(m => m.id === state.editMovieId)
       if (movie) { openEditScreeningModal(movie, state.editDate) }
-      window.history.replaceState({}, "")
-      return
+      window.history.replaceState({}, ""); return
     }
-
-    if (state.openScreeningModal) {
-      setShowAddScreening(true)
-      window.history.replaceState({}, "")
-      return
-    }
-
+    if (state.openScreeningModal) { setShowAddScreening(true); window.history.replaceState({}, ""); return }
     if (state.editMovieId && movieList.length > 0) {
       const target = movieList.find(m => m.id === state.editMovieId)
       if (target) { handleOpenEdit(target); window.history.replaceState({}, "") }
     }
   }, [location.state, movieList])
 
+  // ── Fetch helpers ────────────────────────────────────────────────────────────
   const fetchMovies = async () => {
-    setLoadingMovies(true)
-    setMovieError("")
+    setLoadingMovies(true); setMovieError("")
     try {
-      const res  = await fetch(`${API_URL}/admin/movies`, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      })
+      const res  = await fetch(`${API_URL}/admin/movies`, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setMovieList(data.movies)
-    } catch (err: any) {
-      setMovieError(err.message || "Failed to load movies.")
-    } finally {
-      setLoadingMovies(false)
-    }
+    } catch (err: any) { setMovieError(err.message || "Failed to load movies.") }
+    finally { setLoadingMovies(false) }
   }
 
   const fetchHalls = async () => {
@@ -286,54 +264,44 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setHallList(data.halls)
-    } catch (err: any) {
-      console.error("Failed to load halls:", err.message)
-    }
+    } catch (err: any) { console.error("Failed to load halls:", err.message) }
+  }
+
+  const fetchCalScreenings = async (date: string) => {
+    setLoadingCalScreenings(true)
+    try {
+      const res  = await fetch(`${API_URL}/screenings?date=${date}`)
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setCalScreenings((data.screenings as Screening[]).sort((a, b) => a.start_time.localeCompare(b.start_time)))
+    } catch { setCalScreenings([]) }
+    finally { setLoadingCalScreenings(false) }
   }
 
   const fetchInbox = async () => {
-    setLoadingInbox(true)
-    setInboxError("")
+    setLoadingInbox(true); setInboxError("")
     try {
-      const res  = await fetch(`${API_URL}/admin/contact-messages`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res  = await fetch(`${API_URL}/admin/contact-messages`, { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message || "Failed to load messages.")
-      const normalised: ContactMessage[] = (data.messages as any[]).map(m => ({
-        ...m,
-        is_read: Boolean(m.is_read),
-      }))
-      setInboxMessages(normalised)
-    } catch (err: any) {
-      setInboxError(err.message || "Could not load messages.")
-    } finally {
-      setLoadingInbox(false)
-    }
+      setInboxMessages((data.messages as any[]).map(m => ({ ...m, is_read: Boolean(m.is_read) })))
+    } catch (err: any) { setInboxError(err.message || "Could not load messages.") }
+    finally { setLoadingInbox(false) }
   }
 
   const handleMarkRead = async (id: number) => {
     setMarkingReadId(id)
     try {
-      const res  = await fetch(`${API_URL}/admin/contact-messages/${id}/read`, {
-        method:  "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      })
+      const res  = await fetch(`${API_URL}/admin/contact-messages/${id}/read`, { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
-    } catch (err: any) {
-      console.error("Failed to mark as read:", err.message)
-    } finally {
-      setMarkingReadId(null)
-    }
+    } catch (err: any) { console.error("Failed to mark as read:", err.message) }
+    finally { setMarkingReadId(null) }
   }
 
   const handleMarkAllRead = async () => {
-    const unread = inboxMessages.filter(m => !m.is_read)
-    for (const msg of unread) {
-      await handleMarkRead(msg.id)
-    }
+    for (const msg of inboxMessages.filter(m => !m.is_read)) await handleMarkRead(msg.id)
   }
 
   const fetchTakenSlots = async (hallId: string, date: string) => {
@@ -342,11 +310,8 @@ export default function AdminDashboard() {
       const res  = await fetch(`${API_URL}/screenings?hall_id=${hallId}&date=${date}`)
       const data = await res.json()
       if (!data.success) return
-      const times = (data.screenings as { start_time: string }[]).map(s => s.start_time.slice(0, 5))
-      setTakenSlots(times)
-    } catch {
-      setTakenSlots([])
-    }
+      setTakenSlots((data.screenings as { start_time: string }[]).map(s => s.start_time.slice(0, 5)))
+    } catch { setTakenSlots([]) }
   }
 
   const fetchScreeningsForEdit = async (movieId: number, dateStr: string) => {
@@ -355,36 +320,26 @@ export default function AdminDashboard() {
       const res  = await fetch(`${API_URL}/screenings`)
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      const filtered = (data.screenings as Screening[]).filter(
-        s => s.movie_id === movieId && s.show_date === dateStr
-      ).sort((a, b) => a.start_time.localeCompare(b.start_time))
-      setEditScreeningList(filtered)
-    } catch (err: any) {
-      console.error("Failed to load screenings:", err.message)
-      setEditScreeningList([])
-    } finally {
-      setLoadingScreenings(false)
-    }
+      setEditScreeningList(
+        (data.screenings as Screening[])
+          .filter(s => s.movie_id === movieId && s.show_date === dateStr)
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+      )
+    } catch (err: any) { console.error("Failed to load screenings:", err.message); setEditScreeningList([]) }
+    finally { setLoadingScreenings(false) }
   }
 
   const openEditScreeningModal = (movie: Movie, dateStr: string) => {
-    setEditScreeningMovie(movie)
-    setEditScreeningDate(dateStr)
-    setEditingScreeningId(null)
-    setShowEditScreening(true)
+    setEditScreeningMovie(movie); setEditScreeningDate(dateStr)
+    setEditingScreeningId(null); setShowEditScreening(true)
     fetchScreeningsForEdit(movie.id, dateStr)
   }
 
-  const startEditingScreening = (screening: Screening) => {
-    const hallMatch = hallList.find(h => h.name === screening.hall_name)
-    setEditingScreeningId(screening.id)
-    setEditScreeningForm({
-      hall_id:    hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
-      start_time: screening.start_time.slice(0, 5),
-    })
+  const startEditingScreening = (s: Screening) => {
+    const h = hallList.find(h => h.name === s.hall_name)
+    setEditingScreeningId(s.id)
+    setEditScreeningForm({ hall_id: h ? String(h.id) : (s.hall_id ? String(s.hall_id) : ""), start_time: s.start_time.slice(0, 5) })
   }
-
-  const cancelEditingScreening = () => { setEditingScreeningId(null) }
 
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
@@ -392,32 +347,24 @@ export default function AdminDashboard() {
     if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
       const res  = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
-        method:  "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
+        method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setEditingScreeningId(null)
-      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
-    } catch (err: any) {
-      alert(err.message || "Failed to update screening.")
-    }
+      if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+    } catch (err: any) { alert(err.message || "Failed to update screening.") }
   }
 
   const handleDeleteScreening = async (screeningId: number) => {
     if (!confirm("Are you sure you want to delete this screening?")) return
     try {
-      const res  = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
-        method:  "DELETE",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      })
+      const res  = await fetch(`${API_URL}/admin/screenings/${screeningId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
-    } catch (err: any) {
-      alert(err.message || "Failed to delete screening.")
-    }
+      if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
+    } catch (err: any) { alert(err.message || "Failed to delete screening.") }
   }
 
   const handleAddMovie = async () => {
@@ -425,63 +372,39 @@ export default function AdminDashboard() {
     setAddingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies`, {
-        method:  "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          title:         newMovie.title,
-          description:   newMovie.description   || null,
-          genre:         newMovie.genre         || null,
-          category:      newMovie.category,
-          language:      newMovie.language      || null,
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newMovie.title, description: newMovie.description || null, genre: newMovie.genre || null,
+          category: newMovie.category, language: newMovie.language || null,
           duration_mins: newMovie.duration_mins ? parseInt(newMovie.duration_mins) : null,
-          release_date:  newMovie.release_date  || null,
-          poster_url:    newMovie.poster_url    || null,
-          trailer_url:   newMovie.trailer_url   || null,
-          status:        newMovie.status,
-          is_active:     newMovie.is_active,
+          release_date: newMovie.release_date || null, poster_url: newMovie.poster_url || null,
+          trailer_url: newMovie.trailer_url || null, status: newMovie.status, is_active: newMovie.is_active,
         }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      await fetchMovies()
-      setNewMovie({ ...EMPTY_MOVIE })
-      setShowAddMovie(false)
-    } catch (err: any) {
-      alert(err.message || "Failed to add movie.")
-    } finally {
-      setAddingMovie(false)
-    }
+      await fetchMovies(); setNewMovie({ ...EMPTY_MOVIE }); setShowAddMovie(false)
+    } catch (err: any) { alert(err.message || "Failed to add movie.") }
+    finally { setAddingMovie(false) }
   }
 
   const handleDeleteMovie = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this movie?")) return
+    if (!confirm("Delete this movie?")) return
     try {
-      const res  = await fetch(`${API_URL}/admin/movies/${id}`, {
-        method:  "DELETE",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      })
+      const res  = await fetch(`${API_URL}/admin/movies/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       await fetchMovies()
-    } catch (err: any) {
-      alert(err.message || "Failed to delete movie.")
-    }
+    } catch (err: any) { alert(err.message || "Failed to delete movie.") }
   }
 
   const handleOpenEdit = (movie: Movie) => {
     setEditMovie({
-      id:            movie.id,
-      title:         movie.title,
-      description:   movie.description  || "",
-      genre:         movie.genre        || "",
-      category:      movie.category,
-      language:      movie.language     || "",
-      duration_mins: movie.duration_mins?.toString() || "",
-      release_date:  movie.release_date || "",
-      poster_url:    movie.poster_url   || "",
-      trailer_url:   movie.trailer_url  || "",
-      status:        movie.status,
-      is_active:     movie.is_active,
+      id: movie.id, title: movie.title, description: movie.description || "",
+      genre: movie.genre || "", category: movie.category, language: movie.language || "",
+      duration_mins: movie.duration_mins?.toString() || "", release_date: movie.release_date || "",
+      poster_url: movie.poster_url || "", trailer_url: movie.trailer_url || "",
+      status: movie.status, is_active: movie.is_active,
     })
     setShowEditMovie(true)
   }
@@ -491,85 +414,54 @@ export default function AdminDashboard() {
     setEditingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${editMovie.id}`, {
-        method:  "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          title:         editMovie.title,
-          description:   editMovie.description   || null,
-          genre:         editMovie.genre         || null,
-          category:      editMovie.category,
-          language:      editMovie.language      || null,
+        method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editMovie.title, description: editMovie.description || null, genre: editMovie.genre || null,
+          category: editMovie.category, language: editMovie.language || null,
           duration_mins: editMovie.duration_mins ? parseInt(editMovie.duration_mins as string) : null,
-          release_date:  editMovie.release_date  || null,
-          poster_url:    editMovie.poster_url    || null,
-          trailer_url:   editMovie.trailer_url   || null,
-          status:        editMovie.status,
-          is_active:     editMovie.is_active,
+          release_date: editMovie.release_date || null, poster_url: editMovie.poster_url || null,
+          trailer_url: editMovie.trailer_url || null, status: editMovie.status, is_active: editMovie.is_active,
         }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      await fetchMovies()
-      setShowEditMovie(false)
-    } catch (err: any) {
-      alert(err.message || "Failed to update movie.")
-    } finally {
-      setEditingMovie(false)
-    }
+      await fetchMovies(); setShowEditMovie(false)
+    } catch (err: any) { alert(err.message || "Failed to update movie.") }
+    finally { setEditingMovie(false) }
   }
 
   const handleToggleActive = async (movie: Movie) => {
     setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: !m.is_active } : m))
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${movie.id}`, {
-        method:  "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({ is_active: !movie.is_active }),
+        method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !movie.is_active }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
     } catch (err: any) {
       setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: movie.is_active } : m))
-      alert(err.message || "Failed to update active status.")
+      alert(err.message || "Failed to update.")
     }
   }
 
   const handleAddScreening = async () => {
     const { movie_id, hall_id, show_date, start_time } = newScreening
-    if (!movie_id || !hall_id || !show_date || !start_time) {
-      alert("Please fill in all required fields.")
-      return
-    }
+    if (!movie_id || !hall_id || !show_date || !start_time) { alert("Please fill in all required fields."); return }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
-      const seats = newScreening.available_seats
-        ? parseInt(newScreening.available_seats)
-        : selectedHall?.capacity || 100
-
+      const seats = newScreening.available_seats ? parseInt(newScreening.available_seats) : selectedHall?.capacity || 100
       const res  = await fetch(`${API_URL}/admin/screenings`, {
-        method:  "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          movie_id:        parseInt(movie_id),
-          hall_id:         parseInt(hall_id),
-          show_date,
-          start_time,
-          available_seats: seats,
-        }),
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_id: parseInt(movie_id), hall_id: parseInt(hall_id), show_date, start_time, available_seats: seats }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       alert("Screening added successfully!")
       setNewScreening({ movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "" })
-      setTakenSlots([])
-      setShowAddScreening(false)
-    } catch (err: any) {
-      alert(err.message || "Failed to add screening.")
-    }
+      setTakenSlots([]); setShowAddScreening(false)
+    } catch (err: any) { alert(err.message || "Failed to add screening.") }
   }
-
-  const [showInlineAdd,      setShowInlineAdd]      = useState(false)
-  const [inlineNewScreening, setInlineNewScreening] = useState({ hall_id: "", start_time: "", available_seats: "" })
 
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
@@ -577,200 +469,721 @@ export default function AdminDashboard() {
     if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
-      const seats = inlineNewScreening.available_seats
-        ? parseInt(inlineNewScreening.available_seats)
-        : selectedHall?.capacity || 100
-
+      const seats = inlineNewScreening.available_seats ? parseInt(inlineNewScreening.available_seats) : selectedHall?.capacity || 100
       const res  = await fetch(`${API_URL}/admin/screenings`, {
-        method:  "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          movie_id:        editScreeningMovie.id,
-          hall_id:         parseInt(hall_id),
-          show_date:       editScreeningDate,
-          start_time,
-          available_seats: seats,
-        }),
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_id: editScreeningMovie.id, hall_id: parseInt(hall_id), show_date: editScreeningDate, start_time, available_seats: seats }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setInlineNewScreening({ hall_id: "", start_time: "", available_seats: "" })
-      setTakenSlots([])
-      setShowInlineAdd(false)
+      setTakenSlots([]); setShowInlineAdd(false)
       fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-    } catch (err: any) {
-      alert(err.message || "Failed to add screening.")
-    }
+    } catch (err: any) { alert(err.message || "Failed to add screening.") }
   }
 
-  const setMovieField = (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
-        ? e.target.checked : e.target.value
-      setNewMovie(prev => ({ ...prev, [field]: value }))
-    }
+  const handleApplyDiscount = async () => {
+    if (!discountStartDate || !discountEndDate) { alert("Please select start and end dates."); return }
+    setApplyingDiscount(true)
+    await new Promise(r => setTimeout(r, 800))
+    alert("Discount applied successfully!")
+    setApplyingDiscount(false)
+  }
 
-  const setEditField = (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox"
-        ? e.target.checked : e.target.value
-      setEditMovie(prev => ({ ...prev, [field]: value }))
-    }
+  const setMovieField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : e.target.value
+    setNewMovie(prev => ({ ...prev, [field]: value }))
+  }
+  const setEditField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const value = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : e.target.value
+    setEditMovie(prev => ({ ...prev, [field]: value }))
+  }
 
+  // ── Derived ───────────────────────────────────────────────────────────────
   const nowShowing   = movieList.filter(m => m.status === "now_showing")
   const comingSoon   = movieList.filter(m => m.status === "coming_soon")
-  const activeMovies = movieList.filter(m => m.is_active)
+  const nowActive    = nowShowing.filter(m => m.is_active)
+  const nowInactive  = nowShowing.filter(m => !m.is_active)
+  const soonActive   = comingSoon.filter(m => m.is_active)
+  const soonInactive = comingSoon.filter(m => !m.is_active)
 
-  const unreadCount    = inboxMessages.filter(m => !m.is_read).length
-  const filteredInbox  = inboxMessages.filter(m =>
-    inboxFilter === "all"    ? true :
-    inboxFilter === "unread" ? !m.is_read :
-    m.is_read
+  const unreadCount   = inboxMessages.filter(m => !m.is_read).length
+  const filteredInbox = inboxMessages.filter(m =>
+    inboxFilter === "all" ? true : inboxFilter === "unread" ? !m.is_read : m.is_read
   )
 
-  const stats = [
-    { label: "Tickets Sold",      value: "15,000",                       icon: "fa-ticket" },
-    { label: "Total Movies",      value: movieList.length.toString(),    icon: "fa-film" },
-    { label: "Active Movies",     value: activeMovies.length.toString(), icon: "fa-circle-play" },
-    { label: "Revenue",           value: "40M BDT",                      icon: "fa-sack-dollar" },
-    { label: "Active Screenings", value: "500",                          icon: "fa-clapperboard" },
+  const daysInMonth  = getDaysInMonth(calYear, calMonth)
+  const firstDay     = getFirstDayOfMonth(calYear, calMonth)
+  const todayStr     = getTodayBDStr()  // BD timezone
+
+  const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) } else setCalMonth(m => m - 1) }
+  const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) } else setCalMonth(m => m + 1) }
+
+  // Mock income data
+  const incomeData = [
+    { day: "Sun", comedy: 18000, other: 9000 },
+    { day: "Mon", comedy: 12000, other: 6000 },
+    { day: "Tue", comedy: 28000, other: 14000 },
+    { day: "Wed", comedy: 45000, other: 22000 },
+    { day: "Thu", comedy: 32000, other: 18000 },
+    { day: "Fri", comedy: 38000, other: 20000 },
+    { day: "Sat", comedy: 42000, other: 21000 },
   ]
+  const maxIncome = Math.max(...incomeData.map(d => d.comedy + d.other))
+  const totalIncome = incomeData.reduce((s, d) => s + d.comedy + d.other, 0)
+  const totalComedy = incomeData.reduce((s, d) => s + d.comedy, 0)
+  const totalOther  = incomeData.reduce((s, d) => s + d.other, 0)
+  const fmt = (n: number) => n >= 1000 ? `৳${(n / 1000).toFixed(1)}k` : `৳${n}`
 
-  const mgmt = [
-    { label: "Movie Management",     icon: "fa-film",         action: () => setShowAddMovie(true) },
-    { label: "Screening Management", icon: "fa-clapperboard", action: () => setShowAddScreening(true) },
-    { label: "Inbox",                icon: "fa-inbox",        action: () => { setShowInbox(true); fetchInbox() } },
-  ]
+  // ── Styles — Light theme matching the screenshot ──────────────────────────
+  // Palette: bg=#f5f5f5, card=white, primary=#6B1829, text=#1a1a1a, muted=#6b7280
+  const PRIMARY    = "#6B1829"
+  const PRIMARY_LT = "#f9e8eb"  // light tint of primary
+  const BG         = "#f4f4f6"
+  const CARD       = "#ffffff"
+  const TEXT       = "#1a1a1a"
+  const MUTED      = "#6b7280"
+  const BORDER     = "#e5e7eb"
 
-  return (
-    <div className="admin-wrapper">
+  const s = {
+    wrapper: {
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      background: BG,
+      minHeight: "100vh",
+      color: TEXT,
+    } as React.CSSProperties,
 
-      <div className="admin-header">
-        <div className="admin-header-top">
-          <div>
-            <h1 className="admin-header-title">Good afternoon, admin</h1>
-            <p className="admin-header-subtitle">Here's what's happening with CineBook today.</p>
-          </div>
+    // Tab bar — sits below the existing site navbar, no branding/logo
+    tabBar: {
+      display: "flex",
+      alignItems: "center",
+      gap: "0.25rem",
+      padding: "0.75rem 2rem",
+      background: CARD,
+      borderBottom: `1px solid ${BORDER}`,
+      // NOT sticky — no z-index clash
+    } as React.CSSProperties,
+
+    tabItem: (active: boolean): React.CSSProperties => ({
+      padding: "0.45rem 1.1rem",
+      borderRadius: "999px",
+      fontSize: "0.82rem",
+      fontWeight: 600,
+      cursor: "pointer",
+      border: active ? "none" : `1px solid ${BORDER}`,
+      background: active ? PRIMARY : "transparent",
+      color: active ? "white" : MUTED,
+      transition: "all 0.15s",
+    }),
+    tabBadge: {
+      background: PRIMARY,
+      color: "white",
+      borderRadius: "999px",
+      fontSize: "0.6rem",
+      fontWeight: 700,
+      padding: "0.1rem 0.4rem",
+      marginLeft: "0.3rem",
+    } as React.CSSProperties,
+
+    // Layout — 3 columns: calendar | discount+income | stat cards
+    body: {
+      display: "grid",
+      gridTemplateColumns: "440px 1fr 220px",
+      gap: "1.5rem",
+      padding: "1.5rem",
+      maxWidth: "1500px",
+      margin: "0 auto",
+    } as React.CSSProperties,
+
+    // Cards — white with subtle shadow
+    card: {
+      background: CARD,
+      borderRadius: "14px",
+      border: `1px solid ${BORDER}`,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      overflow: "hidden" as const,
+    } as React.CSSProperties,
+
+    // Calendar
+    calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.5rem 1.5rem 1rem" },
+    calTitle: { fontSize: "1.4rem", fontWeight: 700, color: TEXT },
+    calNav: { display: "flex", gap: "0.5rem" },
+    calNavBtn: {
+      background: PRIMARY_LT, border: `1px solid ${BORDER}`,
+      color: PRIMARY, width: "34px", height: "34px",
+      borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    } as React.CSSProperties,
+    calGrid: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "0 1.25rem 1.25rem", gap: "3px" },
+    calDayLabel: { textAlign: "center" as const, fontSize: "0.72rem", fontWeight: 700, color: MUTED, padding: "0.5rem 0", textTransform: "uppercase" as const },
+    calDay: (isToday: boolean, isSelected: boolean, isEmpty: boolean): React.CSSProperties => ({
+      textAlign: "center", fontSize: "0.88rem",
+      fontWeight: isToday || isSelected ? 700 : 400,
+      padding: "0.55rem 0.25rem", borderRadius: "8px",
+      cursor: isEmpty ? "default" : "pointer",
+      color: isEmpty ? "transparent" : isToday ? PRIMARY : isSelected ? "white" : TEXT,
+      background: isSelected && !isToday ? PRIMARY : isToday ? PRIMARY_LT : "transparent",
+      border: isSelected ? `1px solid ${PRIMARY}` : "1px solid transparent",
+      outline: isToday && !isSelected ? `1.5px solid ${PRIMARY}` : "none",
+    }),
+
+    // Schedule
+    scheduleWrap: { padding: "0 1.5rem 1.5rem", maxHeight: "300px", overflowY: "auto" as const },
+    scheduleItem: {
+      display: "flex", alignItems: "center", gap: "0.85rem",
+      padding: "0.75rem 0.85rem", borderRadius: "10px", marginBottom: "0.5rem",
+      background: "#fafafa", border: `1px solid ${BORDER}`,
+    } as React.CSSProperties,
+    scheduleTime: { fontSize: "0.72rem", fontWeight: 700, color: MUTED, width: "58px", flexShrink: 0 } as React.CSSProperties,
+    scheduleInfo: { flex: 1, minWidth: 0 },
+    scheduleTitle: { fontSize: "0.85rem", fontWeight: 700, color: TEXT, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" },
+    scheduleSub: { fontSize: "0.72rem", color: MUTED, marginTop: "0.1rem" },
+
+    // Right column
+    rightCol: { display: "flex", flexDirection: "column" as const, gap: "1.25rem" },
+
+    // Discount widget — keep the crimson accent from screenshot
+    discountCard: {
+      background: PRIMARY, borderRadius: "14px", padding: "1.25rem",
+      position: "relative" as const, overflow: "hidden",
+      boxShadow: "0 4px 20px rgba(107,24,41,0.3)",
+    },
+    discountTitle: { fontSize: "0.95rem", fontWeight: 800, color: "white", marginBottom: "0.85rem", display: "flex", alignItems: "center", gap: "0.5rem" },
+    discountInp: {
+      background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)",
+      borderRadius: "8px", padding: "0.45rem 0.6rem", color: "white",
+      fontSize: "0.78rem", fontWeight: 600, width: "100%",
+      boxSizing: "border-box" as const, outline: "none",
+    },
+    discountLabel: { fontSize: "0.6rem", color: "rgba(255,255,255,0.75)", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: "0.2rem" },
+    discountSelect: {
+      background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)",
+      borderRadius: "8px", padding: "0.45rem 0.6rem", color: "white",
+      fontSize: "0.78rem", fontWeight: 600, width: "100%",
+      boxSizing: "border-box" as const, outline: "none", cursor: "pointer",
+    },
+
+    // Income
+    incomeCard: { background: CARD, borderRadius: "14px", border: `1px solid ${BORDER}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", padding: "1.25rem" },
+    incomeHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" },
+    incomeTitle: { fontSize: "0.95rem", fontWeight: 700, color: TEXT },
+    incomeFilters: { display: "flex", gap: "0.5rem" },
+    incomeSel: { background: "#f9fafb", border: `1px solid ${BORDER}`, borderRadius: "8px", color: TEXT, fontSize: "0.72rem", padding: "0.3rem 0.6rem", cursor: "pointer", outline: "none" } as React.CSSProperties,
+    incomeStats: { display: "flex", gap: "2rem", marginBottom: "1rem" },
+    incomeStat: { display: "flex", flexDirection: "column" as const },
+    incomeStatVal: { fontSize: "1.4rem", fontWeight: 800, color: TEXT },
+    incomeStatLabel: { fontSize: "0.7rem", color: MUTED, fontWeight: 500, display: "flex", alignItems: "center", gap: "0.3rem" },
+    incomeStatDot: (color: string): React.CSSProperties => ({ width: "7px", height: "7px", borderRadius: "50%", background: color }),
+    barChart: { display: "flex", alignItems: "flex-end", gap: "0.5rem", height: "100px" },
+    barWrap: { flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", gap: "0.4rem", height: "100%" },
+    barStack: { flex: 1, width: "100%", display: "flex", flexDirection: "column" as const, justifyContent: "flex-end", gap: "2px" },
+    barSeg: (h: number, color: string): React.CSSProperties => ({
+      width: "100%", borderRadius: "4px 4px 0 0", background: color,
+      height: `${h}%`, minHeight: h > 0 ? "3px" : "0", transition: "height 0.3s",
+    }),
+    barLabel: { fontSize: "0.6rem", color: MUTED, fontWeight: 600 },
+  }
+
+  // ── Movie card ─────────────────────────────────────────────────────────────
+  const MovieCard = ({ movie }: { movie: Movie }) => (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", transition: "border-color 0.15s" }}>
+      <div style={{ height: "200px", position: "relative", overflow: "hidden" }}>
+        <MoviePoster movie={movie} />
+        <div style={{ position: "absolute", top: "0.5rem", right: "0.5rem", display: "flex", gap: "0.3rem" }}>
+          <span style={{ background: movie.status === "now_showing" ? "#10b981" : "#f59e0b", color: "white", fontSize: "0.6rem", fontWeight: 700, padding: "0.15rem 0.45rem", borderRadius: "999px" }}>
+            {movie.status === "now_showing" ? "NOW" : "SOON"}
+          </span>
+          <span style={{ background: movie.is_active ? "#3b82f6" : "#9ca3af", color: "white", fontSize: "0.6rem", fontWeight: 700, padding: "0.15rem 0.45rem", borderRadius: "999px" }}>
+            {movie.is_active ? "ACTIVE" : "OFF"}
+          </span>
         </div>
-        <div className="admin-month-section">
-          <div className="admin-month-row">
-            <span className="admin-month-label">For the month of:</span>
-            <select className="admin-month-select" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
-              {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
+      </div>
+      <div style={{ padding: "0.75rem" }}>
+        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: TEXT, marginBottom: "0.2rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{movie.title}</div>
+        <div style={{ fontSize: "0.68rem", color: MUTED, marginBottom: "0.6rem" }}>{movie.genre || "—"} · {movie.category}{movie.duration_mins ? ` · ${movie.duration_mins}m` : ""}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+          <span style={{ fontSize: "0.65rem", color: movie.is_active ? "#10b981" : MUTED, fontWeight: 700 }}>{movie.is_active ? "Active" : "Inactive"}</span>
+          <button onClick={() => handleToggleActive(movie)}
+            style={{ width: "36px", height: "20px", borderRadius: "999px", border: "none", background: movie.is_active ? PRIMARY : "#d1d5db", position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+            <span style={{ position: "absolute", top: "2px", left: movie.is_active ? "18px" : "2px", width: "16px", height: "16px", borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button onClick={() => handleOpenEdit(movie)}
+            style={{ flex: 1, padding: "0.4rem", background: PRIMARY_LT, border: `1px solid ${PRIMARY}44`, color: PRIMARY, borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+            <i className="fa-solid fa-pen" /> Edit
+          </button>
+          <button onClick={() => handleDeleteMovie(movie.id)}
+            style={{ flex: 1, padding: "0.4rem", background: "#fee2e2", border: "1px solid #fca5a5", color: "#ef4444", borderRadius: "8px", fontSize: "0.72rem", fontWeight: 700, cursor: "pointer" }}>
+            <i className="fa-solid fa-trash" /> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div style={s.wrapper}>
+      {/* ── Tab bar only — NO branding/logo/logout; those are in the existing site navbar ── */}
+      <div style={s.tabBar}>
+        {(["overview","management","inbox","movies"] as const).map(tab => (
+          <button key={tab} style={s.tabItem(activeTab === tab)}
+            onClick={() => { setActiveTab(tab); if (tab === "inbox") fetchInbox() }}>
+            {tab === "overview"    && <><i className="fa-solid fa-gauge-high" style={{ marginRight: "0.35rem" }} />Overview</>}
+            {tab === "management" && <><i className="fa-solid fa-sliders" style={{ marginRight: "0.35rem" }} />Management</>}
+            {tab === "inbox"      && <><i className="fa-solid fa-inbox" style={{ marginRight: "0.35rem" }} />Inbox{unreadCount > 0 && <span style={s.tabBadge}>{unreadCount}</span>}</>}
+            {tab === "movies"     && <><i className="fa-solid fa-film" style={{ marginRight: "0.35rem" }} />Movies</>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── OVERVIEW TAB ── */}
+      {activeTab === "overview" && (
+        <div style={s.body}>
+          {/* Left: Calendar + Schedule */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            <div style={s.card}>
+              {/* Calendar Header */}
+              <div style={s.calHeader}>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    {MONTHS[calMonth]}, {calYear}
+                  </div>
+                  <div style={s.calTitle}>
+                    {calSelectedDate === todayStr ? "Today" : formatDateDisplay(calSelectedDate).split(",")[0]}
+                    {calSelectedDate === todayStr && <span style={{ fontSize: "0.82rem", color: PRIMARY, marginLeft: "0.5rem", fontWeight: 600 }}>Today</span>}
+                  </div>
+                </div>
+                <div style={s.calNav}>
+                  <button style={s.calNavBtn} onClick={prevMonth}><i className="fa-solid fa-chevron-left" /></button>
+                  <button style={s.calNavBtn} onClick={nextMonth}><i className="fa-solid fa-chevron-right" /></button>
+                </div>
+              </div>
+
+              {/* Day labels */}
+              <div style={s.calGrid}>
+                {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
+                  <div key={d} style={s.calDayLabel}>{d}</div>
+                ))}
+                {/* Empty cells for first day offset */}
+                {Array.from({ length: firstDay }).map((_, i) => (
+                  <div key={`e${i}`} style={s.calDay(false, false, true)}>0</div>
+                ))}
+                {/* Days */}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day     = i + 1
+                  const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+                  const isT     = dateStr === todayStr
+                  const isSel   = dateStr === calSelectedDate
+                  return (
+                    <div key={day} style={s.calDay(isT, isSel, false)} onClick={() => setCalSelectedDate(dateStr)}>
+                      {day}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Screening Schedule */}
+              <div style={{ borderTop: `1px solid ${BORDER}`, padding: "0.9rem 1.5rem 0.6rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
+                  Schedule · {new Date(calSelectedDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </div>
+              </div>
+              <div style={s.scheduleWrap}>
+                {loadingCalScreenings && <div style={{ textAlign: "center", color: MUTED, padding: "1rem", fontSize: "0.8rem" }}>Loading…</div>}
+                {!loadingCalScreenings && calScreenings.length === 0 && (
+                  <div style={{ textAlign: "center", color: "#9ca3af", padding: "1.5rem", fontSize: "0.8rem" }}>No screenings on this date.</div>
+                )}
+                {!loadingCalScreenings && calScreenings.map(s2 => {
+                  const movie = movieList.find(m => m.id === s2.movie_id)
+                  // Resolve hall and theater names
+                  const hall = hallList.find(h => h.name === s2.hall_name || h.id === s2.hall_id)
+                  const hallDisplay    = hall?.name || s2.hall_name || "—"
+                  const theaterDisplay = hall?.theater?.name || ""
+                  const locationLabel  = theaterDisplay ? `${hallDisplay} · ${theaterDisplay}` : hallDisplay
+                  return (
+                    <div key={s2.id} style={s.scheduleItem}>
+                      <div style={s.scheduleTime}>{formatTime12(s2.start_time)}</div>
+                      <div style={{ width: "36px", height: "36px", borderRadius: "6px", overflow: "hidden", flexShrink: 0 }}>
+                        {movie ? <MoviePoster movie={movie} /> : <div style={{ background: BORDER, width: "100%", height: "100%" }} />}
+                      </div>
+                      <div style={s.scheduleInfo}>
+                        <div style={s.scheduleTitle}>{movie?.title || "Unknown"}</div>
+                        <div style={s.scheduleSub}>{locationLabel}</div>
+                      </div>
+                      {s2.available_seats === 0 && (
+                        <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#ef4444", flexShrink: 0 }}>SOLD OUT</div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
-          <div className="admin-stats-row">
-            {stats.map(s => (
-              <div key={s.label} className="admin-stat-card">
-                <i className={`fa-solid ${s.icon} admin-stat-icon`} />
-                <div className="admin-stat-value">{s.value}</div>
-                <div className="admin-stat-label">{s.label}</div>
+
+          {/* Middle column: Discount + Income */}
+          <div style={s.rightCol}>
+            {/* Discount Widget */}
+            <div style={s.discountCard}>
+              <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "120px", height: "120px", borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
+              <div style={{ position: "absolute", bottom: "-30px", right: "60px", width: "80px", height: "80px", borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
+              <div style={s.discountTitle}>
+                <i className="fa-solid fa-tag" />
+                Issue Seat Discount
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.6rem" }}>
+                <div>
+                  <div style={s.discountLabel}>Theatre</div>
+                  <select style={s.discountSelect} value={discountTheater} onChange={e => setDiscountTheater(e.target.value)}>
+                    {THEATERS.map(t => <option key={t.id} value={t.id} style={{ background: "#2a0a10", color: "white" }}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={s.discountLabel}>Regular Seats %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 10" style={s.discountInp} value={discountRegular} onChange={e => setDiscountRegular(e.target.value)} />
+                </div>
+                <div>
+                  <div style={s.discountLabel}>Premium Seats %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 15" style={s.discountInp} value={discountPremium} onChange={e => setDiscountPremium(e.target.value)} />
+                </div>
+                <div>
+                  <div style={s.discountLabel}>VIP Seats %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp} value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
+                </div>
+                <div>
+                  <div style={s.discountLabel}>Start Date</div>
+                  <input type="date" style={s.discountInp} value={discountStartDate} onChange={e => setDiscountStartDate(e.target.value)} />
+                </div>
+                <div>
+                  <div style={s.discountLabel}>End Date</div>
+                  <input type="date" style={s.discountInp} value={discountEndDate} onChange={e => setDiscountEndDate(e.target.value)} />
+                </div>
+              </div>
+
+              <button onClick={handleApplyDiscount} disabled={applyingDiscount}
+                style={{ marginTop: "0.25rem", background: "white", color: PRIMARY, border: "none", borderRadius: "10px", padding: "0.6rem 1.5rem", fontWeight: 800, fontSize: "0.82rem", cursor: applyingDiscount ? "wait" : "pointer", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <i className="fa-solid fa-check" />
+                {applyingDiscount ? "Applying…" : "Apply Discount"}
+              </button>
+            </div>
+
+            {/* Income */}
+            <div style={s.incomeCard}>
+              <div style={s.incomeHeader}>
+                <div style={s.incomeTitle}><i className="fa-solid fa-chart-column" style={{ color: PRIMARY, marginRight: "0.4rem" }} />Income</div>
+                <div style={s.incomeFilters}>
+                  <select style={s.incomeSel} value={incomeMonth} onChange={e => setIncomeMonth(e.target.value)}>
+                    {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select style={s.incomeSel} value={incomeTheater} onChange={e => setIncomeTheater(e.target.value)}>
+                    <option value="all">All Theatres</option>
+                    {THEATERS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <select style={s.incomeSel} value={incomeMovie} onChange={e => setIncomeMovie(e.target.value)}>
+                    <option value="all">All Movies</option>
+                    {movieList.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={s.incomeStats}>
+                <div style={s.incomeStat}>
+                  <div style={s.incomeStatVal}>{fmt(totalIncome)}</div>
+                  <div style={s.incomeStatLabel}>Total income</div>
+                </div>
+                <div style={s.incomeStat}>
+                  <div style={{ ...s.incomeStatVal, color: PRIMARY }}>{fmt(totalComedy)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot(PRIMARY)} />Comedy</div>
+                </div>
+                <div style={s.incomeStat}>
+                  <div style={{ ...s.incomeStatVal, color: MUTED }}>{fmt(totalOther)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#d1d5db")} />Other</div>
+                </div>
+              </div>
+
+              <div style={s.barChart}>
+                {incomeData.map(d => {
+                  const comedyH = Math.round((d.comedy / maxIncome) * 100)
+                  const otherH  = Math.round((d.other  / maxIncome) * 100)
+                  return (
+                    <div key={d.day} style={s.barWrap}>
+                      <div style={s.barStack}>
+                        <div style={s.barSeg(otherH, "#e5e7eb")} title={`Other: ${fmt(d.other)}`} />
+                        <div style={s.barSeg(comedyH, PRIMARY)} title={`Comedy: ${fmt(d.comedy)}`} />
+                      </div>
+                      <div style={s.barLabel}>{d.day}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column: stat cards only */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {[
+              { label: "Total Movies",  value: movieList.length,  icon: "fa-film",       color: "#3b82f6" },
+              { label: "Now Showing",   value: nowShowing.length, icon: "fa-circle-play", color: "#10b981" },
+              { label: "Coming Soon",   value: comingSoon.length, icon: "fa-clock",       color: "#f59e0b" },
+            ].map(stat => (
+              <div key={stat.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "1.25rem 1.25rem 1rem", display: "flex", flexDirection: "column", gap: "0.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                <i className={`fa-solid ${stat.icon}`} style={{ color: stat.color, fontSize: "1.25rem" }} />
+                <div style={{ fontSize: "2.2rem", fontWeight: 800, color: TEXT, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ fontSize: "0.78rem", color: MUTED, fontWeight: 600 }}>{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="admin-mgmt-row">
-        {mgmt.map(m => (
-          <div key={m.label} className="admin-mgmt-card" onClick={m.action}
-            role="button" tabIndex={0} onKeyDown={e => e.key === "Enter" && m.action()}>
-            <div className="admin-mgmt-icon"><i className={`fa-solid ${m.icon}`} /></div>
-            <div className="admin-mgmt-label">{m.label}</div>
+      {/* ── MANAGEMENT TAB ── */}
+      {activeTab === "management" && (
+        <div style={{ padding: "1.5rem", maxWidth: "1400px", margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", maxWidth: "700px" }}>
+            {[
+              { label: "Movie Management",     icon: "fa-film",         desc: "Add, edit and remove movies from the catalogue", action: () => setShowAddMovie(true),     red: true  },
+              { label: "Screening Management", icon: "fa-clapperboard", desc: "Schedule and manage screening sessions",          action: () => setShowAddScreening(true), red: true  },
+            ].map(m => (
+              <div key={m.label} onClick={m.action} role="button" tabIndex={0} onKeyDown={e => e.key === "Enter" && m.action()}
+                style={{ background: m.red ? PRIMARY : CARD, border: `1px solid ${m.red ? PRIMARY : BORDER}`, borderRadius: "16px", padding: "2rem", cursor: "pointer", transition: "opacity 0.15s, transform 0.1s", boxShadow: m.red ? "0 4px 20px rgba(107,24,41,0.25)" : "0 1px 4px rgba(0,0,0,0.05)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1" }}>
+                <div style={{ width: "56px", height: "56px", background: m.red ? "rgba(255,255,255,0.15)" : PRIMARY_LT, borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                  <i className={`fa-solid ${m.icon}`} style={{ color: m.red ? "white" : PRIMARY, fontSize: "1.4rem" }} />
+                </div>
+                <div style={{ fontWeight: 800, fontSize: "1.05rem", color: m.red ? "white" : TEXT, marginBottom: "0.4rem" }}>{m.label}</div>
+                <div style={{ fontSize: "0.82rem", color: m.red ? "rgba(255,255,255,0.7)" : MUTED }}>{m.desc}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      <div className="admin-movies-area">
-        {loadingMovies && <p className="admin-loading">Loading movies…</p>}
-        {movieError    && <p className="admin-error">{movieError}</p>}
+      {/* ── INBOX TAB ── */}
+      {activeTab === "inbox" && (
+        <div style={{ padding: "1.25rem", maxWidth: "800px", margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: TEXT }}>Inbox</div>
+              <div style={{ fontSize: "0.75rem", color: MUTED }}>{inboxMessages.length} total · {unreadCount} unread</div>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              {(["all","unread","read"] as const).map(f => (
+                <button key={f} onClick={() => setInboxFilter(f)}
+                  style={{ padding: "0.35rem 0.9rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", border: `1px solid ${BORDER}`, background: inboxFilter === f ? PRIMARY : CARD, color: inboxFilter === f ? "white" : MUTED, transition: "all 0.15s" }}>
+                  {f === "all" ? `All (${inboxMessages.length})` : f === "unread" ? `Unread (${unreadCount})` : `Read (${inboxMessages.length - unreadCount})`}
+                </button>
+              ))}
+              {unreadCount > 0 && (
+                <button onClick={handleMarkAllRead}
+                  style={{ padding: "0.35rem 0.9rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", border: `1px solid ${BORDER}`, background: CARD, color: MUTED }}>
+                  <i className="fa-solid fa-check-double" style={{ marginRight: "0.3rem" }} />Mark all read
+                </button>
+              )}
+            </div>
+          </div>
 
-        {!loadingMovies && (
-          <>
-            <section className="movie-section">
-              <div className="movie-section-header">
-                <span className="movie-section-badge now-showing-badge">
-                  <i className="fa-solid fa-circle" /> Now Showing
-                </span>
-                <span className="movie-section-count">{nowShowing.length} movie{nowShowing.length !== 1 ? "s" : ""}</span>
-              </div>
-              {nowShowing.length === 0
-                ? <p className="admin-empty">No movies currently showing.</p>
-                : <div className="movie-grid">
-                    {nowShowing.map(m => (
-                      <MovieCard key={m.id} movie={m}
-                        onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />
-                    ))}
+          {loadingInbox && <div style={{ textAlign: "center", color: MUTED, padding: "3rem" }}><i className="fa-solid fa-spinner fa-spin" /></div>}
+          {!loadingInbox && inboxError && <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#ef4444", borderRadius: "10px", padding: "0.85rem 1rem", fontSize: "0.85rem" }}>{inboxError}</div>}
+          {!loadingInbox && !inboxError && filteredInbox.length === 0 && (
+            <div style={{ textAlign: "center", color: "#9ca3af", padding: "3rem", fontSize: "0.9rem" }}>No messages.</div>
+          )}
+
+          {!loadingInbox && !inboxError && filteredInbox.map(msg => {
+            const sc   = SUBJECT_COLORS[msg.subject] || SUBJECT_COLORS["Other"]
+            const isExp = expandedMsgId === msg.id
+            const dateStr = new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+            const timeStr = new Date(msg.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+            return (
+              <div key={msg.id} style={{ background: CARD, border: `1px solid ${msg.is_read ? BORDER : PRIMARY + "66"}`, borderLeft: `3px solid ${msg.is_read ? BORDER : PRIMARY}`, borderRadius: "10px", marginBottom: "0.5rem", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div onClick={() => setExpandedMsgId(isExp ? null : msg.id)} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.85rem 1rem", cursor: "pointer" }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: msg.is_read ? "transparent" : PRIMARY, flexShrink: 0 }} />
+                  <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: PRIMARY, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "0.8rem", flexShrink: 0 }}>{msg.name.charAt(0).toUpperCase()}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.2rem" }}>
+                      <span style={{ fontWeight: msg.is_read ? 500 : 700, fontSize: "0.85rem", color: TEXT }}>{msg.name}</span>
+                      <span style={{ fontSize: "0.65rem", color: MUTED }}>{msg.email}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                      <span style={{ background: sc.bg, color: sc.color, fontSize: "0.62rem", fontWeight: 700, padding: "0.1rem 0.45rem", borderRadius: "999px" }}>{msg.subject}</span>
+                      <span style={{ fontSize: "0.75rem", color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.message.slice(0, 60)}{msg.message.length > 60 ? "…" : ""}</span>
+                    </div>
                   </div>
-              }
-            </section>
-
-            <section className="movie-section">
-              <div className="movie-section-header">
-                <span className="movie-section-badge coming-soon-badge">
-                  <i className="fa-regular fa-circle" /> Coming Soon
-                </span>
-                <span className="movie-section-count">{comingSoon.length} movie{comingSoon.length !== 1 ? "s" : ""}</span>
-              </div>
-              {comingSoon.length === 0
-                ? <p className="admin-empty">No upcoming movies.</p>
-                : <div className="movie-grid">
-                    {comingSoon.map(m => (
-                      <MovieCard key={m.id} movie={m}
-                        onDelete={handleDeleteMovie} onToggleActive={handleToggleActive} onEdit={handleOpenEdit} />
-                    ))}
+                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+                    <span style={{ fontSize: "0.68rem", color: MUTED }}>{dateStr}</span>
+                    {!msg.is_read && <span style={{ background: PRIMARY, color: "white", fontSize: "0.58rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "999px" }}>NEW</span>}
                   </div>
-              }
-            </section>
-          </>
-        )}
-      </div>
+                  <i className={`fa-solid fa-chevron-${isExp ? "up" : "down"}`} style={{ fontSize: "0.65rem", color: MUTED, flexShrink: 0 }} />
+                </div>
+                {isExp && (
+                  <div style={{ borderTop: `1px solid ${BORDER}`, padding: "1rem", background: "#fafafa" }}>
+                    <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                      <div><div style={{ fontSize: "0.62rem", color: MUTED, fontWeight: 700, textTransform: "uppercase", marginBottom: "0.15rem" }}>From</div><div style={{ fontSize: "0.82rem", color: TEXT }}>{msg.name} · {msg.email}</div></div>
+                      <div><div style={{ fontSize: "0.62rem", color: MUTED, fontWeight: 700, textTransform: "uppercase", marginBottom: "0.15rem" }}>Received</div><div style={{ fontSize: "0.82rem", color: TEXT }}>{dateStr} at {timeStr}</div></div>
+                    </div>
+                    <div style={{ fontSize: "0.62rem", color: MUTED, fontWeight: 700, textTransform: "uppercase", marginBottom: "0.4rem" }}>Message</div>
+                    <div style={{ fontSize: "0.85rem", color: "#374151", lineHeight: 1.7, background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", padding: "0.75rem 1rem", whiteSpace: "pre-wrap", marginBottom: "0.75rem" }}>{msg.message}</div>
+                    {!msg.is_read && (
+                      <button onClick={() => handleMarkRead(msg.id)} disabled={markingReadId === msg.id}
+                        style={{ background: PRIMARY, color: "white", border: "none", borderRadius: "8px", padding: "0.4rem 1rem", fontSize: "0.78rem", fontWeight: 700, cursor: markingReadId === msg.id ? "wait" : "pointer" }}>
+                        {markingReadId === msg.id ? "Marking…" : <><i className="fa-solid fa-check" style={{ marginRight: "0.35rem" }} />Mark as read</>}
+                      </button>
+                    )}
+                    {msg.is_read && <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: 600 }}><i className="fa-solid fa-circle-check" style={{ marginRight: "0.35rem" }} />Read</span>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── MOVIES TAB ── */}
+      {activeTab === "movies" && (
+        <div style={{ padding: "1.25rem", maxWidth: "1400px", margin: "0 auto" }}>
+          {loadingMovies && <div style={{ textAlign: "center", color: MUTED, padding: "3rem" }}><i className="fa-solid fa-spinner fa-spin" /></div>}
+          {movieError    && <div style={{ color: "#ef4444", padding: "1rem" }}>{movieError}</div>}
+
+          {!loadingMovies && (
+            <>
+              {/* NOW SHOWING */}
+              <section style={{ marginBottom: "2rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+                  <span style={{ background: "#d1fae5", color: "#065f46", border: "1px solid #6ee7b7", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, padding: "0.25rem 0.75rem" }}>
+                    <i className="fa-solid fa-circle" style={{ fontSize: "0.45rem", marginRight: "0.35rem", verticalAlign: "middle" }} />NOW SHOWING
+                  </span>
+                  <span style={{ color: MUTED, fontSize: "0.75rem" }}>{nowShowing.length} movie{nowShowing.length !== 1 ? "s" : ""}</span>
+                </div>
+
+                {nowActive.length > 0 && (
+                  <>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Active</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+                      {nowActive.map(m => <MovieCard key={m.id} movie={m} />)}
+                    </div>
+                  </>
+                )}
+                {nowInactive.length > 0 && (
+                  <>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Inactive</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "0.75rem" }}>
+                      {nowInactive.map(m => <MovieCard key={m.id} movie={m} />)}
+                    </div>
+                  </>
+                )}
+                {nowShowing.length === 0 && <p style={{ color: MUTED, fontSize: "0.85rem" }}>No movies currently showing.</p>}
+              </section>
+
+              {/* COMING SOON */}
+              <section>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+                  <span style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, padding: "0.25rem 0.75rem" }}>
+                    <i className="fa-regular fa-circle" style={{ fontSize: "0.45rem", marginRight: "0.35rem", verticalAlign: "middle" }} />COMING SOON
+                  </span>
+                  <span style={{ color: MUTED, fontSize: "0.75rem" }}>{comingSoon.length} movie{comingSoon.length !== 1 ? "s" : ""}</span>
+                </div>
+
+                {soonActive.length > 0 && (
+                  <>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Active</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+                      {soonActive.map(m => <MovieCard key={m.id} movie={m} />)}
+                    </div>
+                  </>
+                )}
+                {soonInactive.length > 0 && (
+                  <>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>Inactive</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: "0.75rem" }}>
+                      {soonInactive.map(m => <MovieCard key={m.id} movie={m} />)}
+                    </div>
+                  </>
+                )}
+                {comingSoon.length === 0 && <p style={{ color: MUTED, fontSize: "0.85rem" }}>No upcoming movies.</p>}
+              </section>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          MODALS
+      ════════════════════════════════════════════════════════════════════ */}
 
       {/* ── Add Movie Modal ── */}
       {showAddMovie && (
-        <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
-          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title"><i className="fa-solid fa-film" /> Add New Movie</h3>
-            <div className="modal-grid">
-              <div className="modal-col">
-                <label className="modal-label">Title *</label>
-                <input type="text" placeholder="e.g. Oppenheimer" value={newMovie.title} onChange={setMovieField("title")} className="modal-input" />
-                <label className="modal-label">Description</label>
-                <textarea placeholder="Short synopsis…" value={newMovie.description} onChange={setMovieField("description")} className="modal-input modal-textarea" rows={3} />
-                <label className="modal-label">Genre</label>
-                <input type="text" placeholder="e.g. Action, Drama" value={newMovie.genre} onChange={setMovieField("genre")} className="modal-input" />
-                <label className="modal-label">Language</label>
-                <input type="text" placeholder="e.g. English, Bangla" value={newMovie.language} onChange={setMovieField("language")} className="modal-input" />
+        <div style={modalBackdrop} onClick={() => setShowAddMovie(false)}>
+          <div style={modalWide} onClick={e => e.stopPropagation()}>
+            <div style={{ background: `linear-gradient(135deg,#2a0a10,${PRIMARY})`, padding: "1.25rem 1.5rem", borderRadius: "16px 16px 0 0" }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}><i className="fa-solid fa-film" style={{ marginRight: "0.5rem" }} />Add New Movie</div>
+            </div>
+            <div style={{ padding: "1.25rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1.5rem" }}>
+              <div>
+                <label style={lbl}>Title *</label><input type="text" placeholder="e.g. Oppenheimer" value={newMovie.title} onChange={setMovieField("title")} style={inp} />
+                <label style={lbl}>Description</label><textarea placeholder="Short synopsis…" value={newMovie.description} onChange={setMovieField("description")} style={{ ...inp, height: "72px", resize: "vertical" } as React.CSSProperties} rows={3} />
+                <label style={lbl}>Genre</label><input type="text" placeholder="e.g. Action, Drama" value={newMovie.genre} onChange={setMovieField("genre")} style={inp} />
+                <label style={lbl}>Language</label><input type="text" placeholder="e.g. English, Bangla" value={newMovie.language} onChange={setMovieField("language")} style={inp} />
               </div>
-              <div className="modal-col">
-                <label className="modal-label">Category</label>
-                <select className="modal-input" value={newMovie.category} onChange={setMovieField("category")}>
-                  <option value="2D">2D</option>
-                  <option value="3D">3D</option>
-                </select>
-                <label className="modal-label">Status</label>
-                <select className="modal-input" value={newMovie.status} onChange={setMovieField("status")}>
-                  <option value="now_showing">Now Showing</option>
-                  <option value="coming_soon">Coming Soon</option>
-                </select>
-                <label className="modal-label">Duration (mins)</label>
-                <input type="number" placeholder="e.g. 148" value={newMovie.duration_mins} onChange={setMovieField("duration_mins")} className="modal-input" min={1} />
-                <label className="modal-label">Release Date</label>
-                <input type="date" value={newMovie.release_date} onChange={setMovieField("release_date")} className="modal-input" />
-                <label className="modal-label">Poster URL</label>
-                <input type="text" placeholder="/posters/movie.jpg" value={newMovie.poster_url} onChange={setMovieField("poster_url")} className="modal-input" />
-                <label className="modal-label">Trailer URL</label>
-                <input type="text" placeholder="https://youtube.com/…" value={newMovie.trailer_url} onChange={setMovieField("trailer_url")} className="modal-input" />
-                <div className="modal-checkbox-row">
-                  <input type="checkbox" id="is_active_check" checked={newMovie.is_active as boolean} onChange={setMovieField("is_active")} className="modal-checkbox" />
-                  <label htmlFor="is_active_check" className="modal-checkbox-label">Set as Active</label>
+              <div>
+                <label style={lbl}>Category</label>
+                <select style={inp} value={newMovie.category} onChange={setMovieField("category")}><option value="2D">2D</option><option value="3D">3D</option></select>
+                <label style={lbl}>Status</label>
+                <select style={inp} value={newMovie.status} onChange={setMovieField("status")}><option value="now_showing">Now Showing</option><option value="coming_soon">Coming Soon</option></select>
+                <label style={lbl}>Duration (mins)</label><input type="number" placeholder="e.g. 148" value={newMovie.duration_mins} onChange={setMovieField("duration_mins")} style={inp} min={1} />
+                <label style={lbl}>Release Date</label><input type="date" value={newMovie.release_date} onChange={setMovieField("release_date")} style={inp} />
+                <label style={lbl}>Poster URL</label><input type="text" placeholder="/posters/movie.jpg" value={newMovie.poster_url} onChange={setMovieField("poster_url")} style={inp} />
+                <label style={lbl}>Trailer URL</label><input type="text" placeholder="https://youtube.com/…" value={newMovie.trailer_url} onChange={setMovieField("trailer_url")} style={inp} />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <input type="checkbox" id="is_active_check" checked={newMovie.is_active as boolean} onChange={setMovieField("is_active")} />
+                  <label htmlFor="is_active_check" style={{ fontSize: "0.8rem", color: "#374151", fontWeight: 600 }}>Set as Active</label>
                 </div>
               </div>
             </div>
-            <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowAddMovie(false)}>Cancel</button>
-              <button className="modal-confirm-btn" onClick={handleAddMovie} disabled={addingMovie}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", padding: "0 1.25rem 1.25rem" }}>
+              <button onClick={() => setShowAddMovie(false)} style={{ padding: "0.55rem 1.25rem", border: `1.5px solid ${BORDER}`, borderRadius: "10px", background: "white", color: "#374151", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleAddMovie} disabled={addingMovie} style={{ padding: "0.55rem 1.5rem", border: "none", borderRadius: "10px", background: PRIMARY, color: "white", fontWeight: 700, cursor: addingMovie ? "wait" : "pointer" }}>
                 {addingMovie ? "Adding…" : "Add Movie"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Movie Modal ── */}
+      {showEditMovie && (
+        <div style={modalBackdrop} onClick={() => setShowEditMovie(false)}>
+          <div style={modalWide} onClick={e => e.stopPropagation()}>
+            <div style={{ background: `linear-gradient(135deg,#2a0a10,${PRIMARY})`, padding: "1.25rem 1.5rem", borderRadius: "16px 16px 0 0" }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}><i className="fa-solid fa-pen" style={{ marginRight: "0.5rem" }} />Edit Movie</div>
+            </div>
+            <div style={{ padding: "1.25rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1.5rem" }}>
+              <div>
+                <label style={lbl}>Title *</label><input type="text" value={editMovie.title} onChange={setEditField("title")} style={inp} />
+                <label style={lbl}>Description</label><textarea value={editMovie.description as string} onChange={setEditField("description")} style={{ ...inp, height: "72px", resize: "vertical" } as React.CSSProperties} rows={3} />
+                <label style={lbl}>Genre</label><input type="text" value={editMovie.genre as string} onChange={setEditField("genre")} style={inp} />
+                <label style={lbl}>Language</label><input type="text" value={editMovie.language as string} onChange={setEditField("language")} style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>Category</label>
+                <select style={inp} value={editMovie.category} onChange={setEditField("category")}><option value="2D">2D</option><option value="3D">3D</option></select>
+                <label style={lbl}>Status</label>
+                <select style={inp} value={editMovie.status} onChange={setEditField("status")}><option value="now_showing">Now Showing</option><option value="coming_soon">Coming Soon</option></select>
+                <label style={lbl}>Duration (mins)</label><input type="number" value={editMovie.duration_mins as string} onChange={setEditField("duration_mins")} style={inp} min={1} />
+                <label style={lbl}>Release Date</label><input type="date" value={editMovie.release_date as string} onChange={setEditField("release_date")} style={inp} />
+                <label style={lbl}>Poster URL</label><input type="text" value={editMovie.poster_url as string} onChange={setEditField("poster_url")} style={inp} />
+                <label style={lbl}>Trailer URL</label><input type="text" value={editMovie.trailer_url as string} onChange={setEditField("trailer_url")} style={inp} />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <input type="checkbox" id="edit_is_active_check" checked={editMovie.is_active as boolean} onChange={setEditField("is_active")} />
+                  <label htmlFor="edit_is_active_check" style={{ fontSize: "0.8rem", color: "#374151", fontWeight: 600 }}>Set as Active</label>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", padding: "0 1.25rem 1.25rem" }}>
+              <button onClick={() => setShowEditMovie(false)} style={{ padding: "0.55rem 1.25rem", border: `1.5px solid ${BORDER}`, borderRadius: "10px", background: "white", color: "#374151", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleEditMovie} disabled={editingMovie} style={{ padding: "0.55rem 1.5rem", border: "none", borderRadius: "10px", background: PRIMARY, color: "white", fontWeight: 700, cursor: editingMovie ? "wait" : "pointer" }}>
+                {editingMovie ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
@@ -779,43 +1192,31 @@ export default function AdminDashboard() {
 
       {/* ── Add Screening Modal ── */}
       {showAddScreening && (
-        <div className="modal-backdrop" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
-          <div className="modal-card" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title"><i className="fa-solid fa-clapperboard" /> Add New Screening</h3>
-
-            <label className="modal-label">Movie *</label>
-            <select className="modal-input" value={newScreening.movie_id}
-              onChange={e => setNewScreening(p => ({ ...p, movie_id: e.target.value }))}>
-              <option value="" disabled>Select Movie</option>
-              {movieList.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-            </select>
-
-            <label className="modal-label">Hall *</label>
-            <select className="modal-input" value={newScreening.hall_id}
-              onChange={e => {
-                setNewScreening(p => ({ ...p, hall_id: e.target.value, start_time: "" }))
-                fetchTakenSlots(e.target.value, newScreening.show_date)
-              }}>
-              <HallOptions hallList={hallList} />
-            </select>
-
-            <label className="modal-label">Show Date *</label>
-            <input type="date" className="modal-input" value={newScreening.show_date}
-              onChange={e => {
-                setNewScreening(p => ({ ...p, show_date: e.target.value, start_time: "" }))
-                fetchTakenSlots(newScreening.hall_id, e.target.value)
-              }} />
-
-            <label className="modal-label">Time Slot *</label>
-            <SlotButtons
-              selected={newScreening.start_time}
-              takenSlots={takenSlots}
-              onSelect={slot => setNewScreening(p => ({ ...p, start_time: slot }))}
-            />
-
-            <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>Cancel</button>
-              <button className="modal-confirm-btn" onClick={handleAddScreening}>Add Screening</button>
+        <div style={modalBackdrop} onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
+          <div style={modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "linear-gradient(135deg,#0a2a10,#1a4d2e)", padding: "1.25rem 1.5rem", borderRadius: "16px 16px 0 0" }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}><i className="fa-solid fa-clapperboard" style={{ marginRight: "0.5rem" }} />Add New Screening</div>
+            </div>
+            <div style={{ padding: "1.25rem" }}>
+              <label style={lbl}>Movie *</label>
+              <select style={inp} value={newScreening.movie_id} onChange={e => setNewScreening(p => ({ ...p, movie_id: e.target.value }))}>
+                <option value="" disabled>Select Movie</option>
+                {movieList.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+              </select>
+              <label style={lbl}>Hall *</label>
+              <select style={inp} value={newScreening.hall_id}
+                onChange={e => { setNewScreening(p => ({ ...p, hall_id: e.target.value, start_time: "" })); fetchTakenSlots(e.target.value, newScreening.show_date) }}>
+                <HallOptions hallList={hallList} />
+              </select>
+              <label style={lbl}>Show Date *</label>
+              <input type="date" style={inp} value={newScreening.show_date}
+                onChange={e => { setNewScreening(p => ({ ...p, show_date: e.target.value, start_time: "" })); fetchTakenSlots(newScreening.hall_id, e.target.value) }} />
+              <label style={lbl}>Time Slot *</label>
+              <SlotButtons selected={newScreening.start_time} takenSlots={takenSlots} onSelect={slot => setNewScreening(p => ({ ...p, start_time: slot }))} />
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
+                <button onClick={() => { setShowAddScreening(false); setTakenSlots([]) }} style={{ padding: "0.55rem 1.25rem", border: `1.5px solid ${BORDER}`, borderRadius: "10px", background: "white", color: "#374151", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                <button onClick={handleAddScreening} style={{ padding: "0.55rem 1.5rem", border: "none", borderRadius: "10px", background: "#1a4d2e", color: "white", fontWeight: 700, cursor: "pointer" }}>Add Screening</button>
+              </div>
             </div>
           </div>
         </div>
@@ -823,68 +1224,54 @@ export default function AdminDashboard() {
 
       {/* ── Edit Screening Modal ── */}
       {showEditScreening && editScreeningMovie && (
-        <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
-          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title"><i className="fa-solid fa-pen" /> Edit Screenings</h3>
-
-            <div className="edit-screening-header">
-              <div className="edit-screening-movie-info">
-                <span className="edit-screening-movie-name">{editScreeningMovie.title}</span>
-                <span className="edit-screening-date">{formatDateDisplay(editScreeningDate)}</span>
-              </div>
+        <div style={modalBackdrop} onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
+          <div style={modalWide} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "linear-gradient(135deg,#0a1a2e,#1a3a5c)", padding: "1.25rem 1.5rem", borderRadius: "16px 16px 0 0" }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: "1rem" }}><i className="fa-solid fa-pen" style={{ marginRight: "0.5rem" }} />Edit Screenings</div>
+              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.78rem", marginTop: "0.2rem" }}>{editScreeningMovie.title} · {formatDateDisplay(editScreeningDate)}</div>
             </div>
-
-            {loadingScreenings ? (
-              <p className="admin-loading">Loading screenings…</p>
-            ) : editScreeningList.length === 0 ? (
-              <p className="admin-empty">No screenings found for this movie on this date.</p>
-            ) : (
-              <div className="edit-screening-table-wrap">
-                <table className="edit-screening-table">
-                  <thead>
-                    <tr><th>Time</th><th>Hall</th><th>Theater</th><th>Actions</th></tr>
-                  </thead>
+            <div style={{ padding: "1.25rem" }}>
+              {loadingScreenings ? (
+                <div style={{ textAlign: "center", color: MUTED, padding: "2rem" }}><i className="fa-solid fa-spinner fa-spin" /></div>
+              ) : editScreeningList.length === 0 ? (
+                <p style={{ color: MUTED, fontSize: "0.85rem" }}>No screenings found.</p>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <thead><tr style={{ borderBottom: `1px solid ${BORDER}` }}>
+                    {["Time","Hall","Theater","Actions"].map(h => <th key={h} style={{ textAlign: "left", padding: "0.4rem 0.5rem", color: MUTED, fontWeight: 700, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>)}
+                  </tr></thead>
                   <tbody>
-                    {editScreeningList.map(s => {
-                      const matchedHall = hallList.find(h => h.name === s.hall_name || h.id === s.hall_id)
-                      const theaterName = matchedHall?.theater?.name || "—"
+                    {editScreeningList.map(s2 => {
+                      const mh = hallList.find(h => h.name === s2.hall_name || h.id === s2.hall_id)
                       return (
-                        <tr key={s.id}>
-                          {editingScreeningId === s.id ? (
+                        <tr key={s2.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                          {editingScreeningId === s2.id ? (
                             <>
-                              <td>
-                                <select className="modal-input" style={{ margin: 0 }}
-                                  value={editScreeningForm.start_time}
-                                  onChange={e => setEditScreeningForm(p => ({ ...p, start_time: e.target.value }))}>
+                              <td style={{ padding: "0.4rem 0.5rem" }}>
+                                <select style={{ ...inp, margin: 0 }} value={editScreeningForm.start_time} onChange={e => setEditScreeningForm(p => ({ ...p, start_time: e.target.value }))}>
                                   <option value="" disabled>Select Slot</option>
-                                  {SLOTS.map(slot => (
-                                    <option key={slot} value={slot}>{formatTime12(slot + ":00")}</option>
-                                  ))}
+                                  {SLOTS.map(slot => <option key={slot} value={slot}>{formatTime12(slot + ":00")}</option>)}
                                 </select>
                               </td>
-                              <td colSpan={2}>
-                                <select className="modal-input" style={{ margin: 0 }}
-                                  value={editScreeningForm.hall_id}
-                                  onChange={e => setEditScreeningForm(p => ({ ...p, hall_id: e.target.value }))}>
-                                  <HallOptions hallList={hallList} />
-                                </select>
+                              <td colSpan={2} style={{ padding: "0.4rem 0.5rem" }}>
+                                <select style={{ ...inp, margin: 0 }} value={editScreeningForm.hall_id} onChange={e => setEditScreeningForm(p => ({ ...p, hall_id: e.target.value }))}><HallOptions hallList={hallList} /></select>
                               </td>
-                              <td>
-                                <div className="edit-screening-actions">
-                                  <button className="screening-save-btn" onClick={saveEditingScreening} title="Save"><i className="fa-solid fa-check" /></button>
-                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening} title="Cancel"><i className="fa-solid fa-xmark" /></button>
+                              <td style={{ padding: "0.4rem 0.5rem" }}>
+                                <div style={{ display: "flex", gap: "0.4rem" }}>
+                                  <button onClick={saveEditingScreening} style={{ background: "#10b981", color: "white", border: "none", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer" }}><i className="fa-solid fa-check" /></button>
+                                  <button onClick={() => setEditingScreeningId(null)} style={{ background: BORDER, color: "#374151", border: "none", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer" }}><i className="fa-solid fa-xmark" /></button>
                                 </div>
                               </td>
                             </>
                           ) : (
                             <>
-                              <td><strong>{formatTime12(s.start_time)}</strong></td>
-                              <td>{s.hall_name || matchedHall?.name || "—"}</td>
-                              <td>{theaterName}</td>
-                              <td>
-                                <div className="edit-screening-actions">
-                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)} title="Edit"><i className="fa-solid fa-pen" /></button>
-                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)} title="Delete"><i className="fa-solid fa-trash" /></button>
+                              <td style={{ padding: "0.5rem" }}><strong>{formatTime12(s2.start_time)}</strong></td>
+                              <td style={{ padding: "0.5rem" }}>{s2.hall_name || mh?.name || "—"}</td>
+                              <td style={{ padding: "0.5rem" }}>{mh?.theater?.name || "—"}</td>
+                              <td style={{ padding: "0.5rem" }}>
+                                <div style={{ display: "flex", gap: "0.4rem" }}>
+                                  <button onClick={() => startEditingScreening(s2)} style={{ background: "#dbeafe", color: "#1d4ed8", border: "none", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer" }}><i className="fa-solid fa-pen" /></button>
+                                  <button onClick={() => handleDeleteScreening(s2.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: "6px", width: "28px", height: "28px", cursor: "pointer" }}><i className="fa-solid fa-trash" /></button>
                                 </div>
                               </td>
                             </>
@@ -894,280 +1281,42 @@ export default function AdminDashboard() {
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
 
-            {showInlineAdd ? (
-              <div className="inline-add-screening">
-                <h4 className="inline-add-title">Add Another Screening</h4>
-                <label className="modal-label">Hall *</label>
-                <select className="modal-input"
-                  value={inlineNewScreening.hall_id}
-                  onChange={e => {
-                    setInlineNewScreening(p => ({ ...p, hall_id: e.target.value, start_time: "" }))
-                    fetchTakenSlots(e.target.value, editScreeningDate)
-                  }}>
-                  <HallOptions hallList={hallList} />
-                </select>
-                <label className="modal-label">Time Slot *</label>
-                <SlotButtons
-                  selected={inlineNewScreening.start_time}
-                  takenSlots={takenSlots}
-                  onSelect={slot => setInlineNewScreening(p => ({ ...p, start_time: slot }))}
-                />
-                <div className="inline-add-actions">
-                  <button className="modal-cancel-btn" onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }}>Cancel</button>
-                  <button className="modal-confirm-btn" onClick={handleInlineAddScreening}>Add</button>
+              {showInlineAdd ? (
+                <div style={{ background: "#f9fafb", border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "1rem", marginTop: "0.75rem" }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: TEXT, marginBottom: "0.5rem" }}>Add Another Screening</div>
+                  <label style={lbl}>Hall *</label>
+                  <select style={inp} value={inlineNewScreening.hall_id}
+                    onChange={e => { setInlineNewScreening(p => ({ ...p, hall_id: e.target.value, start_time: "" })); fetchTakenSlots(e.target.value, editScreeningDate) }}>
+                    <HallOptions hallList={hallList} />
+                  </select>
+                  <label style={lbl}>Time Slot *</label>
+                  <SlotButtons selected={inlineNewScreening.start_time} takenSlots={takenSlots} onSelect={slot => setInlineNewScreening(p => ({ ...p, start_time: slot }))} />
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }} style={{ padding: "0.45rem 1rem", border: `1.5px solid ${BORDER}`, borderRadius: "8px", background: "white", color: "#374151", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}>Cancel</button>
+                    <button onClick={handleInlineAddScreening} style={{ padding: "0.45rem 1.25rem", border: "none", borderRadius: "8px", background: "#1a3a5c", color: "white", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}>Add</button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button className="add-screening-inline-btn" onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}>
-                <i className="fa-solid fa-plus" /> Add Screening for This Date
-              </button>
-            )}
+              ) : (
+                <button onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}
+                  style={{ marginTop: "0.75rem", padding: "0.5rem 1rem", border: `1.5px dashed ${BORDER}`, borderRadius: "8px", background: "transparent", color: MUTED, fontWeight: 700, cursor: "pointer", fontSize: "0.78rem", width: "100%" }}>
+                  <i className="fa-solid fa-plus" style={{ marginRight: "0.4rem" }} />Add Screening for This Date
+                </button>
+              )}
 
-            <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
-                Close
-              </button>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
+                <button onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}
+                  style={{ padding: "0.55rem 1.25rem", border: `1.5px solid ${BORDER}`, borderRadius: "10px", background: "white", color: "#374151", fontWeight: 700, cursor: "pointer" }}>Close</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Edit Movie Modal ── */}
-      {showEditMovie && (
-        <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
-          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title"><i className="fa-solid fa-pen" /> Edit Movie</h3>
-            <div className="modal-grid">
-              <div className="modal-col">
-                <label className="modal-label">Title *</label>
-                <input type="text" placeholder="e.g. Oppenheimer" value={editMovie.title} onChange={setEditField("title")} className="modal-input" />
-                <label className="modal-label">Description</label>
-                <textarea placeholder="Short synopsis…" value={editMovie.description as string} onChange={setEditField("description")} className="modal-input modal-textarea" rows={3} />
-                <label className="modal-label">Genre</label>
-                <input type="text" placeholder="e.g. Action, Drama" value={editMovie.genre as string} onChange={setEditField("genre")} className="modal-input" />
-                <label className="modal-label">Language</label>
-                <input type="text" placeholder="e.g. English, Bangla" value={editMovie.language as string} onChange={setEditField("language")} className="modal-input" />
-              </div>
-              <div className="modal-col">
-                <label className="modal-label">Category</label>
-                <select className="modal-input" value={editMovie.category} onChange={setEditField("category")}>
-                  <option value="2D">2D</option>
-                  <option value="3D">3D</option>
-                </select>
-                <label className="modal-label">Status</label>
-                <select className="modal-input" value={editMovie.status} onChange={setEditField("status")}>
-                  <option value="now_showing">Now Showing</option>
-                  <option value="coming_soon">Coming Soon</option>
-                </select>
-                <label className="modal-label">Duration (mins)</label>
-                <input type="number" placeholder="e.g. 148" value={editMovie.duration_mins as string} onChange={setEditField("duration_mins")} className="modal-input" min={1} />
-                <label className="modal-label">Release Date</label>
-                <input type="date" value={editMovie.release_date as string} onChange={setEditField("release_date")} className="modal-input" />
-                <label className="modal-label">Poster URL</label>
-                <input type="text" placeholder="/posters/movie.jpg" value={editMovie.poster_url as string} onChange={setEditField("poster_url")} className="modal-input" />
-                <label className="modal-label">Trailer URL</label>
-                <input type="text" placeholder="https://youtube.com/…" value={editMovie.trailer_url as string} onChange={setEditField("trailer_url")} className="modal-input" />
-                <div className="modal-checkbox-row">
-                  <input type="checkbox" id="edit_is_active_check" checked={editMovie.is_active as boolean} onChange={setEditField("is_active")} className="modal-checkbox" />
-                  <label htmlFor="edit_is_active_check" className="modal-checkbox-label">Set as Active</label>
-                </div>
-              </div>
-            </div>
-            <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowEditMovie(false)}>Cancel</button>
-              <button className="modal-confirm-btn" onClick={handleEditMovie} disabled={editingMovie}>
-                {editingMovie ? "Saving…" : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Inbox Modal (beautified) ── */}
-      {showInbox && (
-        <div className="modal-backdrop" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>
-          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}
-            style={{ padding: 0, overflow: "hidden", maxWidth: "680px" }}>
-
-            {/* Header */}
-            <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #6B1829 100%)", padding: "1.25rem 1.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                  <div style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.12)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <i className="fa-solid fa-inbox" style={{ color: "white", fontSize: "1rem" }} />
-                  </div>
-                  <div>
-                    <div style={{ color: "white", fontWeight: 700, fontSize: "1rem", fontFamily: "'Playfair Display', serif" }}>Inbox</div>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.72rem" }}>
-                      {inboxMessages.length} total · {unreadCount} unread
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                  {unreadCount > 0 && (
-                    <button onClick={handleMarkAllRead}
-                      style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", padding: "0.35rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
-                      <i className="fa-solid fa-check-double" style={{ marginRight: "0.4rem" }} />Mark all read
-                    </button>
-                  )}
-                  <button onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}
-                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", width: "32px", height: "32px", cursor: "pointer", fontSize: "0.85rem" }}>
-                    <i className="fa-solid fa-xmark" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Filter tabs */}
-              <div style={{ display: "flex", gap: "0.4rem", marginTop: "1rem" }}>
-                {(["all", "unread", "read"] as const).map(f => (
-                  <button key={f} onClick={() => setInboxFilter(f)}
-                    style={{
-                      padding: "0.3rem 0.85rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
-                      border: "1px solid rgba(255,255,255,0.25)",
-                      background: inboxFilter === f ? "white" : "rgba(255,255,255,0.1)",
-                      color:      inboxFilter === f ? "#6B1829" : "rgba(255,255,255,0.8)",
-                    }}>
-                    {f === "all" ? `All (${inboxMessages.length})` : f === "unread" ? `Unread (${unreadCount})` : `Read (${inboxMessages.length - unreadCount})`}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ maxHeight: "62vh", overflowY: "auto", background: "#f8f8f8" }}>
-
-              {loadingInbox && (
-                <div style={{ textAlign: "center", padding: "3rem", color: "#999" }}>
-                  <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
-                  Loading messages…
-                </div>
-              )}
-
-              {!loadingInbox && inboxError && (
-                <div style={{ margin: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem" }}>
-                  <i className="fa-solid fa-circle-exclamation" style={{ marginRight: "0.5rem" }} />{inboxError}
-                </div>
-              )}
-
-              {!loadingInbox && !inboxError && filteredInbox.length === 0 && (
-                <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
-                  <i className="fa-regular fa-envelope-open" style={{ fontSize: "2.5rem", color: "#ddd", display: "block", marginBottom: "0.75rem" }} />
-                  <div style={{ color: "#aaa", fontSize: "0.9rem" }}>
-                    {inboxFilter === "unread" ? "No unread messages." : inboxFilter === "read" ? "No read messages yet." : "No messages yet."}
-                  </div>
-                </div>
-              )}
-
-              {!loadingInbox && !inboxError && filteredInbox.length > 0 && (
-                <div style={{ padding: "0.75rem" }}>
-                  {filteredInbox.map(msg => {
-                    const sc         = SUBJECT_COLORS[msg.subject] || SUBJECT_COLORS["Other"]
-                    const isExpanded = expandedMsgId === msg.id
-                    const dateStr    = new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                    const timeStr    = new Date(msg.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-
-                    return (
-                      <div key={msg.id} style={{
-                        background:   "white",
-                        border:       `1px solid ${msg.is_read ? "#e8e8e8" : "#fbbf24"}`,
-                        borderLeft:   `3px solid ${msg.is_read ? "#e8e8e8" : "#f59e0b"}`,
-                        borderRadius: "8px",
-                        marginBottom: "0.5rem",
-                        overflow:     "hidden",
-                      }}>
-                        {/* Row — click to expand */}
-                        <div onClick={() => setExpandedMsgId(isExpanded ? null : msg.id)}
-                          style={{ display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.75rem 0.85rem", cursor: "pointer", background: isExpanded ? "#fffbf0" : "white", userSelect: "none" }}>
-
-                          {/* Unread dot */}
-                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0, background: msg.is_read ? "transparent" : "#f59e0b" }} />
-
-                          {/* Avatar */}
-                          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#6B1829", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
-                            {msg.name.charAt(0).toUpperCase()}
-                          </div>
-
-                          {/* Name + subject */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.15rem" }}>
-                              <span style={{ fontWeight: msg.is_read ? 500 : 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{msg.name}</span>
-                              <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{msg.email}</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                              <span style={{ background: sc.bg, color: sc.color, fontSize: "0.65rem", fontWeight: 700, padding: "0.1rem 0.45rem", borderRadius: "999px" }}>
-                                {msg.subject}
-                              </span>
-                              <span style={{ fontSize: "0.78rem", color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {msg.message.slice(0, 60)}{msg.message.length > 60 ? "…" : ""}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Right side */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem", flexShrink: 0 }}>
-                            <span style={{ fontSize: "0.7rem", color: "#bbb" }}>{dateStr}</span>
-                            {!msg.is_read && (
-                              <span style={{ background: "#f59e0b", color: "white", fontSize: "0.6rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "999px" }}>NEW</span>
-                            )}
-                          </div>
-
-                          <i className={`fa-solid fa-chevron-${isExpanded ? "up" : "down"}`} style={{ fontSize: "0.65rem", color: "#ccc", flexShrink: 0 }} />
-                        </div>
-
-                        {/* Expanded */}
-                        {isExpanded && (
-                          <div style={{ borderTop: "1px solid #f0f0f0", background: "#fffdf5", padding: "1rem 1rem 1rem 1.25rem" }}>
-                            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.85rem", flexWrap: "wrap" }}>
-                              <div>
-                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>From</div>
-                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{msg.name} · {msg.email}</div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>Received</div>
-                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{dateStr} at {timeStr}</div>
-                              </div>
-                            </div>
-
-                            <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Message</div>
-                            <div style={{ fontSize: "0.85rem", color: "#444", lineHeight: 1.7, background: "white", border: "1px solid #eee", borderRadius: "6px", padding: "0.75rem 1rem", whiteSpace: "pre-wrap", marginBottom: "0.75rem" }}>
-                              {msg.message}
-                            </div>
-
-                            {!msg.is_read && (
-                              <button onClick={() => handleMarkRead(msg.id)} disabled={markingReadId === msg.id}
-                                style={{ background: "#6B1829", color: "white", border: "none", borderRadius: "6px", padding: "0.4rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, cursor: markingReadId === msg.id ? "wait" : "pointer" }}>
-                                {markingReadId === msg.id
-                                  ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: "0.4rem" }} />Marking…</>
-                                  : <><i className="fa-solid fa-check" style={{ marginRight: "0.4rem" }} />Mark as read</>
-                                }
-                              </button>
-                            )}
-                            {msg.is_read && (
-                              <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 500 }}>
-                                <i className="fa-solid fa-circle-check" style={{ marginRight: "0.35rem", color: "#10b981" }} />Marked as read
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #eee", background: "white", display: "flex", justifyContent: "flex-end" }}>
-              <button className="modal-cancel-btn" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="admin-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
+      <div style={{ textAlign: "center", padding: "1.5rem", color: "#9ca3af", fontSize: "0.72rem", fontWeight: 500 }}>
+        Copyright© 2026 CineBook Limited. All Rights Reserved.
+      </div>
     </div>
   )
 }
