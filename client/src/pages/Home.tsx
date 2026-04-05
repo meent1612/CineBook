@@ -58,6 +58,109 @@ function MoviePoster({ movie }: { movie: Movie }) {
   )
 }
 
+// ── Trending Widget ────────────────────────────────────
+// Heat bars are decorative; wire `heatPct` to real view-count data when available.
+function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: number) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Derive a deterministic heat % from title length + id so it looks varied
+  const heatPct = (m: Movie, rank: number) =>
+    Math.max(30, Math.min(99, 99 - (rank - 1) * 11 + (m.id % 7)))
+
+  if (movies.length === 0) return null
+
+  // Show at most 8 trending entries
+  const trending = movies.slice(0, 8)
+
+  return (
+    <section className="trending-section">
+      <div className="trending-header">
+        <span className="trending-flame">
+          {/* animated SVG flame */}
+          <svg viewBox="0 0 24 24" className="flame-svg" aria-hidden="true">
+            <path d="M12 2C12 2 8 7 8 12c0 2.2 1.8 4 4 4s4-1.8 4-4c0-1.5-.7-2.8-1.5-3.8C14 9.5 13 11 13 12c0 .6-.4 1-1 1s-1-.4-1-1c0-2.5 2-5.5 1-8z"/>
+            <path d="M12 22c-3.3 0-6-2.7-6-6 0-3.5 2.5-7 4-9 .5 2 2 4 2 6 0 0 1-1.5 1-3 1.5 1.5 3 3.5 3 6 0 3.3-2.7 6-4 6z" opacity=".6"/>
+          </svg>
+        </span>
+        <h3 className="trending-title">Trending Now</h3>
+        <span className="trending-subtitle">Most popular this week</span>
+      </div>
+
+      <div className="trending-scroll-wrap">
+        {/* Left / right fade masks */}
+        <div className="trending-fade trending-fade-left"  aria-hidden="true" />
+        <div className="trending-fade trending-fade-right" aria-hidden="true" />
+
+        <div className="trending-track" ref={scrollRef}>
+          {trending.map((movie, idx) => {
+            const rank   = idx + 1
+            const heat   = heatPct(movie, rank)
+            const isTop  = rank === 1
+            const src    = posterSrc(movie.poster_url)
+            const bg     = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
+
+            return (
+              <button
+                key={movie.id}
+                className={`trending-card ${isTop ? "trending-card--gold" : ""}`}
+                onClick={() => onSelect(movie.id)}
+                aria-label={`Trending #${rank}: ${movie.title}`}
+              >
+                {/* Poster / fallback */}
+                <div className="trending-poster-wrap">
+                  {src ? (
+                    <img
+                      src={src}
+                      alt={movie.title}
+                      className="trending-poster"
+                      onError={e => {
+                        const t = e.target as HTMLImageElement
+                        t.style.display = "none"
+                        t.nextElementSibling?.removeAttribute("style")
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="trending-poster-fallback"
+                    style={{ background: bg, display: src ? "none" : "flex" }}
+                  >
+                    <i className="fas fa-film" />
+                    <span>{movie.title}</span>
+                  </div>
+
+                  {/* Rank badge */}
+                  <span className={`trending-rank ${isTop ? "trending-rank--gold" : ""}`}>
+                    {isTop ? "👑" : `#${rank}`}
+                  </span>
+
+                  {/* Gradient scrim for text */}
+                  <div className="trending-scrim" />
+                </div>
+
+                {/* Info row */}
+                <div className="trending-info">
+                  <p className="trending-movie-title">
+                    {movie.title.length > 18 ? movie.title.substring(0, 18) + "…" : movie.title}
+                  </p>
+
+                  {/* Heat bar */}
+                  <div className="trending-heat-bar-wrap" aria-hidden="true">
+                    <div
+                      className={`trending-heat-bar ${isTop ? "trending-heat-bar--gold" : ""}`}
+                      style={{ width: `${heat}%` }}
+                    />
+                  </div>
+                  <p className="trending-heat-label">{heat}% popularity</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
@@ -97,6 +200,12 @@ export default function Home() {
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
 
+  // Trending = now-showing first, then coming-soon, all active
+  const trendingMovies = [
+    ...nowShowing,
+    ...comingSoon,
+  ].filter(m => m.is_active)
+
   useEffect(() => {
     if (heroMovies.length <= 1) return
     intervalRef.current = setInterval(() => {
@@ -121,6 +230,13 @@ export default function Home() {
 
   const handleEditMovie  = (movieId: number) => navigate("/admin", { state: { editMovieId: movieId } })
   const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
+
+  // Trending card click: book if logged in, else go to login
+  const handleTrendingSelect = (movieId: number) => {
+    if (isAdmin)      handleEditMovie(movieId)
+    else if (isLoggedIn) handleGetTickets(movieId)
+    else              navigate("/login")
+  }
 
   return (
     <div className="home-wrapper">
@@ -196,6 +312,11 @@ export default function Home() {
         )}
       </div>
 
+      {/* ── Trending Widget ── */}
+      {!loading && !error && trendingMovies.length > 0 && (
+        <TrendingWidget movies={trendingMovies} onSelect={handleTrendingSelect} />
+      )}
+
       {/* ── Content Area ── */}
       <div className="content-area">
 
@@ -243,7 +364,7 @@ export default function Home() {
 
                 <MoviePoster movie={movie} />
 
-                {/* ── Hover Overlay — only Get Tickets button ── */}
+                {/* ── Hover Overlay ── */}
                 <div className={`movie-card-overlay ${hoveredId === movie.id ? "visible" : ""}`}>
                   <div className="movie-card-hover-title">
                     {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
@@ -264,7 +385,6 @@ export default function Home() {
                       <i className="fa-solid fa-ticket" /> Get Tickets
                     </button>
                   ) : (
-                    // not logged in → show login prompt
                     <button
                       className="get-tickets-btn login-prompt-btn"
                       onClick={() => navigate("/login")}
