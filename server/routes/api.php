@@ -48,7 +48,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/payments', [PaymentController::class, 'store']);
 
     // Contact — user must be logged in
-    Route::post('/contact', [ContactController::class, 'store']);
+    Route::post('/contact',             [ContactController::class, 'store']);
+    Route::get('/contact/my-messages',  [ContactController::class, 'myMessages']);
 
     // ── Admin routes ────────────────────────────────
     Route::middleware('admin')->prefix('admin')->group(function () {
@@ -64,7 +65,7 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/screenings/{id}', [ScreeningController::class, 'destroy']);
 
         // Inbox
-        Route::get('/contact-messages',               [ContactController::class, 'index']);
-        Route::put('/contact-messages/{id}/read',     [ContactController::class, 'markRead']);
+        Route::get('/contact-messages',           [ContactController::class, 'index']);
+        Route::put('/contact-messages/{id}/read', [ContactController::class, 'markRead']);
     });
 });

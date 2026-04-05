@@ -12,6 +12,15 @@ const API_URL       = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND       = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const POSTER_COLORS = ["#6B1829","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00","#1f4040"]
 
+const SUBJECT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
+  "Booking Issue":     { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
+  "Refund Request":    { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5" },
+  "Movie Inquiry":     { bg: "#ede9fe", color: "#5b21b6", border: "#c4b5fd" },
+  "Technical Support": { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" },
+  "General Feedback":  { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7" },
+  "Other":             { bg: "#f3f4f6", color: "#374151", border: "#d1d5db" },
+}
+
 interface Movie {
   id: number
   title: string
@@ -223,6 +232,10 @@ export default function AdminDashboard() {
   const [showInbox,     setShowInbox]     = useState(false)
   const [inboxMessages, setInboxMessages] = useState<ContactMessage[]>([])
   const [loadingInbox,  setLoadingInbox]  = useState(false)
+  const [markingReadId, setMarkingReadId] = useState<number | null>(null)
+  const [inboxError,    setInboxError]    = useState("")
+  const [inboxFilter,   setInboxFilter]   = useState<"all" | "unread" | "read">("all")
+  const [expandedMsgId, setExpandedMsgId] = useState<number | null>(null)
 
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
@@ -280,17 +293,46 @@ export default function AdminDashboard() {
 
   const fetchInbox = async () => {
     setLoadingInbox(true)
+    setInboxError("")
     try {
       const res  = await fetch(`${API_URL}/admin/contact-messages`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (!data.success) throw new Error(data.message)
-      setInboxMessages(data.messages)
+      if (!data.success) throw new Error(data.message || "Failed to load messages.")
+      const normalised: ContactMessage[] = (data.messages as any[]).map(m => ({
+        ...m,
+        is_read: Boolean(m.is_read),
+      }))
+      setInboxMessages(normalised)
     } catch (err: any) {
-      console.error("Failed to load inbox:", err.message)
+      setInboxError(err.message || "Could not load messages.")
     } finally {
       setLoadingInbox(false)
+    }
+  }
+
+  const handleMarkRead = async (id: number) => {
+    setMarkingReadId(id)
+    try {
+      const res  = await fetch(`${API_URL}/admin/contact-messages/${id}/read`, {
+        method:  "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
+    } catch (err: any) {
+      console.error("Failed to mark as read:", err.message)
+    } finally {
+      setMarkingReadId(null)
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    const unread = inboxMessages.filter(m => !m.is_read)
+    for (const msg of unread) {
+      await handleMarkRead(msg.id)
     }
   }
 
@@ -349,10 +391,10 @@ export default function AdminDashboard() {
     const { hall_id, start_time } = editScreeningForm
     if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
-      const res = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
-        method: "PUT",
+      const res  = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
+        body:    JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
@@ -366,8 +408,8 @@ export default function AdminDashboard() {
   const handleDeleteScreening = async (screeningId: number) => {
     if (!confirm("Are you sure you want to delete this screening?")) return
     try {
-      const res = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
-        method: "DELETE",
+      const res  = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
+        method:  "DELETE",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       })
       const data = await res.json()
@@ -383,9 +425,9 @@ export default function AdminDashboard() {
     setAddingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies`, {
-        method: "POST",
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           title:         newMovie.title,
           description:   newMovie.description   || null,
           genre:         newMovie.genre         || null,
@@ -415,7 +457,7 @@ export default function AdminDashboard() {
     if (!confirm("Are you sure you want to delete this movie?")) return
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${id}`, {
-        method: "DELETE",
+        method:  "DELETE",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       })
       const data = await res.json()
@@ -449,9 +491,9 @@ export default function AdminDashboard() {
     setEditingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${editMovie.id}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           title:         editMovie.title,
           description:   editMovie.description   || null,
           genre:         editMovie.genre         || null,
@@ -480,9 +522,9 @@ export default function AdminDashboard() {
     setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: !m.is_active } : m))
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${movie.id}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: !movie.is_active }),
+        body:    JSON.stringify({ is_active: !movie.is_active }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
@@ -505,9 +547,9 @@ export default function AdminDashboard() {
         : selectedHall?.capacity || 100
 
       const res  = await fetch(`${API_URL}/admin/screenings`, {
-        method: "POST",
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           movie_id:        parseInt(movie_id),
           hall_id:         parseInt(hall_id),
           show_date,
@@ -526,8 +568,8 @@ export default function AdminDashboard() {
     }
   }
 
-  const [showInlineAdd,       setShowInlineAdd]       = useState(false)
-  const [inlineNewScreening,  setInlineNewScreening]  = useState({ hall_id: "", start_time: "", available_seats: "" })
+  const [showInlineAdd,      setShowInlineAdd]      = useState(false)
+  const [inlineNewScreening, setInlineNewScreening] = useState({ hall_id: "", start_time: "", available_seats: "" })
 
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
@@ -539,10 +581,10 @@ export default function AdminDashboard() {
         ? parseInt(inlineNewScreening.available_seats)
         : selectedHall?.capacity || 100
 
-      const res = await fetch(`${API_URL}/admin/screenings`, {
-        method: "POST",
+      const res  = await fetch(`${API_URL}/admin/screenings`, {
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           movie_id:        editScreeningMovie.id,
           hall_id:         parseInt(hall_id),
           show_date:       editScreeningDate,
@@ -578,6 +620,13 @@ export default function AdminDashboard() {
   const nowShowing   = movieList.filter(m => m.status === "now_showing")
   const comingSoon   = movieList.filter(m => m.status === "coming_soon")
   const activeMovies = movieList.filter(m => m.is_active)
+
+  const unreadCount    = inboxMessages.filter(m => !m.is_read).length
+  const filteredInbox  = inboxMessages.filter(m =>
+    inboxFilter === "all"    ? true :
+    inboxFilter === "unread" ? !m.is_read :
+    m.is_read
+  )
 
   const stats = [
     { label: "Tickets Sold",      value: "15,000",                       icon: "fa-ticket" },
@@ -677,7 +726,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Add Movie Modal */}
+      {/* ── Add Movie Modal ── */}
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -728,7 +777,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Add Screening Modal */}
+      {/* ── Add Screening Modal ── */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -772,7 +821,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Edit Screening Modal */}
+      {/* ── Edit Screening Modal ── */}
       {showEditScreening && editScreeningMovie && (
         <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -793,12 +842,7 @@ export default function AdminDashboard() {
               <div className="edit-screening-table-wrap">
                 <table className="edit-screening-table">
                   <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Hall</th>
-                      <th>Theater</th>
-                      <th>Actions</th>
-                    </tr>
+                    <tr><th>Time</th><th>Hall</th><th>Theater</th><th>Actions</th></tr>
                   </thead>
                   <tbody>
                     {editScreeningList.map(s => {
@@ -891,7 +935,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Edit Movie Modal */}
+      {/* ── Edit Movie Modal ── */}
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -942,54 +986,182 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Inbox Modal */}
+      {/* ── Inbox Modal (beautified) ── */}
       {showInbox && (
-        <div className="modal-backdrop" onClick={() => setShowInbox(false)}>
-          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title"><i className="fa-solid fa-inbox" /> Inbox</h3>
+        <div className="modal-backdrop" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>
+          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}
+            style={{ padding: 0, overflow: "hidden", maxWidth: "680px" }}>
 
-            {loadingInbox && <p className="admin-loading">Loading messages…</p>}
-
-            {!loadingInbox && inboxMessages.length === 0 && (
-              <p className="admin-empty">No messages yet.</p>
-            )}
-
-            {!loadingInbox && inboxMessages.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "60vh", overflowY: "auto" }}>
-                {inboxMessages.map(msg => (
-                  <div key={msg.id} style={{
-                    background:   msg.is_read ? "#f8f8f8" : "#fff9f0",
-                    border:       `1px solid ${msg.is_read ? "#e0e0e0" : "#f5c518"}`,
-                    borderRadius: "8px",
-                    padding:      "1rem",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-                      <div>
-                        <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{msg.name}</span>
-                        <span style={{ color: "#888", fontSize: "0.78rem", marginLeft: "0.5rem" }}>{msg.email}</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        {!msg.is_read && (
-                          <span style={{ background: "#f5c518", color: "#1a1a1a", fontSize: "0.65rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "999px" }}>NEW</span>
-                        )}
-                        <span style={{ fontSize: "0.72rem", color: "#aaa" }}>
-                          {new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6B1829", marginBottom: "0.35rem" }}>
-                      Subject: {msg.subject}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#444", lineHeight: 1.6 }}>
-                      {msg.message}
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #6B1829 100%)", padding: "1.25rem 1.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <div style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.12)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <i className="fa-solid fa-inbox" style={{ color: "white", fontSize: "1rem" }} />
+                  </div>
+                  <div>
+                    <div style={{ color: "white", fontWeight: 700, fontSize: "1rem", fontFamily: "'Playfair Display', serif" }}>Inbox</div>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.72rem" }}>
+                      {inboxMessages.length} total · {unreadCount} unread
                     </div>
                   </div>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  {unreadCount > 0 && (
+                    <button onClick={handleMarkAllRead}
+                      style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", padding: "0.35rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
+                      <i className="fa-solid fa-check-double" style={{ marginRight: "0.4rem" }} />Mark all read
+                    </button>
+                  )}
+                  <button onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}
+                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", width: "32px", height: "32px", cursor: "pointer", fontSize: "0.85rem" }}>
+                    <i className="fa-solid fa-xmark" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter tabs */}
+              <div style={{ display: "flex", gap: "0.4rem", marginTop: "1rem" }}>
+                {(["all", "unread", "read"] as const).map(f => (
+                  <button key={f} onClick={() => setInboxFilter(f)}
+                    style={{
+                      padding: "0.3rem 0.85rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                      background: inboxFilter === f ? "white" : "rgba(255,255,255,0.1)",
+                      color:      inboxFilter === f ? "#6B1829" : "rgba(255,255,255,0.8)",
+                    }}>
+                    {f === "all" ? `All (${inboxMessages.length})` : f === "unread" ? `Unread (${unreadCount})` : `Read (${inboxMessages.length - unreadCount})`}
+                  </button>
                 ))}
               </div>
-            )}
+            </div>
 
-            <div className="modal-actions">
-              <button className="modal-cancel-btn" onClick={() => setShowInbox(false)}>Close</button>
+            {/* Body */}
+            <div style={{ maxHeight: "62vh", overflowY: "auto", background: "#f8f8f8" }}>
+
+              {loadingInbox && (
+                <div style={{ textAlign: "center", padding: "3rem", color: "#999" }}>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
+                  Loading messages…
+                </div>
+              )}
+
+              {!loadingInbox && inboxError && (
+                <div style={{ margin: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem" }}>
+                  <i className="fa-solid fa-circle-exclamation" style={{ marginRight: "0.5rem" }} />{inboxError}
+                </div>
+              )}
+
+              {!loadingInbox && !inboxError && filteredInbox.length === 0 && (
+                <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+                  <i className="fa-regular fa-envelope-open" style={{ fontSize: "2.5rem", color: "#ddd", display: "block", marginBottom: "0.75rem" }} />
+                  <div style={{ color: "#aaa", fontSize: "0.9rem" }}>
+                    {inboxFilter === "unread" ? "No unread messages." : inboxFilter === "read" ? "No read messages yet." : "No messages yet."}
+                  </div>
+                </div>
+              )}
+
+              {!loadingInbox && !inboxError && filteredInbox.length > 0 && (
+                <div style={{ padding: "0.75rem" }}>
+                  {filteredInbox.map(msg => {
+                    const sc         = SUBJECT_COLORS[msg.subject] || SUBJECT_COLORS["Other"]
+                    const isExpanded = expandedMsgId === msg.id
+                    const dateStr    = new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    const timeStr    = new Date(msg.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+
+                    return (
+                      <div key={msg.id} style={{
+                        background:   "white",
+                        border:       `1px solid ${msg.is_read ? "#e8e8e8" : "#fbbf24"}`,
+                        borderLeft:   `3px solid ${msg.is_read ? "#e8e8e8" : "#f59e0b"}`,
+                        borderRadius: "8px",
+                        marginBottom: "0.5rem",
+                        overflow:     "hidden",
+                      }}>
+                        {/* Row — click to expand */}
+                        <div onClick={() => setExpandedMsgId(isExpanded ? null : msg.id)}
+                          style={{ display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.75rem 0.85rem", cursor: "pointer", background: isExpanded ? "#fffbf0" : "white", userSelect: "none" }}>
+
+                          {/* Unread dot */}
+                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0, background: msg.is_read ? "transparent" : "#f59e0b" }} />
+
+                          {/* Avatar */}
+                          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#6B1829", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                            {msg.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Name + subject */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.15rem" }}>
+                              <span style={{ fontWeight: msg.is_read ? 500 : 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{msg.name}</span>
+                              <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{msg.email}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <span style={{ background: sc.bg, color: sc.color, fontSize: "0.65rem", fontWeight: 700, padding: "0.1rem 0.45rem", borderRadius: "999px" }}>
+                                {msg.subject}
+                              </span>
+                              <span style={{ fontSize: "0.78rem", color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {msg.message.slice(0, 60)}{msg.message.length > 60 ? "…" : ""}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right side */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem", flexShrink: 0 }}>
+                            <span style={{ fontSize: "0.7rem", color: "#bbb" }}>{dateStr}</span>
+                            {!msg.is_read && (
+                              <span style={{ background: "#f59e0b", color: "white", fontSize: "0.6rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "999px" }}>NEW</span>
+                            )}
+                          </div>
+
+                          <i className={`fa-solid fa-chevron-${isExpanded ? "up" : "down"}`} style={{ fontSize: "0.65rem", color: "#ccc", flexShrink: 0 }} />
+                        </div>
+
+                        {/* Expanded */}
+                        {isExpanded && (
+                          <div style={{ borderTop: "1px solid #f0f0f0", background: "#fffdf5", padding: "1rem 1rem 1rem 1.25rem" }}>
+                            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.85rem", flexWrap: "wrap" }}>
+                              <div>
+                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>From</div>
+                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{msg.name} · {msg.email}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>Received</div>
+                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{dateStr} at {timeStr}</div>
+                              </div>
+                            </div>
+
+                            <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Message</div>
+                            <div style={{ fontSize: "0.85rem", color: "#444", lineHeight: 1.7, background: "white", border: "1px solid #eee", borderRadius: "6px", padding: "0.75rem 1rem", whiteSpace: "pre-wrap", marginBottom: "0.75rem" }}>
+                              {msg.message}
+                            </div>
+
+                            {!msg.is_read && (
+                              <button onClick={() => handleMarkRead(msg.id)} disabled={markingReadId === msg.id}
+                                style={{ background: "#6B1829", color: "white", border: "none", borderRadius: "6px", padding: "0.4rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, cursor: markingReadId === msg.id ? "wait" : "pointer" }}>
+                                {markingReadId === msg.id
+                                  ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: "0.4rem" }} />Marking…</>
+                                  : <><i className="fa-solid fa-check" style={{ marginRight: "0.4rem" }} />Mark as read</>
+                                }
+                              </button>
+                            )}
+                            {msg.is_read && (
+                              <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 500 }}>
+                                <i className="fa-solid fa-circle-check" style={{ marginRight: "0.35rem", color: "#10b981" }} />Marked as read
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #eee", background: "white", display: "flex", justifyContent: "flex-end" }}>
+              <button className="modal-cancel-btn" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>Close</button>
             </div>
           </div>
         </div>

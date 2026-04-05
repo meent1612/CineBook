@@ -38,6 +38,7 @@ class ContactController extends Controller
         ], 201);
     }
 
+    // Admin: all messages
     public function index()
     {
         $messages = ContactMessage::with('user')
@@ -51,7 +52,30 @@ class ContactController extends Controller
                     'email'      => $msg->email,
                     'subject'    => $msg->subject,
                     'message'    => $msg->message,
-                    'is_read'    => $msg->is_read,
+                    'is_read'    => (bool) $msg->is_read,
+                    'created_at' => $msg->created_at,
+                ];
+            });
+
+        return response()->json(['success' => true, 'messages' => $messages]);
+    }
+
+    // User: only their own messages
+    public function myMessages(Request $request)
+    {
+        $user = auth()->user();
+
+        $messages = ContactMessage::where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($msg) {
+                return [
+                    'id'         => $msg->id,
+                    'name'       => $msg->name,
+                    'email'      => $msg->email,
+                    'subject'    => $msg->subject,
+                    'message'    => $msg->message,
+                    'is_read'    => (bool) $msg->is_read,
                     'created_at' => $msg->created_at,
                 ];
             });
