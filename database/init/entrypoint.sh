@@ -25,3 +25,9 @@ echo "05_seed2.sql done"
 
 /opt/mssql-tools/bin/sqlcmd -S db -U sa -P "CineBook@1234" -C -i /sql/06_migration2.sql
 echo "06_migration2.sql done"
+
+/opt/mssql-tools/bin/sqlcmd -S db -U sa -P "CineBook@1234" -C -i /sql/07_init3.sql
+echo "07_init3.sql done"
+
+/opt/mssql-tools/bin/sqlcmd -S db -U sa -P "CineBook@1234" -C -i /sql/08_seed3.sql
+echo "08_seed3.sql done"

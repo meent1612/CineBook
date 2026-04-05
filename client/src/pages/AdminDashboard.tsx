@@ -12,6 +12,15 @@ const API_URL       = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
 const BACKEND       = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 const POSTER_COLORS = ["#6B1829","#1a3a5c","#1a4d2e","#3b1f5e","#7a3b00","#1f4040"]
 
+const SUBJECT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
+  "Booking Issue":     { bg: "#fef3c7", color: "#92400e", border: "#fcd34d" },
+  "Refund Request":    { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5" },
+  "Movie Inquiry":     { bg: "#ede9fe", color: "#5b21b6", border: "#c4b5fd" },
+  "Technical Support": { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd" },
+  "General Feedback":  { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7" },
+  "Other":             { bg: "#f3f4f6", color: "#374151", border: "#d1d5db" },
+}
+
 interface Movie {
   id: number
   title: string
@@ -42,6 +51,17 @@ interface Screening {
   show_date: string
   start_time: string
   available_seats: number
+}
+
+interface ContactMessage {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  subject: string
+  message: string
+  is_read: boolean
+  created_at: string
 }
 
 function MoviePoster({ movie }: { movie: Movie }) {
@@ -99,7 +119,7 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
           </button>
         </div>
         <div className="movie-card-actions">
-          <button className="movie-edit-btn"   onClick={() => onEdit(movie)}>
+          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
             <i className="fa-solid fa-pen" /> Edit
           </button>
           <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
@@ -132,7 +152,6 @@ const formatDateDisplay = (dateStr: string): string => {
 
 const SLOTS = ["10:00", "15:00", "20:00"]
 
-// ── Slot buttons shared component ─────────────────────
 function SlotButtons({
   selected, takenSlots, onSelect,
 }: {
@@ -159,7 +178,6 @@ function SlotButtons({
   )
 }
 
-// ── Hall grouped optgroup ──────────────────────────────
 function HallOptions({ hallList }: { hallList: Hall[] }) {
   const theaterNames = [...new Set(hallList.map(h => h.theater?.name ?? "Unknown"))]
   return (
@@ -195,59 +213,53 @@ export default function AdminDashboard() {
   const [editingMovie,  setEditingMovie]  = useState(false)
   const [editMovie,     setEditMovie]     = useState({ ...EMPTY_MOVIE, id: 0 })
 
-  // ── Add Screening state ──
   const [showAddScreening, setShowAddScreening] = useState(false)
   const [newScreening,     setNewScreening]     = useState({
     movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "",
   })
 
-  // ── Edit Screening state ──
-  const [showEditScreening,   setShowEditScreening]   = useState(false)
-  const [editScreeningMovie,  setEditScreeningMovie]  = useState<Movie | null>(null)
-  const [editScreeningDate,   setEditScreeningDate]   = useState("")
-  const [editScreeningList,   setEditScreeningList]   = useState<Screening[]>([])
-  const [loadingScreenings,   setLoadingScreenings]   = useState(false)
-  const [editingScreeningId,  setEditingScreeningId]  = useState<number | null>(null)
-  const [editScreeningForm,   setEditScreeningForm]   = useState({
-    hall_id: "", start_time: "",
-  })
+  const [showEditScreening,  setShowEditScreening]  = useState(false)
+  const [editScreeningMovie, setEditScreeningMovie] = useState<Movie | null>(null)
+  const [editScreeningDate,  setEditScreeningDate]  = useState("")
+  const [editScreeningList,  setEditScreeningList]  = useState<Screening[]>([])
+  const [loadingScreenings,  setLoadingScreenings]  = useState(false)
+  const [editingScreeningId, setEditingScreeningId] = useState<number | null>(null)
+  const [editScreeningForm,  setEditScreeningForm]  = useState({ hall_id: "", start_time: "" })
 
-  // ── Taken slots state (for slot buttons) ──
   const [takenSlots, setTakenSlots] = useState<string[]>([])
+
+  // ── Inbox state ──
+  const [showInbox,     setShowInbox]     = useState(false)
+  const [inboxMessages, setInboxMessages] = useState<ContactMessage[]>([])
+  const [loadingInbox,  setLoadingInbox]  = useState(false)
+  const [markingReadId, setMarkingReadId] = useState<number | null>(null)
+  const [inboxError,    setInboxError]    = useState("")
+  const [inboxFilter,   setInboxFilter]   = useState<"all" | "unread" | "read">("all")
+  const [expandedMsgId, setExpandedMsgId] = useState<number | null>(null)
 
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
-  // ── Auto-open modals when navigated from other pages ──
   useEffect(() => {
     const state = location.state as any
     if (!state) return
 
-    // From Showtimes "Edit Screening" button — open edit modal with movie+date context
     if (state.openScreeningModal && state.editMovieId && state.editDate) {
-      // Wait for movies to load before opening edit modal
       if (movieList.length === 0) return
       const movie = movieList.find(m => m.id === state.editMovieId)
-      if (movie) {
-        openEditScreeningModal(movie, state.editDate)
-      }
+      if (movie) { openEditScreeningModal(movie, state.editDate) }
       window.history.replaceState({}, "")
       return
     }
 
-    // From Showtimes with just openScreeningModal (no context) — open add modal
     if (state.openScreeningModal) {
       setShowAddScreening(true)
       window.history.replaceState({}, "")
       return
     }
 
-    // From Home "Edit Movie" button
     if (state.editMovieId && movieList.length > 0) {
       const target = movieList.find(m => m.id === state.editMovieId)
-      if (target) {
-        handleOpenEdit(target)
-        window.history.replaceState({}, "")
-      }
+      if (target) { handleOpenEdit(target); window.history.replaceState({}, "") }
     }
   }, [location.state, movieList])
 
@@ -279,22 +291,64 @@ export default function AdminDashboard() {
     }
   }
 
-  // ── Fetch taken slots for a hall on a date ──
+  const fetchInbox = async () => {
+    setLoadingInbox(true)
+    setInboxError("")
+    try {
+      const res  = await fetch(`${API_URL}/admin/contact-messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message || "Failed to load messages.")
+      const normalised: ContactMessage[] = (data.messages as any[]).map(m => ({
+        ...m,
+        is_read: Boolean(m.is_read),
+      }))
+      setInboxMessages(normalised)
+    } catch (err: any) {
+      setInboxError(err.message || "Could not load messages.")
+    } finally {
+      setLoadingInbox(false)
+    }
+  }
+
+  const handleMarkRead = async (id: number) => {
+    setMarkingReadId(id)
+    try {
+      const res  = await fetch(`${API_URL}/admin/contact-messages/${id}/read`, {
+        method:  "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
+    } catch (err: any) {
+      console.error("Failed to mark as read:", err.message)
+    } finally {
+      setMarkingReadId(null)
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    const unread = inboxMessages.filter(m => !m.is_read)
+    for (const msg of unread) {
+      await handleMarkRead(msg.id)
+    }
+  }
+
   const fetchTakenSlots = async (hallId: string, date: string) => {
     if (!hallId || !date) { setTakenSlots([]); return }
     try {
       const res  = await fetch(`${API_URL}/screenings?hall_id=${hallId}&date=${date}`)
       const data = await res.json()
       if (!data.success) return
-      const times = (data.screenings as { start_time: string }[])
-        .map(s => s.start_time.slice(0, 5))
+      const times = (data.screenings as { start_time: string }[]).map(s => s.start_time.slice(0, 5))
       setTakenSlots(times)
     } catch {
       setTakenSlots([])
     }
   }
 
-  // ── Fetch screenings for a specific movie on a specific date ──
   const fetchScreeningsForEdit = async (movieId: number, dateStr: string) => {
     setLoadingScreenings(true)
     try {
@@ -321,60 +375,46 @@ export default function AdminDashboard() {
     fetchScreeningsForEdit(movie.id, dateStr)
   }
 
-  // ── Edit a single screening (inline) ──
   const startEditingScreening = (screening: Screening) => {
     const hallMatch = hallList.find(h => h.name === screening.hall_name)
     setEditingScreeningId(screening.id)
     setEditScreeningForm({
-      hall_id:         hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
-      start_time:      screening.start_time.slice(0, 5), // HH:MM
+      hall_id:    hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
+      start_time: screening.start_time.slice(0, 5),
     })
   }
 
-  const cancelEditingScreening = () => {
-    setEditingScreeningId(null)
-  }
+  const cancelEditingScreening = () => { setEditingScreeningId(null) }
 
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
-    const { hall_id, start_time} = editScreeningForm
-    if (!hall_id || !start_time) {
-      alert("Hall and start time are required.")
-      return
-    }
+    const { hall_id, start_time } = editScreeningForm
+    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
-      const res = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
-        method: "PUT",
+      const res  = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hall_id:         parseInt(hall_id),
-          start_time
-        }),
+        body:    JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setEditingScreeningId(null)
-      if (editScreeningMovie) {
-        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-      }
+      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
     } catch (err: any) {
       alert(err.message || "Failed to update screening.")
     }
   }
 
-  // ── Delete a screening ──
   const handleDeleteScreening = async (screeningId: number) => {
     if (!confirm("Are you sure you want to delete this screening?")) return
     try {
-      const res = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
-        method: "DELETE",
+      const res  = await fetch(`${API_URL}/admin/screenings/${screeningId}`, {
+        method:  "DELETE",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      if (editScreeningMovie) {
-        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-      }
+      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
     } catch (err: any) {
       alert(err.message || "Failed to delete screening.")
     }
@@ -385,9 +425,9 @@ export default function AdminDashboard() {
     setAddingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies`, {
-        method: "POST",
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           title:         newMovie.title,
           description:   newMovie.description   || null,
           genre:         newMovie.genre         || null,
@@ -417,7 +457,7 @@ export default function AdminDashboard() {
     if (!confirm("Are you sure you want to delete this movie?")) return
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${id}`, {
-        method: "DELETE",
+        method:  "DELETE",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       })
       const data = await res.json()
@@ -451,9 +491,9 @@ export default function AdminDashboard() {
     setEditingMovie(true)
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${editMovie.id}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           title:         editMovie.title,
           description:   editMovie.description   || null,
           genre:         editMovie.genre         || null,
@@ -482,9 +522,9 @@ export default function AdminDashboard() {
     setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: !m.is_active } : m))
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${movie.id}`, {
-        method: "PUT",
+        method:  "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: !movie.is_active }),
+        body:    JSON.stringify({ is_active: !movie.is_active }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
@@ -507,9 +547,9 @@ export default function AdminDashboard() {
         : selectedHall?.capacity || 100
 
       const res  = await fetch(`${API_URL}/admin/screenings`, {
-        method: "POST",
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           movie_id:        parseInt(movie_id),
           hall_id:         parseInt(hall_id),
           show_date,
@@ -528,29 +568,23 @@ export default function AdminDashboard() {
     }
   }
 
-  // ── Add a screening from within the Edit Screening modal ──
-  const [showInlineAdd, setShowInlineAdd] = useState(false)
-  const [inlineNewScreening, setInlineNewScreening] = useState({
-    hall_id: "", start_time: "", available_seats: "",
-  })
+  const [showInlineAdd,      setShowInlineAdd]      = useState(false)
+  const [inlineNewScreening, setInlineNewScreening] = useState({ hall_id: "", start_time: "", available_seats: "" })
 
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
     const { hall_id, start_time } = inlineNewScreening
-    if (!hall_id || !start_time) {
-      alert("Hall and start time are required.")
-      return
-    }
+    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
       const seats = inlineNewScreening.available_seats
         ? parseInt(inlineNewScreening.available_seats)
         : selectedHall?.capacity || 100
 
-      const res = await fetch(`${API_URL}/admin/screenings`, {
-        method: "POST",
+      const res  = await fetch(`${API_URL}/admin/screenings`, {
+        method:  "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body:    JSON.stringify({
           movie_id:        editScreeningMovie.id,
           hall_id:         parseInt(hall_id),
           show_date:       editScreeningDate,
@@ -587,24 +621,30 @@ export default function AdminDashboard() {
   const comingSoon   = movieList.filter(m => m.status === "coming_soon")
   const activeMovies = movieList.filter(m => m.is_active)
 
+  const unreadCount    = inboxMessages.filter(m => !m.is_read).length
+  const filteredInbox  = inboxMessages.filter(m =>
+    inboxFilter === "all"    ? true :
+    inboxFilter === "unread" ? !m.is_read :
+    m.is_read
+  )
+
   const stats = [
-    { label: "Tickets Sold",      value: "15,000",                        icon: "fa-ticket" },
-    { label: "Total Movies",      value: movieList.length.toString(),     icon: "fa-film" },
-    { label: "Active Movies",     value: activeMovies.length.toString(),  icon: "fa-circle-play" },
-    { label: "Revenue",           value: "40M BDT",                       icon: "fa-sack-dollar" },
-    { label: "Active Screenings", value: "500",                           icon: "fa-clapperboard" },
+    { label: "Tickets Sold",      value: "15,000",                       icon: "fa-ticket" },
+    { label: "Total Movies",      value: movieList.length.toString(),    icon: "fa-film" },
+    { label: "Active Movies",     value: activeMovies.length.toString(), icon: "fa-circle-play" },
+    { label: "Revenue",           value: "40M BDT",                      icon: "fa-sack-dollar" },
+    { label: "Active Screenings", value: "500",                          icon: "fa-clapperboard" },
   ]
 
   const mgmt = [
     { label: "Movie Management",     icon: "fa-film",         action: () => setShowAddMovie(true) },
     { label: "Screening Management", icon: "fa-clapperboard", action: () => setShowAddScreening(true) },
-    { label: "Inbox",                icon: "fa-inbox",        action: () => {} },
+    { label: "Inbox",                icon: "fa-inbox",        action: () => { setShowInbox(true); fetchInbox() } },
   ]
 
   return (
     <div className="admin-wrapper">
 
-      {/* Header */}
       <div className="admin-header">
         <div className="admin-header-top">
           <div>
@@ -612,7 +652,6 @@ export default function AdminDashboard() {
             <p className="admin-header-subtitle">Here's what's happening with CineBook today.</p>
           </div>
         </div>
-
         <div className="admin-month-section">
           <div className="admin-month-row">
             <span className="admin-month-label">For the month of:</span>
@@ -632,7 +671,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Management Cards */}
       <div className="admin-mgmt-row">
         {mgmt.map(m => (
           <div key={m.label} className="admin-mgmt-card" onClick={m.action}
@@ -643,7 +681,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Movie Sections */}
       <div className="admin-movies-area">
         {loadingMovies && <p className="admin-loading">Loading movies…</p>}
         {movieError    && <p className="admin-error">{movieError}</p>}
@@ -689,9 +726,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Add Movie Modal                                */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* ── Add Movie Modal ── */}
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -742,9 +777,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Add Screening Modal (blank — from management)  */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* ── Add Screening Modal ── */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -788,9 +821,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Edit Screening Modal (from Showtimes page)     */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* ── Edit Screening Modal ── */}
       {showEditScreening && editScreeningMovie && (
         <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -811,18 +842,12 @@ export default function AdminDashboard() {
               <div className="edit-screening-table-wrap">
                 <table className="edit-screening-table">
                   <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Hall</th>
-                      <th>Theater</th>
-                      <th>Actions</th>
-                    </tr>
+                    <tr><th>Time</th><th>Hall</th><th>Theater</th><th>Actions</th></tr>
                   </thead>
                   <tbody>
                     {editScreeningList.map(s => {
                       const matchedHall = hallList.find(h => h.name === s.hall_name || h.id === s.hall_id)
                       const theaterName = matchedHall?.theater?.name || "—"
-
                       return (
                         <tr key={s.id}>
                           {editingScreeningId === s.id ? (
@@ -846,10 +871,8 @@ export default function AdminDashboard() {
                               </td>
                               <td>
                                 <div className="edit-screening-actions">
-                                  <button className="screening-save-btn" onClick={saveEditingScreening}
-                                    title="Save"><i className="fa-solid fa-check" /></button>
-                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening}
-                                    title="Cancel"><i className="fa-solid fa-xmark" /></button>
+                                  <button className="screening-save-btn" onClick={saveEditingScreening} title="Save"><i className="fa-solid fa-check" /></button>
+                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening} title="Cancel"><i className="fa-solid fa-xmark" /></button>
                                 </div>
                               </td>
                             </>
@@ -860,10 +883,8 @@ export default function AdminDashboard() {
                               <td>{theaterName}</td>
                               <td>
                                 <div className="edit-screening-actions">
-                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)}
-                                    title="Edit"><i className="fa-solid fa-pen" /></button>
-                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)}
-                                    title="Delete"><i className="fa-solid fa-trash" /></button>
+                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)} title="Edit"><i className="fa-solid fa-pen" /></button>
+                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)} title="Delete"><i className="fa-solid fa-trash" /></button>
                                 </div>
                               </td>
                             </>
@@ -876,11 +897,9 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Inline Add within edit modal */}
             {showInlineAdd ? (
               <div className="inline-add-screening">
                 <h4 className="inline-add-title">Add Another Screening</h4>
-
                 <label className="modal-label">Hall *</label>
                 <select className="modal-input"
                   value={inlineNewScreening.hall_id}
@@ -890,22 +909,19 @@ export default function AdminDashboard() {
                   }}>
                   <HallOptions hallList={hallList} />
                 </select>
-
                 <label className="modal-label">Time Slot *</label>
                 <SlotButtons
                   selected={inlineNewScreening.start_time}
                   takenSlots={takenSlots}
                   onSelect={slot => setInlineNewScreening(p => ({ ...p, start_time: slot }))}
                 />
-
                 <div className="inline-add-actions">
                   <button className="modal-cancel-btn" onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }}>Cancel</button>
                   <button className="modal-confirm-btn" onClick={handleInlineAddScreening}>Add</button>
                 </div>
               </div>
             ) : (
-              <button className="add-screening-inline-btn"
-                onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}>
+              <button className="add-screening-inline-btn" onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}>
                 <i className="fa-solid fa-plus" /> Add Screening for This Date
               </button>
             )}
@@ -919,9 +935,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Edit Movie Modal                               */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* ── Edit Movie Modal ── */}
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -967,6 +981,187 @@ export default function AdminDashboard() {
               <button className="modal-confirm-btn" onClick={handleEditMovie} disabled={editingMovie}>
                 {editingMovie ? "Saving…" : "Save Changes"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Inbox Modal (beautified) ── */}
+      {showInbox && (
+        <div className="modal-backdrop" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>
+          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}
+            style={{ padding: 0, overflow: "hidden", maxWidth: "680px" }}>
+
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #6B1829 100%)", padding: "1.25rem 1.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <div style={{ width: "36px", height: "36px", background: "rgba(255,255,255,0.12)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <i className="fa-solid fa-inbox" style={{ color: "white", fontSize: "1rem" }} />
+                  </div>
+                  <div>
+                    <div style={{ color: "white", fontWeight: 700, fontSize: "1rem", fontFamily: "'Playfair Display', serif" }}>Inbox</div>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.72rem" }}>
+                      {inboxMessages.length} total · {unreadCount} unread
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  {unreadCount > 0 && (
+                    <button onClick={handleMarkAllRead}
+                      style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", padding: "0.35rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontWeight: 600 }}>
+                      <i className="fa-solid fa-check-double" style={{ marginRight: "0.4rem" }} />Mark all read
+                    </button>
+                  )}
+                  <button onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}
+                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "white", borderRadius: "6px", width: "32px", height: "32px", cursor: "pointer", fontSize: "0.85rem" }}>
+                    <i className="fa-solid fa-xmark" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter tabs */}
+              <div style={{ display: "flex", gap: "0.4rem", marginTop: "1rem" }}>
+                {(["all", "unread", "read"] as const).map(f => (
+                  <button key={f} onClick={() => setInboxFilter(f)}
+                    style={{
+                      padding: "0.3rem 0.85rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                      border: "1px solid rgba(255,255,255,0.25)",
+                      background: inboxFilter === f ? "white" : "rgba(255,255,255,0.1)",
+                      color:      inboxFilter === f ? "#6B1829" : "rgba(255,255,255,0.8)",
+                    }}>
+                    {f === "all" ? `All (${inboxMessages.length})` : f === "unread" ? `Unread (${unreadCount})` : `Read (${inboxMessages.length - unreadCount})`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ maxHeight: "62vh", overflowY: "auto", background: "#f8f8f8" }}>
+
+              {loadingInbox && (
+                <div style={{ textAlign: "center", padding: "3rem", color: "#999" }}>
+                  <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
+                  Loading messages…
+                </div>
+              )}
+
+              {!loadingInbox && inboxError && (
+                <div style={{ margin: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: "8px", padding: "0.85rem 1rem", fontSize: "0.85rem" }}>
+                  <i className="fa-solid fa-circle-exclamation" style={{ marginRight: "0.5rem" }} />{inboxError}
+                </div>
+              )}
+
+              {!loadingInbox && !inboxError && filteredInbox.length === 0 && (
+                <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+                  <i className="fa-regular fa-envelope-open" style={{ fontSize: "2.5rem", color: "#ddd", display: "block", marginBottom: "0.75rem" }} />
+                  <div style={{ color: "#aaa", fontSize: "0.9rem" }}>
+                    {inboxFilter === "unread" ? "No unread messages." : inboxFilter === "read" ? "No read messages yet." : "No messages yet."}
+                  </div>
+                </div>
+              )}
+
+              {!loadingInbox && !inboxError && filteredInbox.length > 0 && (
+                <div style={{ padding: "0.75rem" }}>
+                  {filteredInbox.map(msg => {
+                    const sc         = SUBJECT_COLORS[msg.subject] || SUBJECT_COLORS["Other"]
+                    const isExpanded = expandedMsgId === msg.id
+                    const dateStr    = new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                    const timeStr    = new Date(msg.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+
+                    return (
+                      <div key={msg.id} style={{
+                        background:   "white",
+                        border:       `1px solid ${msg.is_read ? "#e8e8e8" : "#fbbf24"}`,
+                        borderLeft:   `3px solid ${msg.is_read ? "#e8e8e8" : "#f59e0b"}`,
+                        borderRadius: "8px",
+                        marginBottom: "0.5rem",
+                        overflow:     "hidden",
+                      }}>
+                        {/* Row — click to expand */}
+                        <div onClick={() => setExpandedMsgId(isExpanded ? null : msg.id)}
+                          style={{ display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.75rem 0.85rem", cursor: "pointer", background: isExpanded ? "#fffbf0" : "white", userSelect: "none" }}>
+
+                          {/* Unread dot */}
+                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0, background: msg.is_read ? "transparent" : "#f59e0b" }} />
+
+                          {/* Avatar */}
+                          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#6B1829", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                            {msg.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          {/* Name + subject */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.15rem" }}>
+                              <span style={{ fontWeight: msg.is_read ? 500 : 700, fontSize: "0.85rem", color: "#1a1a1a" }}>{msg.name}</span>
+                              <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{msg.email}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <span style={{ background: sc.bg, color: sc.color, fontSize: "0.65rem", fontWeight: 700, padding: "0.1rem 0.45rem", borderRadius: "999px" }}>
+                                {msg.subject}
+                              </span>
+                              <span style={{ fontSize: "0.78rem", color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {msg.message.slice(0, 60)}{msg.message.length > 60 ? "…" : ""}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right side */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem", flexShrink: 0 }}>
+                            <span style={{ fontSize: "0.7rem", color: "#bbb" }}>{dateStr}</span>
+                            {!msg.is_read && (
+                              <span style={{ background: "#f59e0b", color: "white", fontSize: "0.6rem", fontWeight: 700, padding: "0.1rem 0.4rem", borderRadius: "999px" }}>NEW</span>
+                            )}
+                          </div>
+
+                          <i className={`fa-solid fa-chevron-${isExpanded ? "up" : "down"}`} style={{ fontSize: "0.65rem", color: "#ccc", flexShrink: 0 }} />
+                        </div>
+
+                        {/* Expanded */}
+                        {isExpanded && (
+                          <div style={{ borderTop: "1px solid #f0f0f0", background: "#fffdf5", padding: "1rem 1rem 1rem 1.25rem" }}>
+                            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.85rem", flexWrap: "wrap" }}>
+                              <div>
+                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>From</div>
+                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{msg.name} · {msg.email}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.2rem" }}>Received</div>
+                                <div style={{ fontSize: "0.82rem", color: "#333", fontWeight: 500 }}>{dateStr} at {timeStr}</div>
+                              </div>
+                            </div>
+
+                            <div style={{ fontSize: "0.65rem", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>Message</div>
+                            <div style={{ fontSize: "0.85rem", color: "#444", lineHeight: 1.7, background: "white", border: "1px solid #eee", borderRadius: "6px", padding: "0.75rem 1rem", whiteSpace: "pre-wrap", marginBottom: "0.75rem" }}>
+                              {msg.message}
+                            </div>
+
+                            {!msg.is_read && (
+                              <button onClick={() => handleMarkRead(msg.id)} disabled={markingReadId === msg.id}
+                                style={{ background: "#6B1829", color: "white", border: "none", borderRadius: "6px", padding: "0.4rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, cursor: markingReadId === msg.id ? "wait" : "pointer" }}>
+                                {markingReadId === msg.id
+                                  ? <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: "0.4rem" }} />Marking…</>
+                                  : <><i className="fa-solid fa-check" style={{ marginRight: "0.4rem" }} />Mark as read</>
+                                }
+                              </button>
+                            )}
+                            {msg.is_read && (
+                              <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 500 }}>
+                                <i className="fa-solid fa-circle-check" style={{ marginRight: "0.35rem", color: "#10b981" }} />Marked as read
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #eee", background: "white", display: "flex", justifyContent: "flex-end" }}>
+              <button className="modal-cancel-btn" onClick={() => { setShowInbox(false); setExpandedMsgId(null); setInboxFilter("all") }}>Close</button>
             </div>
           </div>
         </div>
