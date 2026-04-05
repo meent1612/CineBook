@@ -44,6 +44,17 @@ interface Screening {
   available_seats: number
 }
 
+interface ContactMessage {
+  id: number
+  user_id: number
+  name: string
+  email: string
+  subject: string
+  message: string
+  is_read: boolean
+  created_at: string
+}
+
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
   const bg  = POSTER_COLORS[movie.title.charCodeAt(0) % POSTER_COLORS.length]
@@ -99,7 +110,7 @@ function MovieCard({ movie, onDelete, onToggleActive, onEdit }: MovieCardProps) 
           </button>
         </div>
         <div className="movie-card-actions">
-          <button className="movie-edit-btn"   onClick={() => onEdit(movie)}>
+          <button className="movie-edit-btn" onClick={() => onEdit(movie)}>
             <i className="fa-solid fa-pen" /> Edit
           </button>
           <button className="movie-delete-btn" onClick={() => onDelete(movie.id)}>
@@ -132,7 +143,6 @@ const formatDateDisplay = (dateStr: string): string => {
 
 const SLOTS = ["10:00", "15:00", "20:00"]
 
-// ── Slot buttons shared component ─────────────────────
 function SlotButtons({
   selected, takenSlots, onSelect,
 }: {
@@ -159,7 +169,6 @@ function SlotButtons({
   )
 }
 
-// ── Hall grouped optgroup ──────────────────────────────
 function HallOptions({ hallList }: { hallList: Hall[] }) {
   const theaterNames = [...new Set(hallList.map(h => h.theater?.name ?? "Unknown"))]
   return (
@@ -195,59 +204,49 @@ export default function AdminDashboard() {
   const [editingMovie,  setEditingMovie]  = useState(false)
   const [editMovie,     setEditMovie]     = useState({ ...EMPTY_MOVIE, id: 0 })
 
-  // ── Add Screening state ──
   const [showAddScreening, setShowAddScreening] = useState(false)
   const [newScreening,     setNewScreening]     = useState({
     movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "",
   })
 
-  // ── Edit Screening state ──
-  const [showEditScreening,   setShowEditScreening]   = useState(false)
-  const [editScreeningMovie,  setEditScreeningMovie]  = useState<Movie | null>(null)
-  const [editScreeningDate,   setEditScreeningDate]   = useState("")
-  const [editScreeningList,   setEditScreeningList]   = useState<Screening[]>([])
-  const [loadingScreenings,   setLoadingScreenings]   = useState(false)
-  const [editingScreeningId,  setEditingScreeningId]  = useState<number | null>(null)
-  const [editScreeningForm,   setEditScreeningForm]   = useState({
-    hall_id: "", start_time: "",
-  })
+  const [showEditScreening,  setShowEditScreening]  = useState(false)
+  const [editScreeningMovie, setEditScreeningMovie] = useState<Movie | null>(null)
+  const [editScreeningDate,  setEditScreeningDate]  = useState("")
+  const [editScreeningList,  setEditScreeningList]  = useState<Screening[]>([])
+  const [loadingScreenings,  setLoadingScreenings]  = useState(false)
+  const [editingScreeningId, setEditingScreeningId] = useState<number | null>(null)
+  const [editScreeningForm,  setEditScreeningForm]  = useState({ hall_id: "", start_time: "" })
 
-  // ── Taken slots state (for slot buttons) ──
   const [takenSlots, setTakenSlots] = useState<string[]>([])
+
+  // ── Inbox state ──
+  const [showInbox,     setShowInbox]     = useState(false)
+  const [inboxMessages, setInboxMessages] = useState<ContactMessage[]>([])
+  const [loadingInbox,  setLoadingInbox]  = useState(false)
 
   useEffect(() => { fetchMovies(); fetchHalls() }, [])
 
-  // ── Auto-open modals when navigated from other pages ──
   useEffect(() => {
     const state = location.state as any
     if (!state) return
 
-    // From Showtimes "Edit Screening" button — open edit modal with movie+date context
     if (state.openScreeningModal && state.editMovieId && state.editDate) {
-      // Wait for movies to load before opening edit modal
       if (movieList.length === 0) return
       const movie = movieList.find(m => m.id === state.editMovieId)
-      if (movie) {
-        openEditScreeningModal(movie, state.editDate)
-      }
+      if (movie) { openEditScreeningModal(movie, state.editDate) }
       window.history.replaceState({}, "")
       return
     }
 
-    // From Showtimes with just openScreeningModal (no context) — open add modal
     if (state.openScreeningModal) {
       setShowAddScreening(true)
       window.history.replaceState({}, "")
       return
     }
 
-    // From Home "Edit Movie" button
     if (state.editMovieId && movieList.length > 0) {
       const target = movieList.find(m => m.id === state.editMovieId)
-      if (target) {
-        handleOpenEdit(target)
-        window.history.replaceState({}, "")
-      }
+      if (target) { handleOpenEdit(target); window.history.replaceState({}, "") }
     }
   }, [location.state, movieList])
 
@@ -279,22 +278,35 @@ export default function AdminDashboard() {
     }
   }
 
-  // ── Fetch taken slots for a hall on a date ──
+  const fetchInbox = async () => {
+    setLoadingInbox(true)
+    try {
+      const res  = await fetch(`${API_URL}/admin/contact-messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setInboxMessages(data.messages)
+    } catch (err: any) {
+      console.error("Failed to load inbox:", err.message)
+    } finally {
+      setLoadingInbox(false)
+    }
+  }
+
   const fetchTakenSlots = async (hallId: string, date: string) => {
     if (!hallId || !date) { setTakenSlots([]); return }
     try {
       const res  = await fetch(`${API_URL}/screenings?hall_id=${hallId}&date=${date}`)
       const data = await res.json()
       if (!data.success) return
-      const times = (data.screenings as { start_time: string }[])
-        .map(s => s.start_time.slice(0, 5))
+      const times = (data.screenings as { start_time: string }[]).map(s => s.start_time.slice(0, 5))
       setTakenSlots(times)
     } catch {
       setTakenSlots([])
     }
   }
 
-  // ── Fetch screenings for a specific movie on a specific date ──
   const fetchScreeningsForEdit = async (movieId: number, dateStr: string) => {
     setLoadingScreenings(true)
     try {
@@ -321,48 +333,36 @@ export default function AdminDashboard() {
     fetchScreeningsForEdit(movie.id, dateStr)
   }
 
-  // ── Edit a single screening (inline) ──
   const startEditingScreening = (screening: Screening) => {
     const hallMatch = hallList.find(h => h.name === screening.hall_name)
     setEditingScreeningId(screening.id)
     setEditScreeningForm({
-      hall_id:         hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
-      start_time:      screening.start_time.slice(0, 5), // HH:MM
+      hall_id:    hallMatch ? String(hallMatch.id) : (screening.hall_id ? String(screening.hall_id) : ""),
+      start_time: screening.start_time.slice(0, 5),
     })
   }
 
-  const cancelEditingScreening = () => {
-    setEditingScreeningId(null)
-  }
+  const cancelEditingScreening = () => { setEditingScreeningId(null) }
 
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
-    const { hall_id, start_time} = editScreeningForm
-    if (!hall_id || !start_time) {
-      alert("Hall and start time are required.")
-      return
-    }
+    const { hall_id, start_time } = editScreeningForm
+    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
       const res = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hall_id:         parseInt(hall_id),
-          start_time
-        }),
+        body: JSON.stringify({ hall_id: parseInt(hall_id), start_time }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setEditingScreeningId(null)
-      if (editScreeningMovie) {
-        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-      }
+      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
     } catch (err: any) {
       alert(err.message || "Failed to update screening.")
     }
   }
 
-  // ── Delete a screening ──
   const handleDeleteScreening = async (screeningId: number) => {
     if (!confirm("Are you sure you want to delete this screening?")) return
     try {
@@ -372,9 +372,7 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      if (editScreeningMovie) {
-        fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-      }
+      if (editScreeningMovie) { fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate) }
     } catch (err: any) {
       alert(err.message || "Failed to delete screening.")
     }
@@ -528,19 +526,13 @@ export default function AdminDashboard() {
     }
   }
 
-  // ── Add a screening from within the Edit Screening modal ──
-  const [showInlineAdd, setShowInlineAdd] = useState(false)
-  const [inlineNewScreening, setInlineNewScreening] = useState({
-    hall_id: "", start_time: "", available_seats: "",
-  })
+  const [showInlineAdd,       setShowInlineAdd]       = useState(false)
+  const [inlineNewScreening,  setInlineNewScreening]  = useState({ hall_id: "", start_time: "", available_seats: "" })
 
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
     const { hall_id, start_time } = inlineNewScreening
-    if (!hall_id || !start_time) {
-      alert("Hall and start time are required.")
-      return
-    }
+    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
       const seats = inlineNewScreening.available_seats
@@ -588,23 +580,22 @@ export default function AdminDashboard() {
   const activeMovies = movieList.filter(m => m.is_active)
 
   const stats = [
-    { label: "Tickets Sold",      value: "15,000",                        icon: "fa-ticket" },
-    { label: "Total Movies",      value: movieList.length.toString(),     icon: "fa-film" },
-    { label: "Active Movies",     value: activeMovies.length.toString(),  icon: "fa-circle-play" },
-    { label: "Revenue",           value: "40M BDT",                       icon: "fa-sack-dollar" },
-    { label: "Active Screenings", value: "500",                           icon: "fa-clapperboard" },
+    { label: "Tickets Sold",      value: "15,000",                       icon: "fa-ticket" },
+    { label: "Total Movies",      value: movieList.length.toString(),    icon: "fa-film" },
+    { label: "Active Movies",     value: activeMovies.length.toString(), icon: "fa-circle-play" },
+    { label: "Revenue",           value: "40M BDT",                      icon: "fa-sack-dollar" },
+    { label: "Active Screenings", value: "500",                          icon: "fa-clapperboard" },
   ]
 
   const mgmt = [
     { label: "Movie Management",     icon: "fa-film",         action: () => setShowAddMovie(true) },
     { label: "Screening Management", icon: "fa-clapperboard", action: () => setShowAddScreening(true) },
-    { label: "Inbox",                icon: "fa-inbox",        action: () => {} },
+    { label: "Inbox",                icon: "fa-inbox",        action: () => { setShowInbox(true); fetchInbox() } },
   ]
 
   return (
     <div className="admin-wrapper">
 
-      {/* Header */}
       <div className="admin-header">
         <div className="admin-header-top">
           <div>
@@ -612,7 +603,6 @@ export default function AdminDashboard() {
             <p className="admin-header-subtitle">Here's what's happening with CineBook today.</p>
           </div>
         </div>
-
         <div className="admin-month-section">
           <div className="admin-month-row">
             <span className="admin-month-label">For the month of:</span>
@@ -632,7 +622,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Management Cards */}
       <div className="admin-mgmt-row">
         {mgmt.map(m => (
           <div key={m.label} className="admin-mgmt-card" onClick={m.action}
@@ -643,7 +632,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Movie Sections */}
       <div className="admin-movies-area">
         {loadingMovies && <p className="admin-loading">Loading movies…</p>}
         {movieError    && <p className="admin-error">{movieError}</p>}
@@ -689,9 +677,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Add Movie Modal                                */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* Add Movie Modal */}
       {showAddMovie && (
         <div className="modal-backdrop" onClick={() => setShowAddMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -742,9 +728,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Add Screening Modal (blank — from management)  */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* Add Screening Modal */}
       {showAddScreening && (
         <div className="modal-backdrop" onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
@@ -788,9 +772,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Edit Screening Modal (from Showtimes page)     */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* Edit Screening Modal */}
       {showEditScreening && editScreeningMovie && (
         <div className="modal-backdrop" onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -822,7 +804,6 @@ export default function AdminDashboard() {
                     {editScreeningList.map(s => {
                       const matchedHall = hallList.find(h => h.name === s.hall_name || h.id === s.hall_id)
                       const theaterName = matchedHall?.theater?.name || "—"
-
                       return (
                         <tr key={s.id}>
                           {editingScreeningId === s.id ? (
@@ -846,10 +827,8 @@ export default function AdminDashboard() {
                               </td>
                               <td>
                                 <div className="edit-screening-actions">
-                                  <button className="screening-save-btn" onClick={saveEditingScreening}
-                                    title="Save"><i className="fa-solid fa-check" /></button>
-                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening}
-                                    title="Cancel"><i className="fa-solid fa-xmark" /></button>
+                                  <button className="screening-save-btn" onClick={saveEditingScreening} title="Save"><i className="fa-solid fa-check" /></button>
+                                  <button className="screening-cancel-btn" onClick={cancelEditingScreening} title="Cancel"><i className="fa-solid fa-xmark" /></button>
                                 </div>
                               </td>
                             </>
@@ -860,10 +839,8 @@ export default function AdminDashboard() {
                               <td>{theaterName}</td>
                               <td>
                                 <div className="edit-screening-actions">
-                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)}
-                                    title="Edit"><i className="fa-solid fa-pen" /></button>
-                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)}
-                                    title="Delete"><i className="fa-solid fa-trash" /></button>
+                                  <button className="screening-edit-btn" onClick={() => startEditingScreening(s)} title="Edit"><i className="fa-solid fa-pen" /></button>
+                                  <button className="screening-delete-btn" onClick={() => handleDeleteScreening(s.id)} title="Delete"><i className="fa-solid fa-trash" /></button>
                                 </div>
                               </td>
                             </>
@@ -876,11 +853,9 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Inline Add within edit modal */}
             {showInlineAdd ? (
               <div className="inline-add-screening">
                 <h4 className="inline-add-title">Add Another Screening</h4>
-
                 <label className="modal-label">Hall *</label>
                 <select className="modal-input"
                   value={inlineNewScreening.hall_id}
@@ -890,22 +865,19 @@ export default function AdminDashboard() {
                   }}>
                   <HallOptions hallList={hallList} />
                 </select>
-
                 <label className="modal-label">Time Slot *</label>
                 <SlotButtons
                   selected={inlineNewScreening.start_time}
                   takenSlots={takenSlots}
                   onSelect={slot => setInlineNewScreening(p => ({ ...p, start_time: slot }))}
                 />
-
                 <div className="inline-add-actions">
                   <button className="modal-cancel-btn" onClick={() => { setShowInlineAdd(false); setTakenSlots([]) }}>Cancel</button>
                   <button className="modal-confirm-btn" onClick={handleInlineAddScreening}>Add</button>
                 </div>
               </div>
             ) : (
-              <button className="add-screening-inline-btn"
-                onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}>
+              <button className="add-screening-inline-btn" onClick={() => { setShowInlineAdd(true); setTakenSlots([]) }}>
                 <i className="fa-solid fa-plus" /> Add Screening for This Date
               </button>
             )}
@@ -919,9 +891,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════ */}
-      {/* Edit Movie Modal                               */}
-      {/* ═══════════════════════════════════════════════ */}
+      {/* Edit Movie Modal */}
       {showEditMovie && (
         <div className="modal-backdrop" onClick={() => setShowEditMovie(false)}>
           <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
@@ -967,6 +937,59 @@ export default function AdminDashboard() {
               <button className="modal-confirm-btn" onClick={handleEditMovie} disabled={editingMovie}>
                 {editingMovie ? "Saving…" : "Save Changes"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inbox Modal */}
+      {showInbox && (
+        <div className="modal-backdrop" onClick={() => setShowInbox(false)}>
+          <div className="modal-card modal-wide" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title"><i className="fa-solid fa-inbox" /> Inbox</h3>
+
+            {loadingInbox && <p className="admin-loading">Loading messages…</p>}
+
+            {!loadingInbox && inboxMessages.length === 0 && (
+              <p className="admin-empty">No messages yet.</p>
+            )}
+
+            {!loadingInbox && inboxMessages.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "60vh", overflowY: "auto" }}>
+                {inboxMessages.map(msg => (
+                  <div key={msg.id} style={{
+                    background:   msg.is_read ? "#f8f8f8" : "#fff9f0",
+                    border:       `1px solid ${msg.is_read ? "#e0e0e0" : "#f5c518"}`,
+                    borderRadius: "8px",
+                    padding:      "1rem",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{msg.name}</span>
+                        <span style={{ color: "#888", fontSize: "0.78rem", marginLeft: "0.5rem" }}>{msg.email}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        {!msg.is_read && (
+                          <span style={{ background: "#f5c518", color: "#1a1a1a", fontSize: "0.65rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: "999px" }}>NEW</span>
+                        )}
+                        <span style={{ fontSize: "0.72rem", color: "#aaa" }}>
+                          {new Date(msg.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6B1829", marginBottom: "0.35rem" }}>
+                      Subject: {msg.subject}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#444", lineHeight: 1.6 }}>
+                      {msg.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button className="modal-cancel-btn" onClick={() => setShowInbox(false)}>Close</button>
             </div>
           </div>
         </div>
