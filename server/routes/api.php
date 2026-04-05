@@ -10,6 +10,7 @@ use App\Http\Controllers\SeatController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TicketPriceController;
+use App\Http\Controllers\ContactController;
 
 // ══════════════════════════════════════════════
 // Public routes
@@ -26,7 +27,8 @@ Route::get('/halls/{id}',      [HallController::class,      'show']);
 Route::get('/theaters',        [TheaterController::class,   'index']);
 
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
-Route::get('/ticket-prices', [TicketPriceController::class, 'index']);
+Route::get('/ticket-prices',       [TicketPriceController::class, 'index']);
+
 // ══════════════════════════════════════════════
 // Authenticated routes
 // ══════════════════════════════════════════════
@@ -45,6 +47,9 @@ Route::middleware('auth:api')->group(function () {
 
     Route::post('/payments', [PaymentController::class, 'store']);
 
+    // Contact — user must be logged in
+    Route::post('/contact', [ContactController::class, 'store']);
+
     // ── Admin routes ────────────────────────────────
     Route::middleware('admin')->prefix('admin')->group(function () {
 
@@ -57,5 +62,9 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/screenings',        [ScreeningController::class, 'store']);
         Route::put('/screenings/{id}',    [ScreeningController::class, 'update']);
         Route::delete('/screenings/{id}', [ScreeningController::class, 'destroy']);
+
+        // Inbox
+        Route::get('/contact-messages',               [ContactController::class, 'index']);
+        Route::put('/contact-messages/{id}/read',     [ContactController::class, 'markRead']);
     });
 });
