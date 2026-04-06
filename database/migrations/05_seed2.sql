@@ -7,9 +7,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time) VALUES
 
 -- ════════════════════════════════════════════
 -- DHANMONDI
--- Hall 1 (id=1): Avatar2D / Avatar3D / Avatar2D
--- Hall 2 (id=2):  Anaconda / Rajnoitik / Sultana
--- Hall 3 (id=3): SpongeBob / Anaconda / SpongeBob
+-- Hall 1 (id=1): Avatar3D / Anaconda / Avatar3D
+-- Hall 2 (id=2):  Rajnoitik / Sultana / SpongeBob
+-- Hall 3 (id=3): Crime101 / Rajnoitik / Crime101
 -- ════════════════════════════════════════════
 (1,1,'2026-04-03','10:00:00'),(2,1,'2026-04-03','15:00:00'),(1,1,'2026-04-03','20:00:00'),
 (3,2,'2026-04-03','10:00:00'),(4,2,'2026-04-03','15:00:00'),(5,2,'2026-04-03','20:00:00'),
@@ -77,9 +77,9 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time) VALUES
 
 -- ════════════════════════════════════════════
 -- SHANTINAGAR
--- Hall 4 (id=4): Avatar3D / Avatar2D / Avatar3D
--- Hall 5 (id=5):  Rajnoitik / Anaconda / Rajnoitik
--- Hall 6 (id=6): Sultana / SpongeBob / Sultana
+-- Hall 4 (id=4): Anaconda / Avatar3D / Anaconda
+-- Hall 5 (id=5):  Sultana / Rajnoitik / Sultana
+-- Hall 6 (id=6): SpongeBob / Crime101 / SpongeBob
 -- ════════════════════════════════════════════
 (2,4,'2026-04-03','10:00:00'),(1,4,'2026-04-03','15:00:00'),(2,4,'2026-04-03','20:00:00'),
 (4,5,'2026-04-03','10:00:00'),(3,5,'2026-04-03','15:00:00'),(4,5,'2026-04-03','20:00:00'),

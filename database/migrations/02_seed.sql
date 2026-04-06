@@ -86,19 +86,6 @@ BEGIN
         'Avatar: Fire and Ash',
         'The next chapter in the Avatar saga.',
         'Action, Fantasy, Adventure',
-        '2D',
-        'English',
-        150,
-        '2025-12-19',
-        '/posters/avatar.jpg',
-        'https://youtu.be/nb_fFj_0rq8?si=yNL5337zQUzm7Q3J',
-        'now_showing',
-        1
-    ),
-    (
-        'Avatar: Fire and Ash',
-        'The next chapter in the Avatar saga.',
-        'Action, Fantasy, Adventure',
         '3D',
         'English',
         150,
@@ -170,7 +157,7 @@ BEGIN
         '2026-02-13',
         '/posters/crime101.jpg',
         'https://www.youtube.com/watch?v=f5y-cziwmMw',
-        'coming_soon',
+        'now_showing',
         1
     ),
     (
@@ -183,9 +170,47 @@ BEGIN
         '2026-03-21',
         '/posters/domm.jpg',
         'https://www.youtube.com/watch?v=lK01xRLuo54',
-        'coming_soon',
+        'now_showing',
+        1
+    ),
+    (
+        'Project Hail Mary',
+        'A science teacher wakes up alone on a spaceship. As his memory returns, he uncovers a mission to stop a mysterious substance killing Earths sun and that an unexpected friendship may be the key.',
+        'Sci-Fi',
+        '2D',
+        'English',
+        156,
+        '2026-03-27',
+        '/posters/projecthailmary.jpg',
+        'https://www.youtube.com/watch?v=m08TxIsFTRI',
+        'now_showing',
+        1
+    ),
+    (
+        'The Super Mario Galaxy Movie',
+        'Mario ventures into space, exploring cosmic worlds and tackling galactic challenges far from the familiar Mushroom Kingdom.',
+        'Adventure,Animation',
+        '3D',
+        'English',
+        99,
+        '2026-04-01',
+        '/posters/supermario.jpg',
+        'https://www.youtube.com/watch?v=GuCejewteF8',
+        'now_showing',
+        1
+    ),
+    (
+        'Bonolota Express',
+        'On a foggy winter night, strangers with secrets collide aboard the Bonolota Express. Personal and political crises erupt, revealing hidden grief, moral decay, and unexpected compassion. By dawn, passengers emerge forever changed.',
+        'Drama',
+        '2D',
+        'Bangla',
+        150,
+        '2025-12-19',
+        '/posters/bonolotaexpress.jpg',
+        'https://www.youtube.com/watch?v=ZTZUaHsfR8o',
+        'now_showing',
         1
     );
-
 END
 GO
