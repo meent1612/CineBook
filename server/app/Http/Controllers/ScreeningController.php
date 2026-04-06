@@ -62,20 +62,22 @@ class ScreeningController extends Controller
     }
 
     
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
         try {
-            $screenings = Screening::with(['movie', 'hall'])->get();
+            $query = Screening::with(['movie', 'hall']);
+
+            if ($request->has('date'))    { $query->where('show_date', $request->date); }
+            if ($request->has('hall_id')) { $query->where('hall_id',   $request->hall_id); }
+
+            $screenings = $query->get();
 
             return response()->json([
                 'success'    => true,
                 'screenings' => $screenings,
             ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
