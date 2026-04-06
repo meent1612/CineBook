@@ -12,6 +12,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TicketPriceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\DiscountController;
 
 // ══════════════════════════════════════════════
 // Public routes
@@ -30,7 +31,7 @@ Route::get('/theaters',        [TheaterController::class,   'index']);
 
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
 Route::get('/ticket-prices',       [TicketPriceController::class, 'index']);
-
+Route::get('/discounts', [DiscountController::class, 'index']);
 
 
 // ══════════════════════════════════════════════
@@ -70,6 +71,10 @@ Route::middleware('auth:api')->group(function () {
 
         Route::get('/analytics', [AnalyticsController::class, 'index']);
 
+        Route::get('/discounts',         [DiscountController::class, 'adminIndex']);
+        Route::post('/discounts',        [DiscountController::class, 'store']);
+        Route::delete('/discounts/{id}', [DiscountController::class, 'destroy']);
+        
         // Inbox
         Route::get('/contact-messages',           [ContactController::class, 'index']);
         Route::put('/contact-messages/{id}/read', [ContactController::class, 'markRead']);
