@@ -179,6 +179,7 @@ export default function AdminDashboard() {
   const [discountEndDate,      setDiscountEndDate]       = useState("")
   const [applyingDiscount,     setApplyingDiscount]      = useState(false)
   const [activeDiscounts,      setActiveDiscounts]       = useState<any[]>([])
+  
 
   // Income filter
   const [incomeMonth,   setIncomeMonth]   = useState(MONTHS[todayBD.getMonth()])
@@ -964,7 +965,7 @@ export default function AdminDashboard() {
       Active Discounts
     </div>
     {activeDiscounts.map(d => {
-      const theater = THEATERS.find(t => t.id === d.theater_id)
+      const theater = THEATERS.find(t => String(t.id) === String(d.theater_id))
 
       const formatDate = (iso: string) =>
         new Date(iso).toLocaleString("en-US", {
@@ -996,12 +997,19 @@ export default function AdminDashboard() {
             </div>
 
             {/* Theater */}
-            {theater && (
-              <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.25rem" }}>
-                <i className="fa-solid fa-location-dot" style={{ marginRight: "0.3rem", color: PRIMARY, opacity: 0.7 }} />
-                {theater.name}
-              </div>
-            )}
+
+{theater && (
+  <div style={{
+    display: "inline-flex", alignItems: "center", gap: "0.25rem",
+    background: `${PRIMARY}12`, border: `1px solid ${PRIMARY}33`,
+    borderRadius: "999px", padding: "0.15rem 0.55rem",
+    fontSize: "0.7rem", fontWeight: 600, color: PRIMARY,
+    marginBottom: "0.35rem"
+  }}>
+    <i className="fa-solid fa-clapperboard" style={{ fontSize: "0.6rem" }} />
+    {theater.name}
+  </div>
+)}
 
             {/* Date Range */}
             <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.4rem" }}>
