@@ -889,6 +889,7 @@ export default function AdminDashboard() {
                 <div style={s.incomeTitle}><i className="fa-solid fa-chart-column" style={{ color: PRIMARY, marginRight: "0.4rem" }} />Income</div>
                 <div style={s.incomeFilters}>
                   <select style={s.incomeSel} value={incomeMonth} onChange={e => setIncomeMonth(e.target.value)}>
+                     <option value="all">All Months</option>
                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                   <select style={s.incomeSel} value={incomeTheater} onChange={e => setIncomeTheater(e.target.value)}>
