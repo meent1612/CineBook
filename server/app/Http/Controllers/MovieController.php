@@ -166,7 +166,7 @@ class MovieController extends Controller
     public function popular()
     {
         try {
-            // COUNT bookings per movie via JOIN
+            // COUNT confirmed bookings per movie via screenings JOIN
             $counts = DB::table('bookings as b')
                 ->join('screenings as sc', 'b.screening_id', '=', 'sc.id')
                 ->where('b.status', 'confirmed')

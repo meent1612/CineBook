@@ -20,6 +20,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login',    [AuthController::class, 'login']);
 
 Route::get('/movies',          [MovieController::class,     'index']);
+Route::get('/movies/popular', [MovieController::class, 'popular']);
 Route::get('/movies/{id}',     [MovieController::class,     'show']);
 Route::get('/screenings',      [ScreeningController::class, 'index']);
 Route::get('/screenings/{id}', [ScreeningController::class, 'show']);
@@ -30,7 +31,7 @@ Route::get('/theaters',        [TheaterController::class,   'index']);
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
 Route::get('/ticket-prices',       [TicketPriceController::class, 'index']);
 
-Route::get('/movies/popular', [MovieController::class, 'popular']);
+
 
 // ══════════════════════════════════════════════
 // Authenticated routes
