@@ -18,8 +18,8 @@ class AnalyticsController extends Controller
                 ->join('movies as m',      'sc.movie_id',    '=', 'm.id')
                 ->where('b.status', 'confirmed');
 
-            // ── Optional filters (handles all 7 combinations automatically) ──
-            if ($request->filled('month') && $request->filled('year')) {
+            // ── Optional filters (handles all 8 combinations automatically) ──
+            if ($request->filled('month') && (int)$request->month > 0 && $request->filled('year')) {
                 $base->whereMonth('sc.show_date', $request->month)
                      ->whereYear('sc.show_date',  $request->year);
             }

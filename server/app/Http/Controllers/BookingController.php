@@ -14,10 +14,37 @@ use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
-    private function getPrice(string $seatType): int
+    private function getPrice(string $seatType, int $screeningId): int
     {
-        $record = TicketPrice::where('seat_type', $seatType)->first();
-        return $record ? $record->price : 400;
+        $basePrice = TicketPrice::where('seat_type', $seatType)->value('price') ?? 400;
+
+        // Find theater for this screening
+        $theaterId = \App\Models\Screening::with('hall.theater')
+            ->find($screeningId)
+            ?->hall
+            ?->theater
+            ?->id;
+
+        if (!$theaterId) return $basePrice;
+
+        // Check for active discount for this theater today
+        $discount = \App\Models\Discount::where('theater_id', $theaterId)
+            ->where('is_active', true)
+            ->where('start_date', '<=', now()->toDateString())
+            ->where('end_date',   '>=', now()->toDateString())
+            ->first();
+
+        if (!$discount) return $basePrice;
+
+        $pctMap = [
+            'standard'      => $discount->standard_pct,
+            'semi_recliner' => $discount->semi_recliner_pct,
+            'premium'       => $discount->premium_pct,
+            'vip'           => $discount->vip_pct,
+        ];
+
+        $pct = $pctMap[$seatType] ?? 0;
+        return $pct > 0 ? (int) round($basePrice * (1 - $pct / 100)) : $basePrice;
     }
 
     // ═══════════════════════════════════════════════════════
@@ -189,7 +216,7 @@ class BookingController extends Controller
 
             foreach ($seatIds as $seatId) {
                 $seat  = $seats[$seatId];
-                $price = $this->getPrice($seat->seat_type);
+                $price = $this->getPrice($seat->seat_type, $screeningId);
                 $totalPrice += $price;
 
                 Booking::create([
