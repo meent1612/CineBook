@@ -169,7 +169,7 @@ export default function AdminDashboard() {
   const [loadingCalScreenings, setLoadingCalScreenings] = useState(false)
 
   // Discount widget
-  const [discountTheater,   setDiscountTheater]   = useState("1")
+  const [discountTheater,   setDiscountTheater]   = useState("all")
   const [discountRegular,   setDiscountRegular]   = useState("")
   const [discountPremium,   setDiscountPremium]   = useState("")
   const [discountVip,       setDiscountVip]       = useState("")
@@ -844,20 +844,26 @@ export default function AdminDashboard() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.6rem" }}>
                 <div>
                   <div style={s.discountLabel}>Theatre</div>
-                  <select style={s.discountSelect} value={discountTheater} onChange={e => setDiscountTheater(e.target.value)}>
-                    {THEATERS.map(t => <option key={t.id} value={t.id} style={{ background: "#2a0a10", color: "white" }}>{t.name}</option>)}
-                  </select>
+                <select style={s.discountSelect} value={discountTheater} onChange={e => setDiscountTheater(e.target.value)}
+                >
+                <option value="all" style={{ background: "#2a0a10", color: "white" }}>All Theatres</option>
+                {THEATERS.map(t => (<option key={t.id} value={t.id} style={{ background: "#2a0a10", color: "white" }}>{t.name}</option>))}
+                </select>
                 </div>
                 <div>
-                  <div style={s.discountLabel}>Regular Seats %</div>
+                  <div style={s.discountLabel}>Standard Seats %</div>
                   <input type="number" min={0} max={100} placeholder="e.g. 10" style={s.discountInp} value={discountRegular} onChange={e => setDiscountRegular(e.target.value)} />
                 </div>
                 <div>
-                  <div style={s.discountLabel}>Premium Seats %</div>
-                  <input type="number" min={0} max={100} placeholder="e.g. 15" style={s.discountInp} value={discountPremium} onChange={e => setDiscountPremium(e.target.value)} />
+                  <div style={s.discountLabel}>Semi Recliner Seats %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp} value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
                 </div>
                 <div>
                   <div style={s.discountLabel}>VIP Seats %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 15" style={s.discountInp} value={discountPremium} onChange={e => setDiscountPremium(e.target.value)} />
+                </div>
+                <div>
+                  <div style={s.discountLabel}>Premium Seats %</div>
                   <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp} value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
                 </div>
                 <div>
