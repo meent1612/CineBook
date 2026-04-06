@@ -16,6 +16,7 @@ interface Movie {
   trailer_url: string | null
   status: "now_showing" | "coming_soon"
   is_active: boolean
+  booking_count?: number  // A) added
 }
 
 // ── Constants ──────────────────────────────────────────
@@ -59,13 +60,15 @@ function MoviePoster({ movie }: { movie: Movie }) {
 }
 
 // ── Trending Widget ────────────────────────────────────
-// Heat bars are decorative; wire `heatPct` to real view-count data when available.
 function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: number) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Derive a deterministic heat % from title length + id so it looks varied
-  const heatPct = (m: Movie, rank: number) =>
-    Math.max(30, Math.min(99, 99 - (rank - 1) * 11 + (m.id % 7)))
+  // E) Use real booking counts for heat percentage
+  const maxCount = Math.max(...movies.map(m => m.booking_count ?? 0), 1)
+  const heatPct  = (m: Movie) =>
+    m.booking_count !== undefined && maxCount > 0
+      ? Math.max(10, Math.round((m.booking_count / maxCount) * 100))
+      : Math.max(30, Math.min(99, 99 - (movies.indexOf(m)) * 11))
 
   if (movies.length === 0) return null
 
@@ -94,7 +97,6 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
         <div className="trending-track" ref={scrollRef}>
           {trending.map((movie, idx) => {
             const rank   = idx + 1
-            const heat   = heatPct(movie, rank)
             const isTop  = rank === 1
             const src    = posterSrc(movie.poster_url)
             const bg     = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
@@ -143,14 +145,14 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
                     {movie.title.length > 18 ? movie.title.substring(0, 18) + "…" : movie.title}
                   </p>
 
-                  {/* Heat bar */}
+                  {/* E) Heat bar using real data */}
                   <div className="trending-heat-bar-wrap" aria-hidden="true">
                     <div
                       className={`trending-heat-bar ${isTop ? "trending-heat-bar--gold" : ""}`}
-                      style={{ width: `${heat}%` }}
+                      style={{ width: `${heatPct(movie)}%` }}
                     />
                   </div>
-                  <p className="trending-heat-label">{heat}% popularity</p>
+                  <p className="trending-heat-label">{heatPct(movie)}% popularity</p>
                 </div>
               </button>
             )
@@ -163,12 +165,13 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
 
 // ── Main Component ─────────────────────────────────────
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("Now Showing")
-  const [heroIdx,   setHeroIdx]   = useState(0)
-  const [movieList, setMovieList] = useState<Movie[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState("")
-  const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const [activeTab,     setActiveTab]     = useState<Tab>("Now Showing")
+  const [heroIdx,       setHeroIdx]       = useState(0)
+  const [movieList,     setMovieList]     = useState<Movie[]>([])
+  const [popularMovies, setPopularMovies] = useState<Movie[]>([])  // B) added
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState("")
+  const [hoveredId,     setHoveredId]     = useState<number | null>(null)
 
   const navigate    = useNavigate()
   const { user }    = useAuth()
@@ -176,6 +179,7 @@ export default function Home() {
   const isLoggedIn  = !!user
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // C) Both fetches in one useEffect
   useEffect(() => {
     const fetchMovies = async () => {
       setLoading(true)
@@ -191,7 +195,17 @@ export default function Home() {
         setLoading(false)
       }
     }
+
+    const fetchPopular = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/movies/popular`)
+        const data = await res.json()
+        if (data.success) setPopularMovies(data.movies)
+      } catch {}
+    }
+
     fetchMovies()
+    fetchPopular()  // C) added
   }, [])
 
   const nowShowing = movieList.filter(m => m.status === "now_showing")
@@ -199,12 +213,6 @@ export default function Home() {
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
-
-  // Trending = now-showing first, then coming-soon, all active
-  const trendingMovies = [
-    ...nowShowing,
-    ...comingSoon,
-  ].filter(m => m.is_active)
 
   useEffect(() => {
     if (heroMovies.length <= 1) return
@@ -231,11 +239,10 @@ export default function Home() {
   const handleEditMovie  = (movieId: number) => navigate("/admin", { state: { editMovieId: movieId } })
   const handleGetTickets = (movieId: number) => navigate(`/book/${movieId}`)
 
-  // Trending card click: book if logged in, else go to login
   const handleTrendingSelect = (movieId: number) => {
-    if (isAdmin)      handleEditMovie(movieId)
+    if (isAdmin)         handleEditMovie(movieId)
     else if (isLoggedIn) handleGetTickets(movieId)
-    else              navigate("/login")
+    else                 navigate("/login")
   }
 
   return (
@@ -312,9 +319,9 @@ export default function Home() {
         )}
       </div>
 
-      {/* ── Trending Widget ── */}
-      {!loading && !error && trendingMovies.length > 0 && (
-        <TrendingWidget movies={trendingMovies} onSelect={handleTrendingSelect} />
+      {/* ── Trending Widget ── D) uses popularMovies */}
+      {!loading && !error && popularMovies.length > 0 && (
+        <TrendingWidget movies={popularMovies} onSelect={handleTrendingSelect} />
       )}
 
       {/* ── Content Area ── */}
