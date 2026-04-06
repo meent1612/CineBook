@@ -546,11 +546,17 @@ export default function AdminDashboard() {
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) } else setCalMonth(m => m + 1) }
 
   // ── Analytics derived values (D) ──
-  const dailyData    = analytics?.daily      || []
-  const maxIncome    = dailyData.length > 0 ? Math.max(...dailyData.map((d: any) => d.total_revenue), 1) : 1
-  const totalIncome  = analytics?.summary?.total_revenue   || 0
-  const totalRegular = analytics?.summary?.regular_revenue || 0
-  const totalPremium = analytics?.summary?.premium_revenue || 0
+  const dailyData   = analytics?.daily || []
+  const maxIncome   = dailyData.length > 0 ? Math.max(...dailyData.map((d: any) => d.total_revenue), 1) : 1
+  const totalIncome = analytics?.summary?.total_revenue || 0
+
+  const getSeatRev = (type: string): number =>
+    (analytics?.by_seat || []).find((s: any) => s.seat_type === type)?.revenue || 0
+
+  const totalStandard     = getSeatRev("standard")
+  const totalSemiRecliner = getSeatRev("semi_recliner")
+  const totalPremium      = getSeatRev("premium")
+  const totalVip          = getSeatRev("vip")
 
   const fmt = (n: number) => n >= 1000 ? `৳${(n / 1000).toFixed(1)}k` : `৳${n}`
 
@@ -678,9 +684,9 @@ export default function AdminDashboard() {
     incomeTitle: { fontSize: "0.95rem", fontWeight: 700, color: TEXT },
     incomeFilters: { display: "flex", gap: "0.5rem" },
     incomeSel: { background: "#f9fafb", border: `1px solid ${BORDER}`, borderRadius: "8px", color: TEXT, fontSize: "0.72rem", padding: "0.3rem 0.6rem", cursor: "pointer", outline: "none" } as React.CSSProperties,
-    incomeStats: { display: "flex", gap: "2rem", marginBottom: "1rem" },
+    incomeStats: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 1.5rem", marginBottom: "1rem" },
     incomeStat: { display: "flex", flexDirection: "column" as const },
-    incomeStatVal: { fontSize: "1.4rem", fontWeight: 800, color: TEXT },
+    incomeStatVal: { fontSize: "1.2rem", fontWeight: 800, color: TEXT },
     incomeStatLabel: { fontSize: "0.7rem", color: MUTED, fontWeight: 500, display: "flex", alignItems: "center", gap: "0.3rem" },
     incomeStatDot: (color: string): React.CSSProperties => ({ width: "7px", height: "7px", borderRadius: "50%", background: color }),
     barChart: { display: "flex", alignItems: "flex-end", gap: "0.5rem", height: "100px" },
@@ -890,19 +896,29 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Income stats (E) */}
-              <div style={s.incomeStats}>
+              {/* Income stats (E) — Total + all 4 seat types in a 2×2 grid */}
+              <div style={{ marginBottom: "1rem" }}>
                 <div style={s.incomeStat}>
-                  <div style={s.incomeStatVal}>{fmt(totalIncome)}</div>
+                  <div style={{ fontSize: "1.6rem", fontWeight: 800, color: TEXT }}>{fmt(totalIncome)}</div>
                   <div style={s.incomeStatLabel}>Total Revenue</div>
                 </div>
+              </div>
+              <div style={s.incomeStats}>
                 <div style={s.incomeStat}>
-                  <div style={{ ...s.incomeStatVal, color: PRIMARY }}>{fmt(totalRegular)}</div>
-                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot(PRIMARY)} />Regular</div>
+                  <div style={{ ...s.incomeStatVal, color: PRIMARY }}>{fmt(totalStandard)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot(PRIMARY)} />Standard</div>
                 </div>
                 <div style={s.incomeStat}>
-                  <div style={{ ...s.incomeStatVal, color: MUTED }}>{fmt(totalPremium)}</div>
-                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#d1d5db")} />Premium</div>
+                  <div style={{ ...s.incomeStatVal, color: "#7c3aed" }}>{fmt(totalSemiRecliner)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#7c3aed")} />Semi Recliner</div>
+                </div>
+                <div style={s.incomeStat}>
+                  <div style={{ ...s.incomeStatVal, color: "#0369a1" }}>{fmt(totalPremium)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#0369a1")} />Premium</div>
+                </div>
+                <div style={s.incomeStat}>
+                  <div style={{ ...s.incomeStatVal, color: "#b45309" }}>{fmt(totalVip)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#b45309")} />VIP</div>
                 </div>
               </div>
 
