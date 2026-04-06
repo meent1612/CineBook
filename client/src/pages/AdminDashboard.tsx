@@ -31,7 +31,6 @@ const SLOTS = ["10:00", "15:00", "20:00"]
 // ─── Bangladesh timezone helper ───────────────────────────────────────────────
 const getBDDate = (): Date => {
   const now = new Date()
-  // UTC+6
   const bdOffset = 6 * 60
   const utc = now.getTime() + now.getTimezoneOffset() * 60000
   return new Date(utc + bdOffset * 60000)
@@ -148,20 +147,11 @@ const EMPTY_MOVIE = {
   poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
 }
 
-// ─── Color palette (matches screenshot) ──────────────────────────────────────
-// Primary dark red: #6B1829
-// Light bg: #f5f5f5 / white
-// Text dark: #1a1a1a / #333
-// Accent gold: #c9a227 (for highlights)
-// Cards: white with subtle shadow
-// Tab active: #6B1829 white text; inactive: transparent dark text
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminDashboard() {
   const { token } = useAuth()
   const location  = useLocation()
 
-  // Nav — no separate navbar; tabs sit below the existing site navbar
   const [activeTab, setActiveTab] = useState<"overview" | "management" | "inbox" | "movies">("overview")
 
   // Data
@@ -170,7 +160,7 @@ export default function AdminDashboard() {
   const [movieError,    setMovieError]    = useState("")
   const [hallList,      setHallList]      = useState<Hall[]>([])
 
-  // Calendar — use Bangladesh time
+  // Calendar
   const todayBD = getBDDate()
   const [calYear,  setCalYear]  = useState(todayBD.getFullYear())
   const [calMonth, setCalMonth] = useState(todayBD.getMonth())
@@ -191,6 +181,10 @@ export default function AdminDashboard() {
   const [incomeMonth,   setIncomeMonth]   = useState(MONTHS[todayBD.getMonth()])
   const [incomeTheater, setIncomeTheater] = useState("all")
   const [incomeMovie,   setIncomeMovie]   = useState("all")
+
+  // ── Analytics state (A) ──
+  const [analytics,        setAnalytics]        = useState<any>(null)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
 
   // Add/Edit Movie modals
   const [showAddMovie,  setShowAddMovie]  = useState(false)
@@ -246,6 +240,11 @@ export default function AdminDashboard() {
     }
   }, [location.state, movieList])
 
+  // ── Analytics useEffect (C) ──
+  useEffect(() => {
+    if (activeTab === "overview") fetchAnalytics()
+  }, [incomeMonth, incomeTheater, incomeMovie, activeTab])
+
   // ── Fetch helpers ────────────────────────────────────────────────────────────
   const fetchMovies = async () => {
     setLoadingMovies(true); setMovieError("")
@@ -270,7 +269,9 @@ export default function AdminDashboard() {
   const fetchCalScreenings = async (date: string) => {
     setLoadingCalScreenings(true)
     try {
-      const res  = await fetch(`${API_URL}/screenings?date=${date}`)
+      const res = await fetch(`${API_URL}/admin/screenings?date=${date}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setCalScreenings((data.screenings as Screening[]).sort((a, b) => a.start_time.localeCompare(b.start_time)))
@@ -287,6 +288,31 @@ export default function AdminDashboard() {
       setInboxMessages((data.messages as any[]).map(m => ({ ...m, is_read: Boolean(m.is_read) })))
     } catch (err: any) { setInboxError(err.message || "Could not load messages.") }
     finally { setLoadingInbox(false) }
+  }
+
+  // ── fetchAnalytics (B) ──
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true)
+    try {
+      const monthNum = MONTHS.indexOf(incomeMonth) + 1
+      const params   = new URLSearchParams({
+        month: String(monthNum),
+        year:  String(calYear),
+      })
+      if (incomeTheater !== "all") params.set("theater_id", incomeTheater)
+      if (incomeMovie   !== "all") params.set("movie_id",   incomeMovie)
+
+      const res  = await fetch(`${API_URL}/admin/analytics?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (data.success) setAnalytics(data)
+      else setAnalytics(null)
+    } catch {
+      setAnalytics(null)
+    } finally {
+      setLoadingAnalytics(false)
+    }
   }
 
   const handleMarkRead = async (id: number) => {
@@ -514,31 +540,23 @@ export default function AdminDashboard() {
 
   const daysInMonth  = getDaysInMonth(calYear, calMonth)
   const firstDay     = getFirstDayOfMonth(calYear, calMonth)
-  const todayStr     = getTodayBDStr()  // BD timezone
+  const todayStr     = getTodayBDStr()
 
   const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) } else setCalMonth(m => m - 1) }
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) } else setCalMonth(m => m + 1) }
 
-  // Mock income data
-  const incomeData = [
-    { day: "Sun", comedy: 18000, other: 9000 },
-    { day: "Mon", comedy: 12000, other: 6000 },
-    { day: "Tue", comedy: 28000, other: 14000 },
-    { day: "Wed", comedy: 45000, other: 22000 },
-    { day: "Thu", comedy: 32000, other: 18000 },
-    { day: "Fri", comedy: 38000, other: 20000 },
-    { day: "Sat", comedy: 42000, other: 21000 },
-  ]
-  const maxIncome = Math.max(...incomeData.map(d => d.comedy + d.other))
-  const totalIncome = incomeData.reduce((s, d) => s + d.comedy + d.other, 0)
-  const totalComedy = incomeData.reduce((s, d) => s + d.comedy, 0)
-  const totalOther  = incomeData.reduce((s, d) => s + d.other, 0)
+  // ── Analytics derived values (D) ──
+  const dailyData    = analytics?.daily      || []
+  const maxIncome    = dailyData.length > 0 ? Math.max(...dailyData.map((d: any) => d.total_revenue), 1) : 1
+  const totalIncome  = analytics?.summary?.total_revenue   || 0
+  const totalRegular = analytics?.summary?.regular_revenue || 0
+  const totalPremium = analytics?.summary?.premium_revenue || 0
+
   const fmt = (n: number) => n >= 1000 ? `৳${(n / 1000).toFixed(1)}k` : `৳${n}`
 
-  // ── Styles — Light theme matching the screenshot ──────────────────────────
-  // Palette: bg=#f5f5f5, card=white, primary=#6B1829, text=#1a1a1a, muted=#6b7280
+  // ── Styles ──────────────────────────────────────────────────────────────────
   const PRIMARY    = "#6B1829"
-  const PRIMARY_LT = "#f9e8eb"  // light tint of primary
+  const PRIMARY_LT = "#f9e8eb"
   const BG         = "#f4f4f6"
   const CARD       = "#ffffff"
   const TEXT       = "#1a1a1a"
@@ -553,7 +571,6 @@ export default function AdminDashboard() {
       color: TEXT,
     } as React.CSSProperties,
 
-    // Tab bar — sits below the existing site navbar, no branding/logo
     tabBar: {
       display: "flex",
       alignItems: "center",
@@ -561,7 +578,6 @@ export default function AdminDashboard() {
       padding: "0.75rem 2rem",
       background: CARD,
       borderBottom: `1px solid ${BORDER}`,
-      // NOT sticky — no z-index clash
     } as React.CSSProperties,
 
     tabItem: (active: boolean): React.CSSProperties => ({
@@ -585,7 +601,6 @@ export default function AdminDashboard() {
       marginLeft: "0.3rem",
     } as React.CSSProperties,
 
-    // Layout — 3 columns: calendar | discount+income | stat cards
     body: {
       display: "grid",
       gridTemplateColumns: "440px 1fr 220px",
@@ -595,7 +610,6 @@ export default function AdminDashboard() {
       margin: "0 auto",
     } as React.CSSProperties,
 
-    // Cards — white with subtle shadow
     card: {
       background: CARD,
       borderRadius: "14px",
@@ -604,7 +618,6 @@ export default function AdminDashboard() {
       overflow: "hidden" as const,
     } as React.CSSProperties,
 
-    // Calendar
     calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.5rem 1.5rem 1rem" },
     calTitle: { fontSize: "1.4rem", fontWeight: 700, color: TEXT },
     calNav: { display: "flex", gap: "0.5rem" },
@@ -627,7 +640,6 @@ export default function AdminDashboard() {
       outline: isToday && !isSelected ? `1.5px solid ${PRIMARY}` : "none",
     }),
 
-    // Schedule
     scheduleWrap: { padding: "0 1.5rem 1.5rem", maxHeight: "300px", overflowY: "auto" as const },
     scheduleItem: {
       display: "flex", alignItems: "center", gap: "0.85rem",
@@ -639,10 +651,8 @@ export default function AdminDashboard() {
     scheduleTitle: { fontSize: "0.85rem", fontWeight: 700, color: TEXT, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" },
     scheduleSub: { fontSize: "0.72rem", color: MUTED, marginTop: "0.1rem" },
 
-    // Right column
     rightCol: { display: "flex", flexDirection: "column" as const, gap: "1.25rem" },
 
-    // Discount widget — keep the crimson accent from screenshot
     discountCard: {
       background: PRIMARY, borderRadius: "14px", padding: "1.25rem",
       position: "relative" as const, overflow: "hidden",
@@ -663,7 +673,6 @@ export default function AdminDashboard() {
       boxSizing: "border-box" as const, outline: "none", cursor: "pointer",
     },
 
-    // Income
     incomeCard: { background: CARD, borderRadius: "14px", border: `1px solid ${BORDER}`, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", padding: "1.25rem" },
     incomeHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" },
     incomeTitle: { fontSize: "0.95rem", fontWeight: 700, color: TEXT },
@@ -725,7 +734,6 @@ export default function AdminDashboard() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={s.wrapper}>
-      {/* ── Tab bar only — NO branding/logo/logout; those are in the existing site navbar ── */}
       <div style={s.tabBar}>
         {(["overview","management","inbox","movies"] as const).map(tab => (
           <button key={tab} style={s.tabItem(activeTab === tab)}
@@ -744,7 +752,6 @@ export default function AdminDashboard() {
           {/* Left: Calendar + Schedule */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
             <div style={s.card}>
-              {/* Calendar Header */}
               <div style={s.calHeader}>
                 <div>
                   <div style={{ fontSize: "0.8rem", color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -761,16 +768,13 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Day labels */}
               <div style={s.calGrid}>
                 {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => (
                   <div key={d} style={s.calDayLabel}>{d}</div>
                 ))}
-                {/* Empty cells for first day offset */}
                 {Array.from({ length: firstDay }).map((_, i) => (
                   <div key={`e${i}`} style={s.calDay(false, false, true)}>0</div>
                 ))}
-                {/* Days */}
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                   const day     = i + 1
                   const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
@@ -784,7 +788,6 @@ export default function AdminDashboard() {
                 })}
               </div>
 
-              {/* Screening Schedule */}
               <div style={{ borderTop: `1px solid ${BORDER}`, padding: "0.9rem 1.5rem 0.6rem" }}>
                 <div style={{ fontSize: "0.78rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
                   Schedule · {new Date(calSelectedDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
@@ -797,7 +800,6 @@ export default function AdminDashboard() {
                 )}
                 {!loadingCalScreenings && calScreenings.map(s2 => {
                   const movie = movieList.find(m => m.id === s2.movie_id)
-                  // Resolve hall and theater names
                   const hall = hallList.find(h => h.name === s2.hall_name || h.id === s2.hall_id)
                   const hallDisplay    = hall?.name || s2.hall_name || "—"
                   const theaterDisplay = hall?.theater?.name || ""
@@ -888,40 +890,95 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Income stats (E) */}
               <div style={s.incomeStats}>
                 <div style={s.incomeStat}>
                   <div style={s.incomeStatVal}>{fmt(totalIncome)}</div>
-                  <div style={s.incomeStatLabel}>Total income</div>
+                  <div style={s.incomeStatLabel}>Total Revenue</div>
                 </div>
                 <div style={s.incomeStat}>
-                  <div style={{ ...s.incomeStatVal, color: PRIMARY }}>{fmt(totalComedy)}</div>
-                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot(PRIMARY)} />Comedy</div>
+                  <div style={{ ...s.incomeStatVal, color: PRIMARY }}>{fmt(totalRegular)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot(PRIMARY)} />Regular</div>
                 </div>
                 <div style={s.incomeStat}>
-                  <div style={{ ...s.incomeStatVal, color: MUTED }}>{fmt(totalOther)}</div>
-                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#d1d5db")} />Other</div>
+                  <div style={{ ...s.incomeStatVal, color: MUTED }}>{fmt(totalPremium)}</div>
+                  <div style={s.incomeStatLabel}><span style={s.incomeStatDot("#d1d5db")} />Premium</div>
                 </div>
               </div>
 
+              {/* Bar chart (F) */}
               <div style={s.barChart}>
-                {incomeData.map(d => {
-                  const comedyH = Math.round((d.comedy / maxIncome) * 100)
-                  const otherH  = Math.round((d.other  / maxIncome) * 100)
-                  return (
-                    <div key={d.day} style={s.barWrap}>
-                      <div style={s.barStack}>
-                        <div style={s.barSeg(otherH, "#e5e7eb")} title={`Other: ${fmt(d.other)}`} />
-                        <div style={s.barSeg(comedyH, PRIMARY)} title={`Comedy: ${fmt(d.comedy)}`} />
+                {loadingAnalytics ? (
+                  <div style={{ color: MUTED, fontSize: "0.8rem", margin: "auto" }}>
+                    <i className="fa-solid fa-spinner fa-spin" />
+                  </div>
+                ) : dailyData.length === 0 ? (
+                  <div style={{ color: "#9ca3af", fontSize: "0.78rem", margin: "auto", textAlign: "center" as const }}>
+                    No bookings this period.
+                  </div>
+                ) : (
+                  dailyData.map((d: any) => {
+                    const regH = Math.round((d.regular_revenue / maxIncome) * 100)
+                    const preH = Math.round((d.premium_revenue / maxIncome) * 100)
+                    return (
+                      <div key={d.day} style={s.barWrap}>
+                        <div style={s.barStack}>
+                          <div style={s.barSeg(preH, "#e5e7eb")} title={`Premium: ${fmt(d.premium_revenue)}`} />
+                          <div style={s.barSeg(regH, PRIMARY)}   title={`Regular: ${fmt(d.regular_revenue)}`} />
+                        </div>
+                        <div style={s.barLabel}>{d.day}</div>
                       </div>
-                      <div style={s.barLabel}>{d.day}</div>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                )}
               </div>
+
+              {/* Breakdown tables (G) */}
+              {analytics?.by_movie?.length > 0 && (
+                <div style={{ marginTop: "1rem", borderTop: `1px solid ${BORDER}`, paddingTop: "0.75rem" }}>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+                    By Movie
+                  </div>
+                  {analytics.by_movie.slice(0, 5).map((m: any) => (
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem", fontSize: "0.78rem" }}>
+                      <span style={{ color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, maxWidth: "65%" }}>{m.title}</span>
+                      <span style={{ color: PRIMARY, fontWeight: 700, flexShrink: 0 }}>{fmt(m.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {analytics?.by_theater?.length > 0 && (
+                <div style={{ marginTop: "0.75rem", borderTop: `1px solid ${BORDER}`, paddingTop: "0.75rem" }}>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+                    By Theater
+                  </div>
+                  {analytics.by_theater.map((t: any) => (
+                    <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem", fontSize: "0.78rem" }}>
+                      <span style={{ color: TEXT }}>{t.name}</span>
+                      <span style={{ color: PRIMARY, fontWeight: 700 }}>{fmt(t.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {analytics?.by_seat?.length > 0 && (
+                <div style={{ marginTop: "0.75rem", borderTop: `1px solid ${BORDER}`, paddingTop: "0.75rem" }}>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+                    By Seat Type
+                  </div>
+                  {analytics.by_seat.map((s: any) => (
+                    <div key={s.seat_type} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem", fontSize: "0.78rem" }}>
+                      <span style={{ color: TEXT, textTransform: "capitalize" as const }}>{s.seat_type.replace("_", " ")}</span>
+                      <span style={{ color: MUTED, fontWeight: 600 }}>{s.bookings} tickets · <span style={{ color: PRIMARY }}>{fmt(s.revenue)}</span></span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right column: stat cards only */}
+          {/* Right column: stat cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {[
               { label: "Total Movies",  value: movieList.length,  icon: "fa-film",       color: "#3b82f6" },
@@ -1048,7 +1105,6 @@ export default function AdminDashboard() {
 
           {!loadingMovies && (
             <>
-              {/* NOW SHOWING */}
               <section style={{ marginBottom: "2rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                   <span style={{ background: "#d1fae5", color: "#065f46", border: "1px solid #6ee7b7", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, padding: "0.25rem 0.75rem" }}>
@@ -1076,7 +1132,6 @@ export default function AdminDashboard() {
                 {nowShowing.length === 0 && <p style={{ color: MUTED, fontSize: "0.85rem" }}>No movies currently showing.</p>}
               </section>
 
-              {/* COMING SOON */}
               <section>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
                   <span style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 700, padding: "0.25rem 0.75rem" }}>
@@ -1108,11 +1163,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════
-          MODALS
-      ════════════════════════════════════════════════════════════════════ */}
+      {/* ════════════════ MODALS ════════════════ */}
 
-      {/* ── Add Movie Modal ── */}
+      {/* Add Movie */}
       {showAddMovie && (
         <div style={modalBackdrop} onClick={() => setShowAddMovie(false)}>
           <div style={modalWide} onClick={e => e.stopPropagation()}>
@@ -1151,7 +1204,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Edit Movie Modal ── */}
+      {/* Edit Movie */}
       {showEditMovie && (
         <div style={modalBackdrop} onClick={() => setShowEditMovie(false)}>
           <div style={modalWide} onClick={e => e.stopPropagation()}>
@@ -1190,7 +1243,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Add Screening Modal ── */}
+      {/* Add Screening */}
       {showAddScreening && (
         <div style={modalBackdrop} onClick={() => { setShowAddScreening(false); setTakenSlots([]) }}>
           <div style={modalCard} onClick={e => e.stopPropagation()}>
@@ -1222,7 +1275,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── Edit Screening Modal ── */}
+      {/* Edit Screening */}
       {showEditScreening && editScreeningMovie && (
         <div style={modalBackdrop} onClick={() => { setShowEditScreening(false); setShowInlineAdd(false); setEditingScreeningId(null); setTakenSlots([]) }}>
           <div style={modalWide} onClick={e => e.stopPropagation()}>
