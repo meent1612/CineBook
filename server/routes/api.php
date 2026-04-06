@@ -11,6 +11,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TicketPriceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\AnalyticsController;
 
 // ══════════════════════════════════════════════
 // Public routes
@@ -28,6 +29,8 @@ Route::get('/theaters',        [TheaterController::class,   'index']);
 
 Route::get('/seats/{screeningId}', [SeatController::class, 'getByScreening']);
 Route::get('/ticket-prices',       [TicketPriceController::class, 'index']);
+
+Route::get('/movies/popular', [MovieController::class, 'popular']);
 
 // ══════════════════════════════════════════════
 // Authenticated routes
@@ -63,6 +66,8 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/screenings',        [ScreeningController::class, 'store']);
         Route::put('/screenings/{id}',    [ScreeningController::class, 'update']);
         Route::delete('/screenings/{id}', [ScreeningController::class, 'destroy']);
+
+        Route::get('/analytics', [AnalyticsController::class, 'index']);
 
         // Inbox
         Route::get('/contact-messages',           [ContactController::class, 'index']);
