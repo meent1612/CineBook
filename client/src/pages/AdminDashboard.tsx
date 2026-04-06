@@ -168,21 +168,24 @@ export default function AdminDashboard() {
   const [calScreenings, setCalScreenings] = useState<Screening[]>([])
   const [loadingCalScreenings, setLoadingCalScreenings] = useState(false)
 
-  // Discount widget
-  const [discountTheater,   setDiscountTheater]   = useState("all")
-  const [discountRegular,   setDiscountRegular]   = useState("")
-  const [discountPremium,   setDiscountPremium]   = useState("")
-  const [discountVip,       setDiscountVip]       = useState("")
-  const [discountStartDate, setDiscountStartDate] = useState("")
-  const [discountEndDate,   setDiscountEndDate]   = useState("")
-  const [applyingDiscount,  setApplyingDiscount]  = useState(false)
+  // Change 1 — 9 discount states (was 7)
+  const [discountName,         setDiscountName]         = useState("")
+  const [discountTheater,      setDiscountTheater]       = useState("1")
+  const [discountStandard,     setDiscountStandard]      = useState("")
+  const [discountSemiRecliner, setDiscountSemiRecliner]  = useState("")
+  const [discountPremium,      setDiscountPremium]       = useState("")
+  const [discountVip,          setDiscountVip]           = useState("")
+  const [discountStartDate,    setDiscountStartDate]     = useState("")
+  const [discountEndDate,      setDiscountEndDate]       = useState("")
+  const [applyingDiscount,     setApplyingDiscount]      = useState(false)
+  const [activeDiscounts,      setActiveDiscounts]       = useState<any[]>([])
 
   // Income filter
   const [incomeMonth,   setIncomeMonth]   = useState(MONTHS[todayBD.getMonth()])
   const [incomeTheater, setIncomeTheater] = useState("all")
   const [incomeMovie,   setIncomeMovie]   = useState("all")
 
-  // ── Analytics state (A) ──
+  // Analytics state
   const [analytics,        setAnalytics]        = useState<any>(null)
   const [loadingAnalytics, setLoadingAnalytics] = useState(false)
 
@@ -218,7 +221,8 @@ export default function AdminDashboard() {
   const [inboxFilter,   setInboxFilter]   = useState<"all" | "unread" | "read">("all")
   const [expandedMsgId, setExpandedMsgId] = useState<number | null>(null)
 
-  useEffect(() => { fetchMovies(); fetchHalls() }, [])
+  // Change 4 — added fetchActiveDiscounts() to initial load
+  useEffect(() => { fetchMovies(); fetchHalls(); fetchActiveDiscounts() }, [])
 
   useEffect(() => {
     fetchCalScreenings(calSelectedDate)
@@ -240,7 +244,6 @@ export default function AdminDashboard() {
     }
   }, [location.state, movieList])
 
-  // ── Analytics useEffect (C) ──
   useEffect(() => {
     if (activeTab === "overview") fetchAnalytics()
   }, [incomeMonth, incomeTheater, incomeMovie, activeTab])
@@ -290,15 +293,16 @@ export default function AdminDashboard() {
     finally { setLoadingInbox(false) }
   }
 
-  // ── fetchAnalytics (B) ──
+  // Change 2 — fetchAnalytics with optional month/year params
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true)
     try {
-      const monthNum = MONTHS.indexOf(incomeMonth) + 1
-      const params   = new URLSearchParams({
-        month: String(monthNum),
-        year:  String(calYear),
-      })
+      const params = new URLSearchParams()
+      if (incomeMonth !== "all") {
+        const monthNum = MONTHS.indexOf(incomeMonth) + 1
+        params.set("month", String(monthNum))
+        params.set("year",  String(calYear))
+      }
       if (incomeTheater !== "all") params.set("theater_id", incomeTheater)
       if (incomeMovie   !== "all") params.set("movie_id",   incomeMovie)
 
@@ -313,6 +317,17 @@ export default function AdminDashboard() {
     } finally {
       setLoadingAnalytics(false)
     }
+  }
+
+  // Change 3 — fetch active discounts
+  const fetchActiveDiscounts = async () => {
+    try {
+      const res  = await fetch(`${API_URL}/admin/discounts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (data.success) setActiveDiscounts(data.discounts)
+    } catch {}
   }
 
   const handleMarkRead = async (id: number) => {
@@ -508,12 +523,52 @@ export default function AdminDashboard() {
     } catch (err: any) { alert(err.message || "Failed to add screening.") }
   }
 
+  // Change 5 — real handleApplyDiscount + new handleRemoveDiscount
   const handleApplyDiscount = async () => {
-    if (!discountStartDate || !discountEndDate) { alert("Please select start and end dates."); return }
+    if (!discountName || !discountStartDate || !discountEndDate) {
+      alert("Please fill in discount name, start date, and end date.")
+      return
+    }
     setApplyingDiscount(true)
-    await new Promise(r => setTimeout(r, 800))
-    alert("Discount applied successfully!")
-    setApplyingDiscount(false)
+    try {
+      const res  = await fetch(`${API_URL}/admin/discounts`, {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name:              discountName,
+          theater_id:        parseInt(discountTheater),
+          standard_pct:      parseInt(discountStandard)     || 0,
+          semi_recliner_pct: parseInt(discountSemiRecliner) || 0,
+          premium_pct:       parseInt(discountPremium)      || 0,
+          vip_pct:           parseInt(discountVip)          || 0,
+          start_date:        discountStartDate,
+          end_date:          discountEndDate,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      setDiscountName(""); setDiscountStandard(""); setDiscountSemiRecliner("")
+      setDiscountPremium(""); setDiscountVip(""); setDiscountStartDate(""); setDiscountEndDate("")
+      fetchActiveDiscounts()
+    } catch (err: any) {
+      alert(err.message || "Failed to apply discount.")
+    } finally {
+      setApplyingDiscount(false)
+    }
+  }
+
+  const handleRemoveDiscount = async (id: number) => {
+    if (!confirm("Remove this discount?")) return
+    try {
+      const res  = await fetch(`${API_URL}/admin/discounts/${id}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      fetchActiveDiscounts()
+    } catch (err: any) {
+      alert(err.message || "Failed to remove discount.")
+    }
   }
 
   const setMovieField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -545,7 +600,7 @@ export default function AdminDashboard() {
   const prevMonth = () => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) } else setCalMonth(m => m - 1) }
   const nextMonth = () => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) } else setCalMonth(m => m + 1) }
 
-  // ── Analytics derived values (D) ──
+  // Analytics derived values
   const dailyData   = analytics?.daily || []
   const maxIncome   = dailyData.length > 0 ? Math.max(...dailyData.map((d: any) => d.total_revenue), 1) : 1
   const totalIncome = analytics?.summary?.total_revenue || 0
@@ -830,8 +885,9 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Middle column: Discount + Income */}
+          {/* Middle column: Discount + Active Discounts + Income */}
           <div style={s.rightCol}>
+
             {/* Discount Widget */}
             <div style={s.discountCard}>
               <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "120px", height: "120px", borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
@@ -841,38 +897,55 @@ export default function AdminDashboard() {
                 Issue Seat Discount
               </div>
 
+              {/* Change 6 — updated discount form */}
+              {/* Offer Name — full width */}
+              <div style={{ marginBottom: "0.6rem" }}>
+                <div style={s.discountLabel}>Offer Name</div>
+                <input type="text" placeholder="e.g. Eid Special" style={s.discountInp}
+                  value={discountName} onChange={e => setDiscountName(e.target.value)} />
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.6rem" }}>
                 <div>
                   <div style={s.discountLabel}>Theatre</div>
-                <select style={s.discountSelect} value={discountTheater} onChange={e => setDiscountTheater(e.target.value)}
-                >
-                <option value="all" style={{ background: "#2a0a10", color: "white" }}>All Theatres</option>
-                {THEATERS.map(t => (<option key={t.id} value={t.id} style={{ background: "#2a0a10", color: "white" }}>{t.name}</option>))}
-                </select>
+                  <select style={s.discountSelect} value={discountTheater}
+                    onChange={e => setDiscountTheater(e.target.value)}>
+                    {THEATERS.map(t => (
+                      <option key={t.id} value={t.id} style={{ background: "#2a0a10", color: "white" }}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <div style={s.discountLabel}>Standard Seats %</div>
-                  <input type="number" min={0} max={100} placeholder="e.g. 10" style={s.discountInp} value={discountRegular} onChange={e => setDiscountRegular(e.target.value)} />
+                  <div style={s.discountLabel}>Standard %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 10" style={s.discountInp}
+                    value={discountStandard} onChange={e => setDiscountStandard(e.target.value)} />
                 </div>
                 <div>
-                  <div style={s.discountLabel}>Semi Recliner Seats %</div>
-                  <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp} value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
+                  <div style={s.discountLabel}>Semi-Recliner %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 15" style={s.discountInp}
+                    value={discountSemiRecliner} onChange={e => setDiscountSemiRecliner(e.target.value)} />
                 </div>
                 <div>
-                  <div style={s.discountLabel}>VIP Seats %</div>
-                  <input type="number" min={0} max={100} placeholder="e.g. 15" style={s.discountInp} value={discountPremium} onChange={e => setDiscountPremium(e.target.value)} />
+                  <div style={s.discountLabel}>Premium %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp}
+                    value={discountPremium} onChange={e => setDiscountPremium(e.target.value)} />
                 </div>
                 <div>
-                  <div style={s.discountLabel}>Premium Seats %</div>
-                  <input type="number" min={0} max={100} placeholder="e.g. 20" style={s.discountInp} value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
+                  <div style={s.discountLabel}>VIP %</div>
+                  <input type="number" min={0} max={100} placeholder="e.g. 25" style={s.discountInp}
+                    value={discountVip} onChange={e => setDiscountVip(e.target.value)} />
                 </div>
                 <div>
                   <div style={s.discountLabel}>Start Date</div>
-                  <input type="date" style={s.discountInp} value={discountStartDate} onChange={e => setDiscountStartDate(e.target.value)} />
+                  <input type="date" style={s.discountInp}
+                    value={discountStartDate} onChange={e => setDiscountStartDate(e.target.value)} />
                 </div>
                 <div>
                   <div style={s.discountLabel}>End Date</div>
-                  <input type="date" style={s.discountInp} value={discountEndDate} onChange={e => setDiscountEndDate(e.target.value)} />
+                  <input type="date" style={s.discountInp}
+                    value={discountEndDate} onChange={e => setDiscountEndDate(e.target.value)} />
                 </div>
               </div>
 
@@ -883,13 +956,109 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {/* Change 7 — Active Discounts card */}
+            {activeDiscounts.length > 0 && (
+  <div style={{ background: CARD, borderRadius: "14px", border: `1px solid ${BORDER}`, padding: "1rem 1.25rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: TEXT, marginBottom: "0.6rem" }}>
+      <i className="fa-solid fa-tag" style={{ color: PRIMARY, marginRight: "0.4rem" }} />
+      Active Discounts
+    </div>
+    {activeDiscounts.map(d => {
+      const theater = THEATERS.find(t => t.id === d.theater_id)
+
+      const formatDate = (iso: string) =>
+        new Date(iso).toLocaleString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+          hour: "numeric", minute: "2-digit", hour12: true
+        })
+
+      const discountBadges: { label: string; pct: number }[] = [
+        { label: "Standard", pct: d.standard_pct },
+        { label: "Semi-Recliner", pct: d.semi_recliner_pct },
+        { label: "Premium", pct: d.premium_pct },
+        { label: "VIP", pct: d.vip_pct },
+      ].filter(b => b.pct > 0)
+
+      return (
+        <div
+          key={d.id}
+          style={{
+            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+            padding: "0.75rem 0.875rem", borderRadius: "10px",
+            background: "#fdf2f4", border: `1px solid ${PRIMARY}33`, marginBottom: "0.5rem"
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+
+            {/* Discount Name */}
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: PRIMARY, marginBottom: "0.25rem" }}>
+              {d.name}
+            </div>
+
+            {/* Theater */}
+            {theater && (
+              <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.25rem" }}>
+                <i className="fa-solid fa-location-dot" style={{ marginRight: "0.3rem", color: PRIMARY, opacity: 0.7 }} />
+                {theater.name}
+              </div>
+            )}
+
+            {/* Date Range */}
+            <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.4rem" }}>
+              <i className="fa-regular fa-calendar" style={{ marginRight: "0.3rem" }} />
+              {formatDate(d.start_date)}
+              <span style={{ margin: "0 0.3rem", opacity: 0.5 }}>→</span>
+              {formatDate(d.end_date)}
+            </div>
+
+            {/* Discount Percentage Badges */}
+            {discountBadges.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                {discountBadges.map(b => (
+                  <span
+                    key={b.label}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "0.2rem",
+                      background: `${PRIMARY}18`, color: PRIMARY,
+                      border: `1px solid ${PRIMARY}44`,
+                      borderRadius: "999px", padding: "0.15rem 0.55rem",
+                      fontSize: "0.68rem", fontWeight: 700
+                    }}
+                  >
+                    <i className="fa-solid fa-percent" style={{ fontSize: "0.55rem" }} />
+                    {b.label}: {b.pct}% off
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Delete Button */}
+          <button
+            onClick={() => handleRemoveDiscount(d.id)}
+            aria-label={`Remove discount ${d.name}`}
+            style={{
+              background: "#fee2e2", color: "#dc2626", border: "none",
+              borderRadius: "6px", padding: "0.35rem 0.6rem",
+              fontSize: "0.75rem", cursor: "pointer", marginLeft: "0.75rem",
+              flexShrink: 0, alignSelf: "flex-start"
+            }}
+          >
+            <i className="fa-solid fa-trash" />
+          </button>
+        </div>
+      )
+    })}
+  </div>
+)}
+
             {/* Income */}
             <div style={s.incomeCard}>
               <div style={s.incomeHeader}>
                 <div style={s.incomeTitle}><i className="fa-solid fa-chart-column" style={{ color: PRIMARY, marginRight: "0.4rem" }} />Income</div>
                 <div style={s.incomeFilters}>
                   <select style={s.incomeSel} value={incomeMonth} onChange={e => setIncomeMonth(e.target.value)}>
-                     <option value="all">All Months</option>
+                    <option value="all">All Months</option>
                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                   <select style={s.incomeSel} value={incomeTheater} onChange={e => setIncomeTheater(e.target.value)}>
@@ -903,7 +1072,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Income stats (E) — Total + all 4 seat types in a 2×2 grid */}
+              {/* Total + seat type breakdown */}
               <div style={{ marginBottom: "1rem" }}>
                 <div style={s.incomeStat}>
                   <div style={{ fontSize: "1.6rem", fontWeight: 800, color: TEXT }}>{fmt(totalIncome)}</div>
@@ -929,7 +1098,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Bar chart (F) */}
+              {/* Bar chart */}
               <div style={s.barChart}>
                 {loadingAnalytics ? (
                   <div style={{ color: MUTED, fontSize: "0.8rem", margin: "auto" }}>
@@ -956,7 +1125,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Breakdown tables (G) */}
+              {/* Breakdown tables */}
               {analytics?.by_movie?.length > 0 && (
                 <div style={{ marginTop: "1rem", borderTop: `1px solid ${BORDER}`, paddingTop: "0.75rem" }}>
                   <div style={{ fontSize: "0.68rem", fontWeight: 700, color: MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: "0.4rem" }}>

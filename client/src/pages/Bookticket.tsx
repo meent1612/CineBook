@@ -154,6 +154,9 @@ export default function BookTicket() {
   const [availableTypes, setAvailableTypes] = useState<SeatTypeKey[]>([])
   const [seatsLoading,   setSeatsLoading]   = useState(false)
 
+  // Discount state
+  const [discount, setDiscount] = useState<any | null>(null)
+
   const [seatType,        setSeatType]        = useState<SeatTypeKey>("standard")
   const [quantity,        setQuantity]        = useState(1)
   const [selectedSeats,   setSelectedSeats]   = useState<string[]>([])
@@ -188,7 +191,6 @@ export default function BookTicket() {
         setMovie(found)
         setScreenings(movieScreenings)
 
-        // ── Only pick the first screening within the 7-day window ──
         const weekScreenings = movieScreenings.filter(s => WEEK_DATES.has(s.show_date))
         if (weekScreenings.length > 0) {
           const sorted = [...weekScreenings].sort((a, b) =>
@@ -205,6 +207,18 @@ export default function BookTicket() {
     }
     fetchData()
   }, [id, selectedTheater])
+
+  // Discount fetch — re-runs when theater changes
+  useEffect(() => {
+    const theaterId = selectedTheater?.id ?? 1
+    fetch(`${API_URL}/discounts?theater_id=${theaterId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.discounts.length > 0) setDiscount(data.discounts[0])
+        else setDiscount(null)
+      })
+      .catch(() => {})
+  }, [selectedTheater])
 
   // ── Load seats when screening changes ────────────────
   const fetchSeats = useCallback(async (screeningId: number) => {
@@ -253,8 +267,20 @@ export default function BookTicket() {
     fetchSeats(selectedScreening.id)
   }, [selectedScreening?.id])
 
+  // ── Effective price with discount ─────────────────────
+  const getEffectivePrice = (type: SeatTypeKey): number => {
+    if (!discount) return PRICES[type]
+    const pctMap: Record<SeatTypeKey, number> = {
+      standard:      discount.standard_pct,
+      semi_recliner: discount.semi_recliner_pct,
+      premium:       discount.premium_pct,
+      vip:           discount.vip_pct,
+    }
+    const pct = pctMap[type] || 0
+    return pct > 0 ? Math.round(PRICES[type] * (1 - pct / 100)) : PRICES[type]
+  }
+
   // ── Derived values ────────────────────────────────────
-  // Filter to only the same 7-day window as ShowTimes
   const availableDates = [...new Set(screenings.map(s => s.show_date))]
     .filter(d => WEEK_DATES.has(d))
     .sort()
@@ -263,7 +289,8 @@ export default function BookTicket() {
     .filter(s => s.show_date === selectedDate)
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const TOTAL = selectedSeats.length * PRICES[seatType]
+  // TOTAL uses effective (discounted) price
+  const TOTAL = selectedSeats.length * getEffectivePrice(seatType)
 
   const locationDisplay = selectedTheater ? selectedTheater.name    : "—"
   const locationAddress = selectedTheater ? selectedTheater.address : "—"
@@ -351,7 +378,7 @@ export default function BookTicket() {
     setSelectedScreening(screening)
   }
 
-  // ── Purchase → navigate to Payment page with booking data ──
+  // ── Purchase → navigate to Payment page ──────────────
   const handlePurchase = () => {
     if (!user || !token) { navigate("/login"); return }
     if (!selectedScreening || selectedSeatIds.length === 0 || !movie) return
@@ -371,8 +398,8 @@ export default function BookTicket() {
         seatIds:         selectedSeatIds,
         screeningId:     selectedScreening.id,
         quantity:        quantity,
-        unitPrice:       PRICES[seatType],
-        totalAmount:     TOTAL,
+        unitPrice:       getEffectivePrice(seatType),   // discounted
+        totalAmount:     TOTAL,                         // discounted
       },
     })
   }
@@ -451,7 +478,16 @@ export default function BookTicket() {
                       borderRadius: "2px", background: ZONE_COLORS[type], flexShrink: 0,
                     }} />
                     <span>{SEAT_TYPE_DISPLAY[type]}</span>
-                    <span className="seat-type-price">BDT {PRICES[type]}</span>
+                    <span className="seat-type-price">
+                      {discount && (discount as any)[`${type}_pct`] > 0 ? (
+                        <>
+                          <span style={{ textDecoration: "line-through", color: "#9ca3af", marginRight: "0.3rem" }}>
+                            {PRICES[type]}
+                          </span>
+                          {getEffectivePrice(type)}
+                        </>
+                      ) : PRICES[type]} BDT
+                    </span>
                   </label>
                 ))
               )}
