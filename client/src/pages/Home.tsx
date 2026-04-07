@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import AIChatbot from "./Aichatbot"
 import "../CSSfiles/Home.css"
 
 // ── Types ──────────────────────────────────────────────
@@ -411,6 +412,7 @@ export default function Home() {
           Copyright© 2026 CineBook Limited. All Rights Reserved.
         </div>
       </div>
+    <AIChatbot />
     </div>
   )
 }
