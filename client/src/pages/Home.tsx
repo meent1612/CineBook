@@ -64,12 +64,13 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // E) Use real booking counts for heat percentage
-  const maxCount = Math.max(...movies.map(m => m.booking_count ?? 0), 1)
-  const heatPct  = (m: Movie) =>
-    m.booking_count !== undefined && maxCount > 0
-      ? Math.max(10, Math.round((m.booking_count / maxCount) * 100))
-      : Math.max(30, Math.min(99, 99 - (movies.indexOf(m)) * 11))
-
+  // NEW
+  const maxCount = Math.max(...movies.map(m => m.booking_count ?? 0), 0)
+  const heatPct  = (m: Movie) => {
+    const baseline = 8
+    if (maxCount === 0) return baseline
+    return Math.round(baseline + ((m.booking_count ?? 0) / maxCount) * (100 - baseline))
+  }
   if (movies.length === 0) return null
 
   // Show at most 8 trending entries
