@@ -209,7 +209,7 @@ BEGIN
         '2025-12-19',
         '/posters/bonolotaexpress.jpg',
         'https://www.youtube.com/watch?v=ZTZUaHsfR8o',
-        'now_showing',
+        'coming_soon',
         1
     );
 END
