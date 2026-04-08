@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import AIContentAssistant from "../components/AIContentAssistant"
@@ -40,6 +40,186 @@ const getBDDate = (): Date => {
 const getTodayBDStr = (): string => {
   const bd = getBDDate()
   return `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, "0")}-${String(bd.getDate()).padStart(2, "0")}`
+}
+
+// ─── Toast Types ──────────────────────────────────────────────────────────────
+type ToastType = "success" | "error" | "info" | "warning"
+
+interface Toast {
+  id: number
+  type: ToastType
+  title: string
+  message?: string
+}
+
+// ─── Toast Component ──────────────────────────────────────────────────────────
+const TOAST_ICONS: Record<ToastType, string> = {
+  success: "fa-circle-check",
+  error:   "fa-circle-xmark",
+  info:    "fa-circle-info",
+  warning: "fa-triangle-exclamation",
+}
+
+const TOAST_COLORS: Record<ToastType, { bg: string; border: string; icon: string; progress: string }> = {
+  success: { bg: "#f0fdf4", border: "#bbf7d0", icon: "#16a34a", progress: "#16a34a" },
+  error:   { bg: "#fff1f2", border: "#fecdd3", icon: "#6B1829", progress: "#6B1829" },
+  info:    { bg: "#eff6ff", border: "#bfdbfe", icon: "#2563eb", progress: "#2563eb" },
+  warning: { bg: "#fffbeb", border: "#fde68a", icon: "#d97706", progress: "#d97706" },
+}
+
+function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
+  return (
+    <div style={{
+      position: "fixed",
+      top: "1.25rem",
+      right: "1.25rem",
+      zIndex: 9999,
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.6rem",
+      pointerEvents: "none",
+    }}>
+      {toasts.map(toast => (
+        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
+      ))}
+    </div>
+  )
+}
+
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number) => void }) {
+  const [visible, setVisible] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const c = TOAST_COLORS[toast.type]
+
+  useEffect(() => {
+    // Mount → slide in
+    const t1 = setTimeout(() => setVisible(true), 10)
+    // Auto-dismiss after 3.8s
+    const t2 = setTimeout(() => handleDismiss(), 3800)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
+  const handleDismiss = () => {
+    setLeaving(true)
+    setTimeout(() => onDismiss(toast.id), 320)
+  }
+
+  return (
+    <div
+      onClick={handleDismiss}
+      style={{
+        pointerEvents: "all",
+        cursor: "pointer",
+        minWidth: "300px",
+        maxWidth: "380px",
+        background: c.bg,
+        border: `1.5px solid ${c.border}`,
+        borderRadius: "14px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.13), 0 1.5px 4px rgba(0,0,0,0.07)",
+        overflow: "hidden",
+        transform: visible && !leaving ? "translateX(0) scale(1)" : "translateX(calc(100% + 1.25rem)) scale(0.96)",
+        opacity: visible && !leaving ? 1 : 0,
+        transition: leaving
+          ? "transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.28s ease"
+          : "transform 0.38s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease",
+      }}
+    >
+      {/* Progress bar */}
+      <div style={{
+        height: "3px",
+        background: `${c.progress}22`,
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: c.progress,
+          transformOrigin: "left",
+          animation: visible ? "toastProgress 3.8s linear forwards" : "none",
+        }} />
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", padding: "0.85rem 1rem" }}>
+        {/* Icon */}
+        <div style={{
+          width: "32px", height: "32px", borderRadius: "50%",
+          background: `${c.icon}18`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <i className={`fa-solid ${TOAST_ICONS[toast.type]}`} style={{ color: c.icon, fontSize: "0.95rem" }} />
+        </div>
+
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700,
+            fontSize: "0.84rem",
+            color: "#111827",
+            fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+            marginBottom: toast.message ? "0.2rem" : 0,
+          }}>
+            {toast.title}
+          </div>
+          {toast.message && (
+            <div style={{
+              fontSize: "0.76rem",
+              color: "#6b7280",
+              lineHeight: 1.5,
+              fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+            }}>
+              {toast.message}
+            </div>
+          )}
+        </div>
+
+        {/* Close */}
+        <button
+          onClick={e => { e.stopPropagation(); handleDismiss() }}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "#9ca3af", fontSize: "0.75rem", padding: "0.1rem",
+            flexShrink: 0, lineHeight: 1,
+          }}
+        >
+          <i className="fa-solid fa-xmark" />
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes toastProgress {
+          from { transform: scaleX(1); }
+          to   { transform: scaleX(0); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ─── useToast hook ────────────────────────────────────────────────────────────
+let _toastId = 0
+
+function useToast() {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const addToast = useCallback((type: ToastType, title: string, message?: string) => {
+    const id = ++_toastId
+    setToasts(prev => [...prev, { id, type, title, message }])
+  }, [])
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  const toast = {
+    success: (title: string, message?: string) => addToast("success", title, message),
+    error:   (title: string, message?: string) => addToast("error",   title, message),
+    info:    (title: string, message?: string) => addToast("info",    title, message),
+    warning: (title: string, message?: string) => addToast("warning", title, message),
+  }
+
+  return { toasts, dismissToast, toast }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -152,6 +332,7 @@ const EMPTY_MOVIE = {
 export default function AdminDashboard() {
   const { token } = useAuth()
   const location  = useLocation()
+  const { toasts, dismissToast, toast } = useToast()
 
   const [activeTab, setActiveTab] = useState<"overview" | "management" | "inbox" | "movies">("overview")
 
@@ -169,7 +350,7 @@ export default function AdminDashboard() {
   const [calScreenings, setCalScreenings] = useState<Screening[]>([])
   const [loadingCalScreenings, setLoadingCalScreenings] = useState(false)
 
-  // Change 1 — 9 discount states (was 7)
+  // Discount states
   const [discountName,         setDiscountName]         = useState("")
   const [discountTheater,      setDiscountTheater]       = useState("1")
   const [discountStandard,     setDiscountStandard]      = useState("")
@@ -180,7 +361,6 @@ export default function AdminDashboard() {
   const [discountEndDate,      setDiscountEndDate]       = useState("")
   const [applyingDiscount,     setApplyingDiscount]      = useState(false)
   const [activeDiscounts,      setActiveDiscounts]       = useState<any[]>([])
-  
 
   // Income filter
   const [incomeMonth,   setIncomeMonth]   = useState(MONTHS[todayBD.getMonth()])
@@ -223,7 +403,6 @@ export default function AdminDashboard() {
   const [inboxFilter,   setInboxFilter]   = useState<"all" | "unread" | "read">("all")
   const [expandedMsgId, setExpandedMsgId] = useState<number | null>(null)
 
-  // Change 4 — added fetchActiveDiscounts() to initial load
   useEffect(() => { fetchMovies(); fetchHalls(); fetchActiveDiscounts() }, [])
 
   useEffect(() => {
@@ -295,7 +474,6 @@ export default function AdminDashboard() {
     finally { setLoadingInbox(false) }
   }
 
-  // Change 2 — fetchAnalytics with optional month/year params
   const fetchAnalytics = async () => {
     setLoadingAnalytics(true)
     try {
@@ -321,7 +499,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Change 3 — fetch active discounts
   const fetchActiveDiscounts = async () => {
     try {
       const res  = await fetch(`${API_URL}/admin/discounts`, {
@@ -339,12 +516,16 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
-    } catch (err: any) { console.error("Failed to mark as read:", err.message) }
+      toast.success("Message marked as read")
+    } catch (err: any) {
+      toast.error("Failed to mark as read", err.message)
+    }
     finally { setMarkingReadId(null) }
   }
 
   const handleMarkAllRead = async () => {
     for (const msg of inboxMessages.filter(m => !m.is_read)) await handleMarkRead(msg.id)
+    toast.success("All messages marked as read")
   }
 
   const fetchTakenSlots = async (hallId: string, date: string) => {
@@ -368,7 +549,10 @@ export default function AdminDashboard() {
           .filter(s => s.movie_id === movieId && s.show_date === dateStr)
           .sort((a, b) => a.start_time.localeCompare(b.start_time))
       )
-    } catch (err: any) { console.error("Failed to load screenings:", err.message); setEditScreeningList([]) }
+    } catch (err: any) {
+      console.error("Failed to load screenings:", err.message)
+      setEditScreeningList([])
+    }
     finally { setLoadingScreenings(false) }
   }
 
@@ -387,7 +571,10 @@ export default function AdminDashboard() {
   const saveEditingScreening = async () => {
     if (!editingScreeningId) return
     const { hall_id, start_time } = editScreeningForm
-    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
+    if (!hall_id || !start_time) {
+      toast.warning("Missing fields", "Hall and start time are required.")
+      return
+    }
     try {
       const res  = await fetch(`${API_URL}/admin/screenings/${editingScreeningId}`, {
         method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -396,8 +583,11 @@ export default function AdminDashboard() {
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       setEditingScreeningId(null)
+      toast.success("Screening updated")
       if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-    } catch (err: any) { alert(err.message || "Failed to update screening.") }
+    } catch (err: any) {
+      toast.error("Failed to update screening", err.message)
+    }
   }
 
   const handleDeleteScreening = async (screeningId: number) => {
@@ -406,8 +596,11 @@ export default function AdminDashboard() {
       const res  = await fetch(`${API_URL}/admin/screenings/${screeningId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
+      toast.success("Screening deleted")
       if (editScreeningMovie) fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-    } catch (err: any) { alert(err.message || "Failed to delete screening.") }
+    } catch (err: any) {
+      toast.error("Failed to delete screening", err.message)
+    }
   }
 
   const handleAddMovie = async () => {
@@ -426,19 +619,28 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      await fetchMovies(); setNewMovie({ ...EMPTY_MOVIE }); setShowAddMovie(false)
-    } catch (err: any) { alert(err.message || "Failed to add movie.") }
+      await fetchMovies()
+      setNewMovie({ ...EMPTY_MOVIE })
+      setShowAddMovie(false)
+      toast.success("Movie added", `"${newMovie.title}" has been added successfully.`)
+    } catch (err: any) {
+      toast.error("Failed to add movie", err.message)
+    }
     finally { setAddingMovie(false) }
   }
 
   const handleDeleteMovie = async (id: number) => {
+    const movie = movieList.find(m => m.id === id)
     if (!confirm("Delete this movie?")) return
     try {
       const res  = await fetch(`${API_URL}/admin/movies/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
       await fetchMovies()
-    } catch (err: any) { alert(err.message || "Failed to delete movie.") }
+      toast.success("Movie deleted", movie ? `"${movie.title}" has been removed.` : undefined)
+    } catch (err: any) {
+      toast.error("Failed to delete movie", err.message)
+    }
   }
 
   const handleOpenEdit = (movie: Movie) => {
@@ -468,8 +670,12 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      await fetchMovies(); setShowEditMovie(false)
-    } catch (err: any) { alert(err.message || "Failed to update movie.") }
+      await fetchMovies()
+      setShowEditMovie(false)
+      toast.success("Movie updated", `"${editMovie.title}" has been saved.`)
+    } catch (err: any) {
+      toast.error("Failed to update movie", err.message)
+    }
     finally { setEditingMovie(false) }
   }
 
@@ -482,15 +688,22 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
+      toast.success(
+        !movie.is_active ? "Movie activated" : "Movie deactivated",
+        `"${movie.title}" is now ${!movie.is_active ? "active" : "inactive"}.`
+      )
     } catch (err: any) {
       setMovieList(prev => prev.map(m => m.id === movie.id ? { ...m, is_active: movie.is_active } : m))
-      alert(err.message || "Failed to update.")
+      toast.error("Failed to update", err.message)
     }
   }
 
   const handleAddScreening = async () => {
     const { movie_id, hall_id, show_date, start_time } = newScreening
-    if (!movie_id || !hall_id || !show_date || !start_time) { alert("Please fill in all required fields."); return }
+    if (!movie_id || !hall_id || !show_date || !start_time) {
+      toast.warning("Missing fields", "Please fill in all required fields.")
+      return
+    }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
       const seats = newScreening.available_seats ? parseInt(newScreening.available_seats) : selectedHall?.capacity || 100
@@ -500,16 +713,22 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
-      alert("Screening added successfully!")
+      toast.success("Screening added", `Scheduled for ${formatTime12(start_time + ":00")} on ${show_date}.`)
       setNewScreening({ movie_id: "", hall_id: "", show_date: "", start_time: "", available_seats: "" })
-      setTakenSlots([]); setShowAddScreening(false)
-    } catch (err: any) { alert(err.message || "Failed to add screening.") }
+      setTakenSlots([])
+      setShowAddScreening(false)
+    } catch (err: any) {
+      toast.error("Failed to add screening", err.message)
+    }
   }
 
   const handleInlineAddScreening = async () => {
     if (!editScreeningMovie || !editScreeningDate) return
     const { hall_id, start_time } = inlineNewScreening
-    if (!hall_id || !start_time) { alert("Hall and start time are required."); return }
+    if (!hall_id || !start_time) {
+      toast.warning("Missing fields", "Hall and start time are required.")
+      return
+    }
     try {
       const selectedHall = hallList.find(h => h.id === parseInt(hall_id))
       const seats = inlineNewScreening.available_seats ? parseInt(inlineNewScreening.available_seats) : selectedHall?.capacity || 100
@@ -519,16 +738,19 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
+      toast.success("Screening added")
       setInlineNewScreening({ hall_id: "", start_time: "", available_seats: "" })
-      setTakenSlots([]); setShowInlineAdd(false)
+      setTakenSlots([])
+      setShowInlineAdd(false)
       fetchScreeningsForEdit(editScreeningMovie.id, editScreeningDate)
-    } catch (err: any) { alert(err.message || "Failed to add screening.") }
+    } catch (err: any) {
+      toast.error("Failed to add screening", err.message)
+    }
   }
 
-  // Change 5 — real handleApplyDiscount + new handleRemoveDiscount
   const handleApplyDiscount = async () => {
     if (!discountName || !discountStartDate || !discountEndDate) {
-      alert("Please fill in discount name, start date, and end date.")
+      toast.warning("Missing fields", "Please fill in discount name, start date, and end date.")
       return
     }
     setApplyingDiscount(true)
@@ -549,17 +771,19 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
+      toast.success("Discount applied", `"${discountName}" is now active.`)
       setDiscountName(""); setDiscountStandard(""); setDiscountSemiRecliner("")
       setDiscountPremium(""); setDiscountVip(""); setDiscountStartDate(""); setDiscountEndDate("")
       fetchActiveDiscounts()
     } catch (err: any) {
-      alert(err.message || "Failed to apply discount.")
+      toast.error("Failed to apply discount", err.message)
     } finally {
       setApplyingDiscount(false)
     }
   }
 
   const handleRemoveDiscount = async (id: number) => {
+    const discount = activeDiscounts.find(d => d.id === id)
     if (!confirm("Remove this discount?")) return
     try {
       const res  = await fetch(`${API_URL}/admin/discounts/${id}`, {
@@ -567,9 +791,10 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message)
+      toast.success("Discount removed", discount ? `"${discount.name}" has been removed.` : undefined)
       fetchActiveDiscounts()
     } catch (err: any) {
-      alert(err.message || "Failed to remove discount.")
+      toast.error("Failed to remove discount", err.message)
     }
   }
 
@@ -797,6 +1022,9 @@ export default function AdminDashboard() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={s.wrapper}>
+      {/* ── Toast Notifications ── */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       <div style={s.tabBar}>
         {(["overview","management","inbox","movies"] as const).map(tab => (
           <button key={tab} style={s.tabItem(activeTab === tab)}
@@ -899,7 +1127,6 @@ export default function AdminDashboard() {
                 Issue Seat Discount
               </div>
 
-              {/* Change 6 — updated discount form */}
               {/* Offer Name — full width */}
               <div style={{ marginBottom: "0.6rem" }}>
                 <div style={s.discountLabel}>Offer Name</div>
@@ -958,108 +1185,97 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* Change 7 — Active Discounts card */}
+            {/* Active Discounts card */}
             {activeDiscounts.length > 0 && (
-  <div style={{ background: CARD, borderRadius: "14px", border: `1px solid ${BORDER}`, padding: "1rem 1.25rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: TEXT, marginBottom: "0.6rem" }}>
-      <i className="fa-solid fa-tag" style={{ color: PRIMARY, marginRight: "0.4rem" }} />
-      Active Discounts
-    </div>
-    {activeDiscounts.map(d => {
-      const theater = THEATERS.find(t => String(t.id) === String(d.theater_id))
+              <div style={{ background: CARD, borderRadius: "14px", border: `1px solid ${BORDER}`, padding: "1rem 1.25rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: TEXT, marginBottom: "0.6rem" }}>
+                  <i className="fa-solid fa-tag" style={{ color: PRIMARY, marginRight: "0.4rem" }} />
+                  Active Discounts
+                </div>
+                {activeDiscounts.map(d => {
+                  const theater = THEATERS.find(t => String(t.id) === String(d.theater_id))
 
-      const formatDate = (iso: string) =>
-        new Date(iso).toLocaleString("en-US", {
-          month: "short", day: "numeric", year: "numeric",
-          hour: "numeric", minute: "2-digit", hour12: true
-        })
+                  const formatDate = (iso: string) =>
+                    new Date(iso).toLocaleString("en-US", {
+                      month: "short", day: "numeric", year: "numeric",
+                      hour: "numeric", minute: "2-digit", hour12: true
+                    })
 
-      const discountBadges: { label: string; pct: number }[] = [
-        { label: "Standard", pct: d.standard_pct },
-        { label: "Semi-Recliner", pct: d.semi_recliner_pct },
-        { label: "Premium", pct: d.premium_pct },
-        { label: "VIP", pct: d.vip_pct },
-      ].filter(b => b.pct > 0)
+                  const discountBadges: { label: string; pct: number }[] = [
+                    { label: "Standard", pct: d.standard_pct },
+                    { label: "Semi-Recliner", pct: d.semi_recliner_pct },
+                    { label: "Premium", pct: d.premium_pct },
+                    { label: "VIP", pct: d.vip_pct },
+                  ].filter(b => b.pct > 0)
 
-      return (
-        <div
-          key={d.id}
-          style={{
-            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-            padding: "0.75rem 0.875rem", borderRadius: "10px",
-            background: "#fdf2f4", border: `1px solid ${PRIMARY}33`, marginBottom: "0.5rem"
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-
-            {/* Discount Name */}
-            <div style={{ fontWeight: 700, fontSize: "0.88rem", color: PRIMARY, marginBottom: "0.25rem" }}>
-              {d.name}
-            </div>
-
-            {/* Theater */}
-
-{theater && (
-  <div style={{
-    display: "inline-flex", alignItems: "center", gap: "0.25rem",
-    background: `${PRIMARY}12`, border: `1px solid ${PRIMARY}33`,
-    borderRadius: "999px", padding: "0.15rem 0.55rem",
-    fontSize: "0.7rem", fontWeight: 600, color: PRIMARY,
-    marginBottom: "0.35rem"
-  }}>
-    <i className="fa-solid fa-clapperboard" style={{ fontSize: "0.6rem" }} />
-    {theater.name}
-  </div>
-)}
-
-            {/* Date Range */}
-            <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.4rem" }}>
-              <i className="fa-regular fa-calendar" style={{ marginRight: "0.3rem" }} />
-              {formatDate(d.start_date)}
-              <span style={{ margin: "0 0.3rem", opacity: 0.5 }}>→</span>
-              {formatDate(d.end_date)}
-            </div>
-
-            {/* Discount Percentage Badges */}
-            {discountBadges.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
-                {discountBadges.map(b => (
-                  <span
-                    key={b.label}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: "0.2rem",
-                      background: `${PRIMARY}18`, color: PRIMARY,
-                      border: `1px solid ${PRIMARY}44`,
-                      borderRadius: "999px", padding: "0.15rem 0.55rem",
-                      fontSize: "0.68rem", fontWeight: 700
-                    }}
-                  >
-                    <i className="fa-solid fa-percent" style={{ fontSize: "0.55rem" }} />
-                    {b.label}: {b.pct}% off
-                  </span>
-                ))}
+                  return (
+                    <div
+                      key={d.id}
+                      style={{
+                        display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+                        padding: "0.75rem 0.875rem", borderRadius: "10px",
+                        background: "#fdf2f4", border: `1px solid ${PRIMARY}33`, marginBottom: "0.5rem"
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.88rem", color: PRIMARY, marginBottom: "0.25rem" }}>
+                          {d.name}
+                        </div>
+                        {theater && (
+                          <div style={{
+                            display: "inline-flex", alignItems: "center", gap: "0.25rem",
+                            background: `${PRIMARY}12`, border: `1px solid ${PRIMARY}33`,
+                            borderRadius: "999px", padding: "0.15rem 0.55rem",
+                            fontSize: "0.7rem", fontWeight: 600, color: PRIMARY,
+                            marginBottom: "0.35rem"
+                          }}>
+                            <i className="fa-solid fa-clapperboard" style={{ fontSize: "0.6rem" }} />
+                            {theater.name}
+                          </div>
+                        )}
+                        <div style={{ fontSize: "0.72rem", color: MUTED, marginBottom: "0.4rem" }}>
+                          <i className="fa-regular fa-calendar" style={{ marginRight: "0.3rem" }} />
+                          {formatDate(d.start_date)}
+                          <span style={{ margin: "0 0.3rem", opacity: 0.5 }}>→</span>
+                          {formatDate(d.end_date)}
+                        </div>
+                        {discountBadges.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem" }}>
+                            {discountBadges.map(b => (
+                              <span
+                                key={b.label}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: "0.2rem",
+                                  background: `${PRIMARY}18`, color: PRIMARY,
+                                  border: `1px solid ${PRIMARY}44`,
+                                  borderRadius: "999px", padding: "0.15rem 0.55rem",
+                                  fontSize: "0.68rem", fontWeight: 700
+                                }}
+                              >
+                                <i className="fa-solid fa-percent" style={{ fontSize: "0.55rem" }} />
+                                {b.label}: {b.pct}% off
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleRemoveDiscount(d.id)}
+                        aria-label={`Remove discount ${d.name}`}
+                        style={{
+                          background: "#fee2e2", color: "#dc2626", border: "none",
+                          borderRadius: "6px", padding: "0.35rem 0.6rem",
+                          fontSize: "0.75rem", cursor: "pointer", marginLeft: "0.75rem",
+                          flexShrink: 0, alignSelf: "flex-start"
+                        }}
+                      >
+                        <i className="fa-solid fa-trash" />
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
-          </div>
-
-          {/* Delete Button */}
-          <button
-            onClick={() => handleRemoveDiscount(d.id)}
-            aria-label={`Remove discount ${d.name}`}
-            style={{
-              background: "#fee2e2", color: "#dc2626", border: "none",
-              borderRadius: "6px", padding: "0.35rem 0.6rem",
-              fontSize: "0.75rem", cursor: "pointer", marginLeft: "0.75rem",
-              flexShrink: 0, alignSelf: "flex-start"
-            }}
-          >
-            <i className="fa-solid fa-trash" />
-          </button>
-        </div>
-      )
-    })}
-  </div>
-)}
 
             {/* Income */}
             <div style={s.incomeCard}>
@@ -1403,8 +1619,8 @@ export default function AdminDashboard() {
             </div>
           </div>
           {<AIContentAssistant
-  onFill={(data) => setNewMovie(prev => ({ ...prev, ...data }))}
-/>}
+            onFill={(data) => setNewMovie(prev => ({ ...prev, ...data }))}
+          />}
         </div>
       )}
 
