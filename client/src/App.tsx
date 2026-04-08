@@ -17,7 +17,6 @@ import MovieDetail from "./pages/MovieDetail"
 import Payment from "./pages/Payment"
 import AIChatbot from "./pages/Aichatbot"
 import AIContentAssistant from "./components/AIContentAssistant"
-import { ReactNode, useState } from "react"
 
 interface MovieFormData {
   [key: string]: unknown
