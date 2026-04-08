@@ -29,6 +29,7 @@ CREATE TABLE movies (
     duration_mins INT           NULL,
     release_date  DATE          NULL,
     poster_url    NVARCHAR(500) NULL,
+    carasol_url   NVARCHAR(500) NULL,
     trailer_url   NVARCHAR(500) NULL,
     status        NVARCHAR(20)  NOT NULL DEFAULT 'now_showing' CHECK (status IN ('now_showing', 'coming_soon')),
     is_active     BIT           NOT NULL DEFAULT 1,
