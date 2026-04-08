@@ -113,21 +113,9 @@ const formatDateLabel = (dateStr: string): { display: string; day: string } => {
 }
 
 // ── AI Seat Recommendation ─────────────────────────────
-//
-// Scoring logic (higher = better seat):
-//   1. Row score: rows in the middle-to-back third of the hall score highest
-//      (ideal viewing angle for a cinema screen)
-//   2. Column score: seats closest to the center column score highest
-//      (best horizontal viewing angle)
-//   3. Consecutive block: for a group, we find the longest run of 'available'
-//      seats in a row, then pick the block closest to the center
-//
-// The function returns the best group of `quantity` consecutive seat labels,
-// or an empty array if no valid block exists.
-
 interface RecommendResult {
-  seats:  string[]          // seat_label list  e.g. ["C4","C5"]
-  reason: string            // human-readable explanation
+  seats:  string[]
+  reason: string
 }
 
 const recommendSeats = (
@@ -137,12 +125,10 @@ const recommendSeats = (
   seatType:      SeatTypeKey,
   quantity:      number,
 ): RecommendResult => {
-  const rows = Object.keys(seatsByRow).sort()   // ["A","B","C", ...]
+  const rows = Object.keys(seatsByRow).sort()
   const totalRows = rows.length
   if (totalRows === 0) return { seats: [], reason: "No seat data available." }
 
-  // Optimal row index: middle-to-back third (e.g. row index 55%–75% of total)
-  // Rows are sorted A→Z so higher index = further back
   const idealRowIndex = Math.round(totalRows * 0.65)
 
   let bestBlock:     string[] = []
@@ -153,10 +139,8 @@ const recommendSeats = (
     const seats = seatsByRow[rowLabel]
     if (!seats || seats.length === 0) return
 
-    // Row distance score: closer to idealRowIndex = higher score
     const rowScore = 1 - Math.abs(rowIndex - idealRowIndex) / totalRows
 
-    // Collect available seats in this row for the selected type
     const availableSeats = seats.filter(s =>
       s.seat_type === seatType &&
       (seatStatusMap[s.seat_label] === "available" || !seatStatusMap[s.seat_label])
@@ -164,21 +148,17 @@ const recommendSeats = (
 
     if (availableSeats.length < quantity) return
 
-    // Sort by seat_number ascending
     const sorted = [...availableSeats].sort((a, b) => a.seat_number - b.seat_number)
     const totalCols = seats.length
     const centerCol = totalCols / 2
 
-    // Sliding window of `quantity` consecutive seats
     for (let i = 0; i <= sorted.length - quantity; i++) {
-      // Check all `quantity` seats are truly consecutive by seat_number
       const block = sorted.slice(i, i + quantity)
       const isConsecutive = block.every((s, idx) =>
         idx === 0 || s.seat_number === block[idx - 1].seat_number + 1
       )
       if (!isConsecutive) continue
 
-      // Column score: center of this block vs center of hall
       const blockCenter = (block[0].seat_number + block[block.length - 1].seat_number) / 2
       const colScore = 1 - Math.abs(blockCenter - centerCol) / totalCols
 
@@ -199,7 +179,6 @@ const recommendSeats = (
     }
   }
 
-  // Build a friendly reason string
   const rowPosition =
     rows.indexOf(bestRowLabel) < totalRows * 0.35 ? "front"
     : rows.indexOf(bestRowLabel) < totalRows * 0.65 ? "middle"
@@ -235,6 +214,151 @@ function Section({ title, children, className }: {
   )
 }
 
+// ── Cinema Seat Map ────────────────────────────────────
+//
+// Layout mirrors a real multiplex hall:
+//   • Screen arc at the top
+//   • Rows from O (front/screen-side) down to A (back/VIP)
+//   • Three seating blocks separated by two aisles
+//   • WALL labels on left and right edges
+//
+// Block split: seats are divided into thirds by seat_number.
+// e.g. 15 seats/row → left [1-5], center [6-10], right [11-15]
+
+interface SeatMapProps {
+  seatsByRow:        Record<string, ApiSeat[]>
+  seatStatusMap:     Record<string, LocalSeatStatus>
+  seatTypeMap:       Record<string, SeatTypeKey>
+  seatType:          SeatTypeKey
+  quantity:          number
+  selectedSeats:     string[]
+  aiRecommendedSeats: string[]
+  toggleSeat:        (key: string) => void
+}
+
+const CinemaSeatMap = ({
+  seatsByRow,
+  seatStatusMap,
+  seatTypeMap,
+  seatType,
+  quantity,
+  selectedSeats,
+  aiRecommendedSeats,
+  toggleSeat,
+}: SeatMapProps) => {
+  const rows = Object.keys(seatsByRow).sort().reverse() // O→A (screen at top)
+
+  const splitIntoBlocks = (seats: ApiSeat[]): [ApiSeat[], ApiSeat[], ApiSeat[]] => {
+    const sorted    = [...seats].sort((a, b) => a.seat_number - b.seat_number)
+    const total     = sorted.length
+    const baseThird = Math.floor(total / 3)
+    const remainder = total % 3
+    // Distribute remainder seats: right block gets +1 if remainder>=1, center gets +1 if remainder>=2
+    const leftEnd   = baseThird
+    const centerEnd = baseThird * 2 + (remainder >= 2 ? 1 : 0)
+    return [
+      sorted.slice(0, leftEnd),
+      sorted.slice(leftEnd, centerEnd),
+      sorted.slice(centerEnd),
+    ]
+  }
+
+  const renderSeat = (seat: ApiSeat) => {
+    const key         = seat.seat_label
+    const localStatus = seatStatusMap[key] || "available"
+    const isWrongZone = seat.seat_type !== seatType
+    const isTaken     = localStatus === "taken"
+    const isSelected  = localStatus === "selected"
+    const isAiPick    = aiRecommendedSeats.includes(key)
+    const atLimit     = localStatus === "available" && !isWrongZone && selectedSeats.length >= quantity
+
+    let bg = ZONE_COLORS[seat.seat_type]
+    if (isTaken)                   bg = "#9E9E9E"
+    if (isSelected && !isAiPick)   bg = "#FF9800"
+    if (isSelected && isAiPick)    bg = "#22c55e"
+
+    const opacity = isTaken ? 0.5 : isWrongZone ? 0.18 : atLimit ? 0.35 : 1
+    const cursor  = isTaken || isWrongZone || atLimit ? "not-allowed" : "pointer"
+    const outline = isAiPick && isSelected ? "2px solid #16a34a" : "none"
+
+    return (
+      <button
+        key={key}
+        onClick={() => toggleSeat(key)}
+        title={`${key} — ${SEAT_TYPE_DISPLAY[seat.seat_type]} — BDT ${seat.price}${isTaken ? " — Taken" : isSelected ? (isAiPick ? " — AI Recommended" : " — Selected") : ""}`}
+        className={`seat-btn ${localStatus}`}
+        style={{ background: bg, opacity, cursor, outline, outlineOffset: "1px" }}
+        disabled={isTaken}
+        aria-label={`Seat ${key}${isAiPick ? ", AI recommended" : ""}`}
+      />
+    )
+  }
+
+  return (
+    <div className="cinema-hall-wrapper">
+      {/* ── Screen ── */}
+      <div className="cinema-screen-wrap">
+        <div className="cinema-screen-arc" />
+        <div className="cinema-screen-label">SCREEN</div>
+      </div>
+
+      {/* ── Seating grid ── */}
+      <div className="cinema-grid-outer">
+        {/* Left WALL */}
+        <div className="cinema-wall cinema-wall-left">
+          <span>W</span><span>A</span><span>L</span><span>L</span>
+        </div>
+
+        {/* Seat rows */}
+        <div className="cinema-rows-wrap">
+          {rows.map(rowLabel => {
+            const [left, center, right] = splitIntoBlocks(seatsByRow[rowLabel] ?? [])
+            return (
+              <div key={rowLabel} className="cinema-row">
+                {/* Row label left */}
+                <span className="cinema-row-label">{rowLabel}</span>
+
+                {/* Left block */}
+                <div className="cinema-block">
+                  {left.map(renderSeat)}
+                </div>
+
+                {/* Left aisle */}
+                <div className="cinema-aisle">
+                  <span className="cinema-aisle-label">A<br/>I<br/>S<br/>L<br/>E</span>
+                </div>
+
+                {/* Center block */}
+                <div className="cinema-block cinema-block-center">
+                  {center.map(renderSeat)}
+                </div>
+
+                {/* Right aisle */}
+                <div className="cinema-aisle">
+                  <span className="cinema-aisle-label">A<br/>I<br/>S<br/>L<br/>E</span>
+                </div>
+
+                {/* Right block */}
+                <div className="cinema-block">
+                  {right.map(renderSeat)}
+                </div>
+
+                {/* Row label right */}
+                <span className="cinema-row-label">{rowLabel}</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Right WALL */}
+        <div className="cinema-wall cinema-wall-right">
+          <span>W</span><span>A</span><span>L</span><span>L</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────
 export default function BookTicket() {
   const { id }              = useParams<{ id: string }>()
@@ -256,7 +380,6 @@ export default function BookTicket() {
   const [availableTypes, setAvailableTypes] = useState<SeatTypeKey[]>([])
   const [seatsLoading,   setSeatsLoading]   = useState(false)
 
-  // Discount state
   const [discount, setDiscount] = useState<any | null>(null)
 
   const [seatType,        setSeatType]        = useState<SeatTypeKey>("standard")
@@ -264,7 +387,6 @@ export default function BookTicket() {
   const [selectedSeats,   setSelectedSeats]   = useState<string[]>([])
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([])
 
-  // ── AI Recommendation state ────────────────────────
   const [aiRecommendedSeats, setAiRecommendedSeats] = useState<string[]>([])
   const [aiReason,           setAiReason]           = useState("")
   const [aiLoading,          setAiLoading]          = useState(false)
@@ -330,7 +452,6 @@ export default function BookTicket() {
   // ── Load seats when screening changes ────────────────
   const fetchSeats = useCallback(async (screeningId: number) => {
     setSeatsLoading(true)
-    // Clear any previous AI recommendation when seats reload
     setAiRecommendedSeats([])
     setAiReason("")
     try {
@@ -377,7 +498,6 @@ export default function BookTicket() {
     fetchSeats(selectedScreening.id)
   }, [selectedScreening?.id])
 
-  // Clear AI recommendation whenever seat type or quantity changes
   useEffect(() => {
     setAiRecommendedSeats([])
     setAiReason("")
@@ -385,7 +505,6 @@ export default function BookTicket() {
 
   // ── AI Recommend handler ───────────────────────────
   const handleRecommendSeats = () => {
-    // Clear current selections first
     setSeatStatusMap(prev => {
       const updated = { ...prev }
       selectedSeats.forEach(k => { updated[k] = "available" })
@@ -397,7 +516,6 @@ export default function BookTicket() {
     setAiReason("")
     setAiLoading(true)
 
-    // Small timeout so the UI updates before the calculation runs
     setTimeout(() => {
       const result = recommendSeats(seatsByRow, seatStatusMap, seatTypeMap, seatType, quantity)
       setAiLoading(false)
@@ -407,7 +525,6 @@ export default function BookTicket() {
         return
       }
 
-      // Mark recommended seats as selected
       setSeatStatusMap(prev => {
         const updated = { ...prev }
         result.seats.forEach(k => { updated[k] = "selected" })
@@ -418,7 +535,6 @@ export default function BookTicket() {
       setAiRecommendedSeats(result.seats)
       setAiReason(result.reason)
 
-      // Lock seats on backend if user is logged in
       if (user && token && selectedScreening) {
         const ids = result.seats.map(k => seatIdMap[k])
         fetch(`${API_URL}/seats/lock`, {
@@ -465,7 +581,6 @@ export default function BookTicket() {
     if (localStatus === "taken")   return
     if (thisSeatType !== seatType) return
 
-    // When a user manually clicks after an AI recommendation, clear AI highlight
     if (aiRecommendedSeats.length > 0) {
       setAiRecommendedSeats([])
       setAiReason("")
@@ -695,7 +810,6 @@ export default function BookTicket() {
                 )}
               </button>
 
-              {/* Result banner */}
               {aiReason && (
                 <div
                   className={`ai-result-banner ${aiRecommendedSeats.length > 0 ? "ai-result-success" : "ai-result-error"}`}
@@ -753,49 +867,16 @@ export default function BookTicket() {
             ) : Object.keys(seatsByRow).length === 0 ? (
               <p className="book-empty">No seat data available.</p>
             ) : (
-              <div className="seat-map-wrapper">
-                {Object.keys(seatsByRow).sort().map(row => (
-                  <div key={row} className="seat-row">
-                    <span className="seat-row-label">{row}</span>
-                    {seatsByRow[row].map(seat => {
-                      const key         = seat.seat_label
-                      const localStatus = seatStatusMap[key] || "available"
-                      const isWrongZone = seat.seat_type !== seatType
-                      const isTaken     = localStatus === "taken"
-                      const isSelected  = localStatus === "selected"
-                      const isAiPick    = aiRecommendedSeats.includes(key)
-                      const atLimit     = localStatus === "available" && !isWrongZone && selectedSeats.length >= quantity
-
-                      // Color priority: AI recommended green > selected orange > taken gray > zone color
-                      let bg = ZONE_COLORS[seat.seat_type]
-                      if (isTaken)            bg = "#9E9E9E"
-                      if (isSelected && !isAiPick) bg = "#FF9800"
-                      if (isSelected && isAiPick)  bg = "#22c55e"
-
-                      const opacity = isTaken ? 0.5 : isWrongZone ? 0.18 : atLimit ? 0.35 : 1
-                      const cursor  = isTaken || isWrongZone || atLimit ? "not-allowed" : "pointer"
-
-                      // Extra ring around AI-recommended seats
-                      const outline = isAiPick && isSelected
-                        ? "2px solid #16a34a"
-                        : "none"
-
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => toggleSeat(key)}
-                          title={`${key} — ${SEAT_TYPE_DISPLAY[seat.seat_type]} — BDT ${seat.price}${isTaken ? " — Taken" : isSelected ? (isAiPick ? " — AI Recommended" : " — Selected") : ""}`}
-                          className={`seat-btn ${localStatus}`}
-                          style={{ background: bg, opacity, cursor, outline, outlineOffset: "1px" }}
-                          disabled={isTaken}
-                          aria-label={`Seat ${key}${isAiPick ? ", AI recommended" : ""}`}
-                        />
-                      )
-                    })}
-                  </div>
-                ))}
-                <div className="theatre-screen">THEATRE SCREEN</div>
-              </div>
+              <CinemaSeatMap
+                seatsByRow={seatsByRow}
+                seatStatusMap={seatStatusMap}
+                seatTypeMap={seatTypeMap}
+                seatType={seatType}
+                quantity={quantity}
+                selectedSeats={selectedSeats}
+                aiRecommendedSeats={aiRecommendedSeats}
+                toggleSeat={toggleSeat}
+              />
             )}
           </Section>
 
@@ -834,7 +915,6 @@ export default function BookTicket() {
                   </div>
                 ))}
 
-                {/* Show AI badge in summary if seats were AI-recommended */}
                 {aiRecommendedSeats.length > 0 && selectedSeats.length > 0 &&
                   aiRecommendedSeats.every(s => selectedSeats.includes(s)) && (
                   <div className="summary-ai-badge">
