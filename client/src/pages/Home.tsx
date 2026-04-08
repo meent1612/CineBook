@@ -17,7 +17,7 @@ interface Movie {
   trailer_url: string | null
   status: "now_showing" | "coming_soon"
   is_active: boolean
-  booking_count?: number  // A) added
+  booking_count?: number
 }
 
 // ── Constants ──────────────────────────────────────────
@@ -33,6 +33,60 @@ const posterSrc = (url: string | null): string => {
 }
 
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
+
+// ── AI: reorder movies based on user's genre history ──
+// Calls Claude API with the user's preferred genres and current movie list.
+// Claude returns a JSON array of movie IDs in recommended order.
+const reorderMoviesWithAI = async (
+  movies: Movie[],
+  preferredGenres: string[]
+): Promise<Movie[]> => {
+  if (preferredGenres.length === 0 || movies.length === 0) return movies
+
+  try {
+    const movieList = movies.map(m => ({
+      id: m.id,
+      title: m.title,
+      genre: m.genre || "Unknown",
+    }))
+
+    const prompt = `You are a movie recommendation engine.
+A user has previously watched movies in these genres: ${preferredGenres.join(", ")}.
+Reorder the following movies so the most relevant ones appear first.
+Return ONLY a JSON array of movie IDs in recommended order, nothing else.
+Example: [3, 1, 5, 2, 4]
+
+Movies: ${JSON.stringify(movieList)}`
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    })
+
+    const data = await response.json()
+    const text = data.content?.[0]?.text?.trim() || ""
+
+    // Parse the returned array of IDs
+    const orderedIds: number[] = JSON.parse(text)
+
+    // Reorder movies by returned ID order, keep any missing at the end
+    const idToMovie = new Map(movies.map(m => [m.id, m]))
+    const reordered = orderedIds
+      .map(id => idToMovie.get(id))
+      .filter(Boolean) as Movie[]
+    const included = new Set(orderedIds)
+    const remaining = movies.filter(m => !included.has(m.id))
+    return [...reordered, ...remaining]
+  } catch {
+    // If AI fails, return original order silently
+    return movies
+  }
+}
 
 // ── Poster with fallback ───────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
@@ -63,25 +117,19 @@ function MoviePoster({ movie }: { movie: Movie }) {
 // ── Trending Widget ────────────────────────────────────
 function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: number) => void }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-
-  // E) Use real booking counts for heat percentage
-  // NEW
-  const maxCount = Math.max(...movies.map(m => m.booking_count ?? 0), 0)
-  const heatPct  = (m: Movie) => {
+  const maxCount  = Math.max(...movies.map(m => m.booking_count ?? 0), 0)
+  const heatPct   = (m: Movie) => {
     const baseline = 8
     if (maxCount === 0) return baseline
     return Math.round(baseline + ((m.booking_count ?? 0) / maxCount) * (100 - baseline))
   }
   if (movies.length === 0) return null
-
-  // Show at most 8 trending entries
-  const trending = movies.slice(0, 8)
+  const trending = movies.slice(0, 9)
 
   return (
     <section className="trending-section">
       <div className="trending-header">
         <span className="trending-flame">
-          {/* animated SVG flame */}
           <svg viewBox="0 0 24 24" className="flame-svg" aria-hidden="true">
             <path d="M12 2C12 2 8 7 8 12c0 2.2 1.8 4 4 4s4-1.8 4-4c0-1.5-.7-2.8-1.5-3.8C14 9.5 13 11 13 12c0 .6-.4 1-1 1s-1-.4-1-1c0-2.5 2-5.5 1-8z"/>
             <path d="M12 22c-3.3 0-6-2.7-6-6 0-3.5 2.5-7 4-9 .5 2 2 4 2 6 0 0 1-1.5 1-3 1.5 1.5 3 3.5 3 6 0 3.3-2.7 6-4 6z" opacity=".6"/>
@@ -92,17 +140,14 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
       </div>
 
       <div className="trending-scroll-wrap">
-        {/* Left / right fade masks */}
         <div className="trending-fade trending-fade-left"  aria-hidden="true" />
         <div className="trending-fade trending-fade-right" aria-hidden="true" />
-
         <div className="trending-track" ref={scrollRef}>
           {trending.map((movie, idx) => {
-            const rank   = idx + 1
-            const isTop  = rank === 1
-            const src    = posterSrc(movie.poster_url)
-            const bg     = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
-
+            const rank  = idx + 1
+            const isTop = rank === 1
+            const src   = posterSrc(movie.poster_url)
+            const bg    = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
             return (
               <button
                 key={movie.id}
@@ -110,7 +155,6 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
                 onClick={() => onSelect(movie.id)}
                 aria-label={`Trending #${rank}: ${movie.title}`}
               >
-                {/* Poster / fallback */}
                 <div className="trending-poster-wrap">
                   {src ? (
                     <img
@@ -131,23 +175,15 @@ function TrendingWidget({ movies, onSelect }: { movies: Movie[]; onSelect: (id: 
                     <i className="fas fa-film" />
                     <span>{movie.title}</span>
                   </div>
-
-                  {/* Rank badge */}
                   <span className={`trending-rank ${isTop ? "trending-rank--gold" : ""}`}>
                     {isTop ? "👑" : `#${rank}`}
                   </span>
-
-                  {/* Gradient scrim for text */}
                   <div className="trending-scrim" />
                 </div>
-
-                {/* Info row */}
                 <div className="trending-info">
                   <p className="trending-movie-title">
                     {movie.title.length > 18 ? movie.title.substring(0, 18) + "…" : movie.title}
                   </p>
-
-                  {/* E) Heat bar using real data */}
                   <div className="trending-heat-bar-wrap" aria-hidden="true">
                     <div
                       className={`trending-heat-bar ${isTop ? "trending-heat-bar--gold" : ""}`}
@@ -170,18 +206,24 @@ export default function Home() {
   const [activeTab,     setActiveTab]     = useState<Tab>("Now Showing")
   const [heroIdx,       setHeroIdx]       = useState(0)
   const [movieList,     setMovieList]     = useState<Movie[]>([])
-  const [popularMovies, setPopularMovies] = useState<Movie[]>([])  // B) added
+  const [popularMovies, setPopularMovies] = useState<Movie[]>([])
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState("")
   const [hoveredId,     setHoveredId]     = useState<number | null>(null)
 
-  const navigate    = useNavigate()
-  const { user }    = useAuth()
-  const isAdmin     = user?.role === "admin"
-  const isLoggedIn  = !!user
+  // ── AI personalization state ───────────────────────
+  const [aiOrdering,     setAiOrdering]     = useState(false)  // true while Claude is thinking
+  const [isPersonalized, setIsPersonalized] = useState(false)  // shows the "personalized" badge
+  const [nowShowingAI,   setNowShowingAI]   = useState<Movie[]>([])
+  const [comingSoonAI,   setComingSoonAI]   = useState<Movie[]>([])
+
+  const navigate   = useNavigate()
+  const { user, token } = useAuth()
+  const isAdmin    = user?.role === "admin"
+  const isLoggedIn = !!user
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // C) Both fetches in one useEffect
+  // ── Fetch movies ───────────────────────────────────
   useEffect(() => {
     const fetchMovies = async () => {
       setLoading(true)
@@ -197,7 +239,6 @@ export default function Home() {
         setLoading(false)
       }
     }
-
     const fetchPopular = async () => {
       try {
         const res  = await fetch(`${API_URL}/movies/popular`)
@@ -205,14 +246,67 @@ export default function Home() {
         if (data.success) setPopularMovies(data.movies)
       } catch {}
     }
-
     fetchMovies()
-    fetchPopular()  // C) added
+    fetchPopular()
   }, [])
 
-  const nowShowing = movieList.filter(m => m.status === "now_showing")
-  const comingSoon = movieList.filter(m => m.status === "coming_soon")
+  // ── AI personalization: runs after movies load + user is logged in ──
+  // Fetches user booking history, extracts genres, asks Claude to reorder
+  useEffect(() => {
+    if (!isLoggedIn || !token || movieList.length === 0) return
+
+    const personalize = async () => {
+      setAiOrdering(true)
+      try {
+        // Step 1: fetch user's booking history
+        const res  = await fetch(`${API_URL}/bookings/history`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (!data.success || !data.bookings?.length) return
+
+        // Step 2: extract genres from past bookings
+        const genreCount: Record<string, number> = {}
+        data.bookings.forEach((b: any) => {
+          const genre = b.movie?.genre
+          if (genre) {
+            genreCount[genre] = (genreCount[genre] || 0) + 1
+          }
+        })
+        const preferredGenres = Object.entries(genreCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([g]) => g)
+
+        if (preferredGenres.length === 0) return
+
+        // Step 3: ask Claude to reorder both lists
+        const nowShowing = movieList.filter(m => m.status === "now_showing")
+        const comingSoon = movieList.filter(m => m.status === "coming_soon")
+
+        const [reorderedNow, reorderedSoon] = await Promise.all([
+          reorderMoviesWithAI(nowShowing, preferredGenres),
+          reorderMoviesWithAI(comingSoon, preferredGenres),
+        ])
+
+        setNowShowingAI(reorderedNow)
+        setComingSoonAI(reorderedSoon)
+        setIsPersonalized(true)
+      } catch {
+        // silently fall back to default order
+      } finally {
+        setAiOrdering(false)
+      }
+    }
+
+    personalize()
+  }, [isLoggedIn, token, movieList])
+
+  // ── Which movies to show (AI order if available, else default) ──
+  const nowShowing = isPersonalized ? nowShowingAI : movieList.filter(m => m.status === "now_showing")
+  const comingSoon = isPersonalized ? comingSoonAI : movieList.filter(m => m.status === "coming_soon")
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
+
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
 
@@ -279,27 +373,16 @@ export default function Home() {
             </p>
             <div className="hero-btn-row">
               {heroMovie.trailer_url && !isAdmin && (
-                <a
-                  href={heroMovie.trailer_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hero-trailer-btn"
-                >
+                <a href={heroMovie.trailer_url} target="_blank" rel="noreferrer" className="hero-trailer-btn">
                   <i className="fa-solid fa-play" /> Watch Trailer
                 </a>
               )}
               {isAdmin ? (
-                <button
-                  className="hero-tickets-btn hero-edit-btn"
-                  onClick={() => handleEditMovie(heroMovie.id)}
-                >
+                <button className="hero-tickets-btn hero-edit-btn" onClick={() => handleEditMovie(heroMovie.id)}>
                   <i className="fa-solid fa-pen" /> Edit Movie
                 </button>
               ) : isLoggedIn ? (
-                <button
-                  className="hero-tickets-btn"
-                  onClick={() => handleGetTickets(heroMovie.id)}
-                >
+                <button className="hero-tickets-btn" onClick={() => handleGetTickets(heroMovie.id)}>
                   <i className="fa-solid fa-ticket" /> Get Tickets
                 </button>
               ) : null}
@@ -321,7 +404,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* ── Trending Widget ── D) uses popularMovies */}
+      {/* ── Trending Widget ── */}
       {!loading && !error && popularMovies.length > 0 && (
         <TrendingWidget movies={popularMovies} onSelect={handleTrendingSelect} />
       )}
@@ -329,7 +412,7 @@ export default function Home() {
       {/* ── Content Area ── */}
       <div className="content-area">
 
-        {/* Tabs */}
+        {/* Tabs + personalization badge */}
         <div className="tabs-bar">
           <div className="tabs-list">
             {TABS.map(tab => (
@@ -342,9 +425,32 @@ export default function Home() {
               </button>
             ))}
           </div>
-          <button className="view-all-btn" onClick={() => navigate("/showmovies")}>
-            View All →
-          </button>
+
+          {/* ── AI personalization status badge ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            {aiOrdering && (
+              <span style={{
+                fontSize: "0.75rem", color: "#9ca3af",
+                display: "flex", alignItems: "center", gap: "0.3rem"
+              }}>
+                <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "0.7rem" }} />
+                Personalizing…
+              </span>
+            )}
+            {isPersonalized && !aiOrdering && (
+              <span style={{
+                fontSize: "0.72rem", background: "rgba(99,102,241,0.12)",
+                color: "#818cf8", padding: "2px 8px",
+                borderRadius: "999px", display: "flex", alignItems: "center", gap: "0.3rem"
+              }}>
+                <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: "0.65rem" }} />
+                Personalized for you
+              </span>
+            )}
+            <button className="view-all-btn" onClick={() => navigate("/showmovies")}>
+              View All →
+            </button>
+          </div>
         </div>
 
         {loading && <p className="home-state-msg">Loading movies…</p>}
@@ -363,46 +469,29 @@ export default function Home() {
                 onMouseEnter={() => setHoveredId(movie.id)}
                 onMouseLeave={() => setHoveredId(null)}
               >
-                {/* Status ribbon */}
                 <div className={`movie-ribbon ${movie.status === "now_showing" ? "ribbon-showing" : "ribbon-soon"}`}>
                   {movie.status === "now_showing" ? "Now Showing" : "Coming Soon"}
                 </div>
-
-                {/* Category badge */}
                 <div className="movie-category-badge">{movie.category}</div>
-
                 <MoviePoster movie={movie} />
-
-                {/* ── Hover Overlay ── */}
                 <div className={`movie-card-overlay ${hoveredId === movie.id ? "visible" : ""}`}>
                   <div className="movie-card-hover-title">
                     {movie.title.length > 22 ? movie.title.substring(0, 22) + "…" : movie.title}
                   </div>
-
                   {isAdmin ? (
-                    <button
-                      className="get-tickets-btn edit-movie-btn"
-                      onClick={() => handleEditMovie(movie.id)}
-                    >
+                    <button className="get-tickets-btn edit-movie-btn" onClick={() => handleEditMovie(movie.id)}>
                       <i className="fa-solid fa-pen" /> Edit Movie
                     </button>
                   ) : isLoggedIn ? (
-                    <button
-                      className="get-tickets-btn"
-                      onClick={() => handleGetTickets(movie.id)}
-                    >
+                    <button className="get-tickets-btn" onClick={() => handleGetTickets(movie.id)}>
                       <i className="fa-solid fa-ticket" /> Get Tickets
                     </button>
                   ) : (
-                    <button
-                      className="get-tickets-btn login-prompt-btn"
-                      onClick={() => navigate("/login")}
-                    >
+                    <button className="get-tickets-btn login-prompt-btn" onClick={() => navigate("/login")}>
                       <i className="fa-solid fa-user" /> Login to Book
                     </button>
                   )}
                 </div>
-
               </div>
             ))}
           </div>
@@ -412,7 +501,7 @@ export default function Home() {
           Copyright© 2026 CineBook Limited. All Rights Reserved.
         </div>
       </div>
-    <AIChatbot />
+      <AIChatbot />
     </div>
   )
 }
