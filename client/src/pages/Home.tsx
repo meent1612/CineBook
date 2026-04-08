@@ -14,6 +14,7 @@ interface Movie {
   duration_mins: number | null
   release_date: string | null
   poster_url: string | null
+  carasol_url: string | null
   trailer_url: string | null
   status: "now_showing" | "coming_soon"
   is_active: boolean
@@ -35,8 +36,6 @@ const posterSrc = (url: string | null): string => {
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
 // ── AI: reorder movies based on user's genre history ──
-// Calls Claude API with the user's preferred genres and current movie list.
-// Claude returns a JSON array of movie IDs in recommended order.
 const reorderMoviesWithAI = async (
   movies: Movie[],
   preferredGenres: string[]
@@ -71,10 +70,7 @@ Movies: ${JSON.stringify(movieList)}`
     const data = await response.json()
     const text = data.content?.[0]?.text?.trim() || ""
 
-    // Parse the returned array of IDs
     const orderedIds: number[] = JSON.parse(text)
-
-    // Reorder movies by returned ID order, keep any missing at the end
     const idToMovie = new Map(movies.map(m => [m.id, m]))
     const reordered = orderedIds
       .map(id => idToMovie.get(id))
@@ -83,7 +79,6 @@ Movies: ${JSON.stringify(movieList)}`
     const remaining = movies.filter(m => !included.has(m.id))
     return [...reordered, ...remaining]
   } catch {
-    // If AI fails, return original order silently
     return movies
   }
 }
@@ -211,9 +206,8 @@ export default function Home() {
   const [error,         setError]         = useState("")
   const [hoveredId,     setHoveredId]     = useState<number | null>(null)
 
-  // ── AI personalization state ───────────────────────
-  const [aiOrdering,     setAiOrdering]     = useState(false)  // true while Claude is thinking
-  const [isPersonalized, setIsPersonalized] = useState(false)  // shows the "personalized" badge
+  const [aiOrdering,     setAiOrdering]     = useState(false)
+  const [isPersonalized, setIsPersonalized] = useState(false)
   const [nowShowingAI,   setNowShowingAI]   = useState<Movie[]>([])
   const [comingSoonAI,   setComingSoonAI]   = useState<Movie[]>([])
 
@@ -223,7 +217,6 @@ export default function Home() {
   const isLoggedIn = !!user
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Fetch movies ───────────────────────────────────
   useEffect(() => {
     const fetchMovies = async () => {
       setLoading(true)
@@ -250,22 +243,18 @@ export default function Home() {
     fetchPopular()
   }, [])
 
-  // ── AI personalization: runs after movies load + user is logged in ──
-  // Fetches user booking history, extracts genres, asks Claude to reorder
   useEffect(() => {
     if (!isLoggedIn || !token || movieList.length === 0) return
 
     const personalize = async () => {
       setAiOrdering(true)
       try {
-        // Step 1: fetch user's booking history
         const res  = await fetch(`${API_URL}/bookings/history`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
         if (!data.success || !data.bookings?.length) return
 
-        // Step 2: extract genres from past bookings
         const genreCount: Record<string, number> = {}
         data.bookings.forEach((b: any) => {
           const genre = b.movie?.genre
@@ -280,7 +269,6 @@ export default function Home() {
 
         if (preferredGenres.length === 0) return
 
-        // Step 3: ask Claude to reorder both lists
         const nowShowing = movieList.filter(m => m.status === "now_showing")
         const comingSoon = movieList.filter(m => m.status === "coming_soon")
 
@@ -302,7 +290,6 @@ export default function Home() {
     personalize()
   }, [isLoggedIn, token, movieList])
 
-  // ── Which movies to show (AI order if available, else default) ──
   const nowShowing = isPersonalized ? nowShowingAI : movieList.filter(m => m.status === "now_showing")
   const comingSoon = isPersonalized ? comingSoonAI : movieList.filter(m => m.status === "coming_soon")
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
@@ -346,10 +333,11 @@ export default function Home() {
 
       {/* ── Hero Banner ── */}
       <div className="hero-banner">
-        {heroMovie && posterSrc(heroMovie.poster_url) ? (
+        {/* ↓ CHANGED: use carasol_url instead of poster_url for the hero background */}
+        {heroMovie && posterSrc(heroMovie.carasol_url) ? (
           <img
             key={heroMovie.id}
-            src={posterSrc(heroMovie.poster_url)}
+            src={posterSrc(heroMovie.carasol_url)}
             alt={heroMovie.title}
             className="hero-img hero-img-fade"
             onError={e => { (e.target as HTMLImageElement).style.display = "none" }}
@@ -412,7 +400,6 @@ export default function Home() {
       {/* ── Content Area ── */}
       <div className="content-area">
 
-        {/* Tabs + personalization badge */}
         <div className="tabs-bar">
           <div className="tabs-list">
             {TABS.map(tab => (
@@ -426,7 +413,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ── AI personalization status badge ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             {aiOrdering && (
               <span style={{
@@ -459,7 +445,6 @@ export default function Home() {
           <p className="home-state-msg">No movies available right now.</p>
         )}
 
-        {/* ── Movie Grid ── */}
         {!loading && !error && displayed.length > 0 && (
           <div className="movie-grid">
             {displayed.map(movie => (

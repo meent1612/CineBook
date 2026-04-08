@@ -81,7 +81,7 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM movies)
 BEGIN
-    INSERT INTO movies (title, description, genre, category, language, duration_mins, release_date, poster_url, trailer_url, status, is_active) VALUES
+    INSERT INTO movies (title, description, genre, category, language, duration_mins, release_date, poster_url, carasol_url, trailer_url, status, is_active) VALUES
     (
         'Avatar: Fire and Ash',
         'The next chapter in the Avatar saga.',
@@ -91,6 +91,7 @@ BEGIN
         150,
         '2025-12-19',
         '/posters/avatar.jpg',
+        '/carasols/avatar_carasol.jpg',
         'https://youtu.be/nb_fFj_0rq8?si=yNL5337zQUzm7Q3J',
         'now_showing',
         1
@@ -104,6 +105,7 @@ BEGIN
         120,
         '2025-01-25',
         '/posters/anaconda.jpg',
+        '/carasols/anaconda_carasol.jpg',
         'https://youtu.be/az8M5Mai0X4?si=VzV9ghsMMP_BOm8b',
         'now_showing',
         1
@@ -117,6 +119,7 @@ BEGIN
         130,
         '2026-01-16',
         '/posters/rajnoitik.jpeg',
+        '/carasols/rajnoitik_carasol.jpg',
         'https://youtu.be/pHHttaMky2o?si=fJkZQ1k3fsQ6zCFh',
         'now_showing',
         1
@@ -130,6 +133,7 @@ BEGIN
         110,
         '2026-01-10',
         '/posters/sultana.jpg',
+        '/carasols/sultana_carasol.jpg',
         'https://youtu.be/B0ObVv3QYag?si=f9v8EB_htD5Lx205',
         'now_showing',
         1
@@ -143,6 +147,7 @@ BEGIN
         95,
         '2025-12-25',
         '/posters/spongebob.jpg',
+        '/carasols/spongebob_carasol.jpg',
         'https://youtu.be/XdPt8QWTypI?si=2QXY_D87awvZEoJ5',
         'now_showing',
         1
@@ -156,6 +161,7 @@ BEGIN
         139,
         '2026-02-13',
         '/posters/crime101.jpg',
+        '/carasols/crime101_carasol.jpg',
         'https://www.youtube.com/watch?v=f5y-cziwmMw',
         'now_showing',
         1
@@ -169,6 +175,7 @@ BEGIN
         139,
         '2026-03-21',
         '/posters/domm.jpg',
+        '/carasols/domm_carasol.jpg',
         'https://www.youtube.com/watch?v=lK01xRLuo54',
         'now_showing',
         1
@@ -182,6 +189,7 @@ BEGIN
         156,
         '2026-03-27',
         '/posters/projecthailmary.jpg',
+        '/carasols/projecthailmary_carasol.jpg',
         'https://www.youtube.com/watch?v=m08TxIsFTRI',
         'now_showing',
         1
@@ -195,6 +203,7 @@ BEGIN
         99,
         '2026-04-01',
         '/posters/supermario.jpg',
+        '/carasols/supermario_carasol.jpg',
         'https://www.youtube.com/watch?v=GuCejewteF8',
         'now_showing',
         1
@@ -208,6 +217,7 @@ BEGIN
         150,
         '2025-12-19',
         '/posters/bonolotaexpress.jpg',
+        '/carasols/bonolotaexpress_carasol.jpg',
         'https://www.youtube.com/watch?v=ZTZUaHsfR8o',
         'coming_soon',
         1
