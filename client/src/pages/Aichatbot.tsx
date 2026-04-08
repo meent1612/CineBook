@@ -1,72 +1,262 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import "../CSSfiles/AIChatbot.css"
 
 // ── Types ──────────────────────────────────────────────
-interface Message {
+interface Movie {
+  id: number
+  title: string
+  genre: string | null
+  category: string
+  language: string | null
+  duration_mins: number | null
+  release_date: string | null
+  poster_url: string | null
+  trailer_url: string | null
+  status: "now_showing" | "coming_soon"
+  is_active: boolean
+  rating?: string | null
+  description?: string | null
+}
+
+interface ChatMessage {
   role: "user" | "assistant"
   content: string
+  movieCards?: RecommendedMovie[]
+}
+
+interface RecommendedMovie {
+  id: number
+  title: string
+  genre: string | null
+  duration_mins: number | null
+  status: string
+  poster_url: string | null
+  reason?: string
 }
 
 interface QuickChip {
   label: string
-  icon: string   // FA class string
   prompt: string
 }
 
 // ── Constants ──────────────────────────────────────────
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
+
 const QUICK_CHIPS: QuickChip[] = [
-  { label: "Recommend a movie",   icon: "fa-solid fa-film",         prompt: "Can you recommend a movie for me?" },
-  { label: "Show showtimes",      icon: "fa-solid fa-clock",        prompt: "What are the showtimes available?" },
-  { label: "Ticket prices",       icon: "fa-solid fa-ticket",       prompt: "What are the ticket prices?" },
-  { label: "Branch locations",    icon: "fa-solid fa-location-dot", prompt: "Where are your cinema branches located?" },
-  { label: "Refund policy",       icon: "fa-solid fa-rotate-left",  prompt: "What is your refund and cancellation policy?" },
-  { label: "Seat availability",   icon: "fa-solid fa-couch",        prompt: "How can I check seat availability?" },
+  { label: "😱 Scare me",           prompt: "I want something really scary tonight" },
+  { label: "😂 Make me laugh",      prompt: "I need a good comedy to cheer me up" },
+  { label: "💥 Pure action",        prompt: "Give me the most action-packed movie available" },
+  { label: "🧠 Mind-bending",       prompt: "I want a movie like Inception — mind-bending thriller" },
+  { label: "❤️ Date night",         prompt: "What's a good romantic movie for a date night?" },
+  { label: "⏱️ Under 2 hours",      prompt: "Show me good movies under 2 hours long" },
+  { label: "🌍 Non-English",        prompt: "Recommend a great non-English language film" },
+  { label: "🎟️ What's showing now", prompt: "What movies are currently showing?" },
 ]
 
-const SYSTEM_PROMPT = `You are CineBot, a friendly and knowledgeable AI assistant for CineBook — a cinema ticket booking platform.
+const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
-Your role is to help users with:
-1. **Movie Recommendations** — Suggest movies based on user preferences, genres they enjoy, mood, or trending popularity. Ask clarifying questions if needed (e.g. "Do you prefer action, romance, or horror?").
-2. **Showtimes** — Guide users to check the Showtimes page at /showtimes. Explain that showtimes are updated daily and cover a 7-day window.
-3. **Ticket Pricing** — Standard tickets are typically 200–350 BDT depending on hall type (regular, premium, IMAX). Concessions and student discounts may apply.
-4. **Branch Information** — CineBook operates across multiple cinema branches. Users can select their preferred branch from the navbar dropdown.
-5. **Refund & Cancellation Policy** — Bookings can be cancelled up to 2 hours before showtime for a full refund. After that, no refund is issued. Contact support@cinebook.com for disputes.
-6. **Seat Availability** — Users can view real-time seat maps during the booking flow at /book/:movieId.
-7. **General Navigation** — Help users find pages: Home (/), Showtimes (/showtimes), About (/about), Contact (/contact), Ticket Prices (/ticket-price).
+// ── System prompt factory ─────────────────────────────
+const buildSystemPrompt = (movies: Movie[]): string => {
+  const catalog = movies.map(m => ({
+    id:            m.id,
+    title:         m.title,
+    genre:         m.genre          ?? "Unknown",
+    category:      m.category,
+    language:      m.language       ?? "Unknown",
+    duration_mins: m.duration_mins  ?? null,
+    status:        m.status,
+    description:   m.description    ?? null,
+    rating:        m.rating         ?? null,
+  }))
 
-Tone: Warm, concise, cinema-enthusiast energy. Use occasional movie references or emojis to keep it fun. Never make up specific movie schedules — guide users to the live pages instead.
+  return `You are CineBot, an expert AI movie assistant for CineBook — a cinema booking platform in Bangladesh.
 
-If asked something outside your scope, politely redirect: "That's beyond my popcorn-powered brain 🍿 — try reaching our support team at support@cinebook.com"`
+## CURRENT MOVIE CATALOG:
+${JSON.stringify(catalog, null, 2)}
 
-// ── Helpers ────────────────────────────────────────────
-const formatTime = (): string => {
-  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+## YOUR CORE JOB:
+1. **Mood / Preference Recommendations** — When users describe a feeling or vibe ("I want something scary but not gory", "good for a date night", "something fun with family"), pick the BEST matching movies from the catalog above.
+2. **Natural Language Search** — When users search like "movies like Inception", "action movies under 2 hours", "non-English films", "comedies", filter and rank from the catalog.
+3. **General Questions** — Showtimes: direct to /showtimes. Ticket prices: 200–350 BDT. Branches: selectable in navbar. Refund policy: cancel 2+ hrs before for full refund. Seat availability: visible at /book/:id.
+
+## STRICT RECOMMENDATION FORMAT:
+- Only recommend movies that exist in the catalog (match by id and title exactly).
+- After your 1–3 sentence friendly response, if recommending movies append this block:
+
+MOVIE_CARDS_JSON::[{"id":1,"title":"Exact Title","reason":"Why this matches in under 15 words"}]
+
+- Include 1–4 movies max. Use real IDs and exact titles from the catalog.
+- NEVER mention the JSON format to the user.
+- If no good match exists, say so honestly before suggesting the closest option.
+
+## SEARCH LOGIC:
+- "like Inception" / "mind-bending" → match thriller, sci-fi, mystery genres
+- "under 2 hours" → duration_mins < 120
+- "non-English" / language requests → filter by language field
+- "now showing" / "playing now" → status === "now_showing"
+- "coming soon" → status === "coming_soon"
+- "scary but not gory" → horror genre, avoid extreme violence descriptors in description
+
+## TONE:
+Warm, concise, cinema-enthusiast. 2–3 sentences max before cards. Use occasional emojis 🎬🍿.
+If asked outside your scope: "That's beyond my popcorn-powered brain 🍿 — reach us at support@cinebook.com"`
 }
 
+// ── Helpers ───────────────────────────────────────────
+const posterSrc = (url: string | null): string => {
+  if (!url) return ""
+  return url.startsWith("/") ? `${BACKEND}${url}` : url
+}
+
+const parseMovieCards = (
+  text: string,
+  catalog: Movie[]
+): { cleanText: string; cards: RecommendedMovie[] } => {
+  const marker = "MOVIE_CARDS_JSON::"
+  const idx    = text.indexOf(marker)
+  if (idx === -1) return { cleanText: text.trim(), cards: [] }
+
+  const cleanText = text.slice(0, idx).trim()
+  const jsonStr   = text.slice(idx + marker.length).trim()
+
+  try {
+    const parsed: Array<{ id: number; title: string; reason?: string }> = JSON.parse(jsonStr)
+    const cards: RecommendedMovie[] = parsed
+      .map(p => {
+        const movie = catalog.find(m => m.id === p.id || m.title === p.title)
+        if (!movie) return null
+        return {
+          id:            movie.id,
+          title:         movie.title,
+          genre:         movie.genre,
+          duration_mins: movie.duration_mins,
+          status:        movie.status,
+          poster_url:    movie.poster_url,
+          reason:        p.reason,
+        } as RecommendedMovie
+      })
+      .filter((c): c is RecommendedMovie => c !== null)
+    return { cleanText, cards }
+  } catch {
+    return { cleanText, cards: [] }
+  }
+}
+
+const formatTime = (): string =>
+  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+
+// ── Movie Result Card ─────────────────────────────────
+const MovieResultCard = ({
+  movie,
+  onBook,
+}: {
+  movie: RecommendedMovie
+  onBook: (id: number) => void
+}) => {
+  const [imgFailed, setImgFailed] = useState(false)
+  const src = posterSrc(movie.poster_url)
+  const bg  = FALLBACK_COLORS[movie.title.charCodeAt(0) % FALLBACK_COLORS.length]
+
+  return (
+    <div className="cb-movie-card" role="article" aria-label={`Recommendation: ${movie.title}`}>
+      <div className="cb-movie-card-poster">
+        {src && !imgFailed ? (
+          <img src={src} alt={movie.title} onError={() => setImgFailed(true)} />
+        ) : (
+          <div className="cb-movie-card-poster-fallback" style={{ background: bg }}>
+            <i className="fa-solid fa-film" aria-hidden="true" />
+          </div>
+        )}
+        <span
+          className={`cb-movie-card-status ${
+            movie.status === "now_showing" ? "status--showing" : "status--soon"
+          }`}
+        >
+          {movie.status === "now_showing" ? "Now Showing" : "Coming Soon"}
+        </span>
+      </div>
+
+      <div className="cb-movie-card-info">
+        <p className="cb-movie-card-title">
+          {movie.title.length > 22 ? movie.title.slice(0, 22) + "…" : movie.title}
+        </p>
+        <p className="cb-movie-card-meta">
+          {[movie.genre, movie.duration_mins ? `${movie.duration_mins}m` : null]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        {movie.reason && (
+          <p className="cb-movie-card-reason">"{movie.reason}"</p>
+        )}
+        <button
+          className="cb-movie-card-btn"
+          onClick={() => onBook(movie.id)}
+          aria-label={`Book tickets for ${movie.title}`}
+          tabIndex={0}
+        >
+          <i className="fa-solid fa-ticket" aria-hidden="true" /> Book Tickets
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Typing indicator ──────────────────────────────────
 const TypingDots = () => (
   <div className="cb-typing-dots" aria-label="CineBot is typing">
     <span /><span /><span />
   </div>
 )
 
-// ── Main Component ─────────────────────────────────────
-export default function AIChatbot() {
-  const [isOpen,    setIsOpen]    = useState(false)
-  const [messages,  setMessages]  = useState<Message[]>([])
-  const [input,     setInput]     = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [showChips, setShowChips] = useState(true)
-  const [hasUnread, setHasUnread] = useState(false)
+// ── Main Component ────────────────────────────────────
+export default function AIChatbot({
+  onNavigate,
+}: {
+  onNavigate?: (path: string) => void
+}) {
+  const [isOpen,        setIsOpen]        = useState(false)
+  const [messages,      setMessages]      = useState<ChatMessage[]>([])
+  const [input,         setInput]         = useState("")
+  const [isLoading,     setIsLoading]     = useState(false)
+  const [catalog,       setCatalog]       = useState<Movie[]>([])
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
+  const [showChips,     setShowChips]     = useState(true)
+  const [hasUnread,     setHasUnread]     = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef       = useRef<HTMLTextAreaElement>(null)
 
-  // Scroll to bottom on new message
+  // Fetch catalog on mount
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const res  = await fetch(`${API_URL}/movies`)
+        const data = await res.json()
+        if (data.success) setCatalog(data.movies)
+      } catch {
+        // silently fail — chatbot still works without catalog
+      } finally {
+        setCatalogLoaded(true)
+      }
+    }
+    fetchCatalog()
+  }, [])
+
+  // Unread badge after 4s
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!isOpen && messages.length === 0) setHasUnread(true)
+    }, 4000)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading])
 
-  // Focus input when opened
+  // Focus input on open
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300)
@@ -74,59 +264,62 @@ export default function AIChatbot() {
     }
   }, [isOpen])
 
-  // Show unread badge after 3s if closed
-  useEffect(() => {
-    if (!isOpen && messages.length === 0) {
-      const t = setTimeout(() => setHasUnread(true), 3000)
-      return () => clearTimeout(t)
-    }
-  }, [])
-
   const handleToggle = () => setIsOpen(prev => !prev)
+  const handleReset  = () => { setMessages([]); setShowChips(true); setInput("") }
 
-  const handleSend = async (text?: string) => {
+  const handleSend = useCallback(async (text?: string) => {
     const userText = (text ?? input).trim()
     if (!userText || isLoading) return
 
-    const userMsg: Message = { role: "user", content: userText }
-    const nextMessages = [...messages, userMsg]
+    const userMsg: ChatMessage = { role: "user", content: userText }
+    const nextMessages         = [...messages, userMsg]
 
     setMessages(nextMessages)
     setInput("")
     setShowChips(false)
     setIsLoading(true)
 
+    // Strip movieCards before sending to API (only role+content needed)
+    const apiHistory = nextMessages.map(m => ({ role: m.role, content: m.content }))
+
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model:      "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: nextMessages,
+          system:     buildSystemPrompt(catalog),
+          messages:   apiHistory,
         }),
       })
 
-      const data = await response.json()
-      const assistantText =
+      const data     = await response.json()
+      const rawText: string =
         data?.content?.find((b: any) => b.type === "text")?.text ??
-        "Sorry, I couldn't process that. Please try again!"
+        "Sorry, something went wrong 🎥 — please try again!"
 
-      setMessages(prev => [...prev, { role: "assistant", content: assistantText }])
+      const { cleanText, cards } = parseMovieCards(rawText, catalog)
+
+      setMessages(prev => [
+        ...prev,
+        {
+          role:       "assistant",
+          content:    cleanText,
+          movieCards: cards.length > 0 ? cards : undefined,
+        },
+      ])
     } catch {
       setMessages(prev => [
         ...prev,
-        { role: "assistant", content: "Oops! Looks like the projector broke — please try again shortly." },
+        { role: "assistant", content: "Looks like the projector broke 🎬 — please try again shortly." },
       ])
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [input, messages, isLoading, catalog])
 
-  const handleChipClick = (chip: QuickChip) => {
-    handleSend(chip.prompt)
-  }
+  const handleChipClick = (chip: QuickChip) => handleSend(chip.prompt)
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -135,40 +328,39 @@ export default function AIChatbot() {
     }
   }
 
-  const handleReset = () => {
-    setMessages([])
-    setShowChips(true)
-    setInput("")
+  const handleBookMovie = (movieId: number) => {
+    if (onNavigate) onNavigate(`/book/${movieId}`)
+    else window.location.href = `/book/${movieId}`
   }
 
+  // ── Render ──
   return (
     <>
-      {/* ── Floating Button ── */}
+      {/* Floating Action Button */}
       <button
         className={`cb-fab ${isOpen ? "cb-fab--open" : ""}`}
         onClick={handleToggle}
-        aria-label={isOpen ? "Close CineBot" : "Open CineBot AI Assistant"}
+        aria-label={isOpen ? "Close CineBot" : "Open AI Movie Assistant"}
         tabIndex={0}
       >
-        {isOpen ? (
-          <i className="fa-solid fa-xmark cb-fab-icon" />
-        ) : (
-          <>
-            <i className="fa-solid fa-robot cb-fab-icon" />
-            {hasUnread && <span className="cb-fab-badge" aria-label="New message">1</span>}
-          </>
-        )}
-        <div className="cb-fab-ring" aria-hidden="true" />
+        {isOpen
+          ? <i className="fa-solid fa-xmark cb-fab-icon" aria-hidden="true" />
+          : <>
+              <i className="fa-solid fa-robot cb-fab-icon" aria-hidden="true" />
+              {hasUnread && <span className="cb-fab-badge" aria-label="Unread notification">1</span>}
+            </>
+        }
+        {!isOpen && <div className="cb-fab-ring" aria-hidden="true" />}
       </button>
 
-      {/* ── Chat Panel ── */}
+      {/* Chat Panel */}
       <div
         className={`cb-panel ${isOpen ? "cb-panel--open" : ""}`}
         role="dialog"
-        aria-label="CineBot AI Chat"
+        aria-label="CineBot AI Movie Assistant"
         aria-modal="true"
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="cb-header">
           <div className="cb-header-left">
             <div className="cb-avatar" aria-hidden="true">
@@ -177,18 +369,22 @@ export default function AIChatbot() {
             </div>
             <div>
               <p className="cb-header-name">CineBot</p>
-              <p className="cb-header-status">AI Assistant · Online</p>
+              <p className="cb-header-status">
+                {catalogLoaded
+                  ? `${catalog.length} movies loaded · Online`
+                  : "Loading catalog…"}
+              </p>
             </div>
           </div>
           <div className="cb-header-actions">
             <button
               className="cb-icon-btn"
               onClick={handleReset}
-              aria-label="Reset conversation"
+              aria-label="Start new conversation"
               title="New conversation"
               tabIndex={0}
             >
-              <i className="fa-solid fa-rotate-left" />
+              <i className="fa-solid fa-rotate-left" aria-hidden="true" />
             </button>
             <button
               className="cb-icon-btn"
@@ -196,24 +392,30 @@ export default function AIChatbot() {
               aria-label="Close chat"
               tabIndex={0}
             >
-              <i className="fa-solid fa-xmark" />
+              <i className="fa-solid fa-xmark" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="cb-messages" role="log" aria-live="polite">
-          {/* Welcome */}
+        {/* ── Messages ── */}
+        <div className="cb-messages" role="log" aria-live="polite" aria-atomic="false">
+
+          {/* Welcome screen */}
           {messages.length === 0 && (
             <div className="cb-welcome">
-              <div className="cb-welcome-icon" aria-hidden="true">
-                <i className="fa-solid fa-clapperboard" />
-              </div>
-              <p className="cb-welcome-title">Hey there, moviegoer!</p>
+              <div className="cb-welcome-icon" aria-hidden="true">🎬</div>
+              <p className="cb-welcome-title">Your personal movie guide</p>
               <p className="cb-welcome-sub">
-                I'm CineBot — your AI guide for everything CineBook.
-                Ask me about movies, tickets, showtimes, or anything else!
+                Describe your mood, search by vibe, or ask anything — I'll match you to the perfect film from our{" "}
+                <strong style={{ color: "var(--cb-gold)" }}>
+                  {catalog.length > 0 ? `${catalog.length} live listings` : "catalog"}
+                </strong>.
               </p>
+              <div className="cb-welcome-examples" aria-label="Example searches">
+                <span>"scary but not gory"</span>
+                <span>"movies like Inception"</span>
+                <span>"action under 2 hrs"</span>
+              </div>
             </div>
           )}
 
@@ -228,9 +430,29 @@ export default function AIChatbot() {
                   <i className="fa-solid fa-robot" />
                 </div>
               )}
-              <div className={`cb-bubble ${msg.role === "user" ? "cb-bubble--user" : "cb-bubble--bot"}`}>
-                <p className="cb-bubble-text">{msg.content}</p>
-                <span className="cb-bubble-time">{formatTime()}</span>
+
+              <div className="cb-msg-content-col">
+                <div className={`cb-bubble ${msg.role === "user" ? "cb-bubble--user" : "cb-bubble--bot"}`}>
+                  <p className="cb-bubble-text">{msg.content}</p>
+                  <span className="cb-bubble-time" aria-hidden="true">{formatTime()}</span>
+                </div>
+
+                {/* Movie result cards */}
+                {msg.movieCards && msg.movieCards.length > 0 && (
+                  <div
+                    className="cb-movie-cards-row"
+                    role="list"
+                    aria-label={`${msg.movieCards.length} movie recommendation${msg.movieCards.length > 1 ? "s" : ""}`}
+                  >
+                    {msg.movieCards.map(movie => (
+                      <MovieResultCard
+                        key={movie.id}
+                        movie={movie}
+                        onBook={handleBookMovie}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -247,12 +469,12 @@ export default function AIChatbot() {
             </div>
           )}
 
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
-        {/* Quick Chips */}
+        {/* ── Quick Chips ── */}
         {showChips && messages.length === 0 && (
-          <div className="cb-chips" role="list" aria-label="Quick questions">
+          <div className="cb-chips" role="list" aria-label="Quick mood prompts">
             {QUICK_CHIPS.map(chip => (
               <button
                 key={chip.label}
@@ -260,16 +482,15 @@ export default function AIChatbot() {
                 onClick={() => handleChipClick(chip)}
                 role="listitem"
                 tabIndex={0}
-                aria-label={chip.label}
+                aria-label={`Quick prompt: ${chip.label}`}
               >
-                <i className={`${chip.icon} cb-chip-icon`} aria-hidden="true" />
                 {chip.label}
               </button>
             ))}
           </div>
         )}
 
-        {/* Input */}
+        {/* ── Input ── */}
         <div className="cb-input-row">
           <textarea
             ref={inputRef}
@@ -277,9 +498,9 @@ export default function AIChatbot() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask me anything about movies…"
+            placeholder='Try "scary but not gory" or "movies like Inception"…'
             rows={1}
-            aria-label="Chat input"
+            aria-label="Type your movie request"
             disabled={isLoading}
           />
           <button
@@ -289,20 +510,19 @@ export default function AIChatbot() {
             aria-label="Send message"
             tabIndex={0}
           >
-            <i className="fa-solid fa-paper-plane" />
+            <i className="fa-solid fa-paper-plane" aria-hidden="true" />
           </button>
         </div>
 
-        <p className="cb-footer-note">Powered by Claude AI · CineBook 2026</p>
+        <p className="cb-footer-note" aria-hidden="true">
+          <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: 4, color: "var(--cb-gold)" }} />
+          Claude AI · Matching from your live catalog
+        </p>
       </div>
 
-      {/* Backdrop (mobile) */}
+      {/* Mobile backdrop */}
       {isOpen && (
-        <div
-          className="cb-backdrop"
-          onClick={handleToggle}
-          aria-hidden="true"
-        />
+        <div className="cb-backdrop" onClick={handleToggle} aria-hidden="true" />
       )}
     </>
   )
