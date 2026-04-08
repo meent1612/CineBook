@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import AIContentAssistant from "../components/AIContentAssistant"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -1401,6 +1402,9 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+          {<AIContentAssistant
+  onFill={(data) => setNewMovie(prev => ({ ...prev, ...data }))}
+/>}
         </div>
       )}
 

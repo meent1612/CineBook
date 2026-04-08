@@ -16,6 +16,21 @@ import BookTicket from "./pages/Bookticket"
 import MovieDetail from "./pages/MovieDetail"
 import Payment from "./pages/Payment"
 import AIChatbot from "./pages/Aichatbot"
+import AIContentAssistant from "./components/AIContentAssistant"
+import { ReactNode, useState } from "react"
+
+interface MovieFormData {
+  [key: string]: unknown
+}
+
+function AIContentAssistantWrapper() {
+  const handleFill = (data: Partial<MovieFormData>) => {
+    // Handle the filled form data here
+    console.log("Form data filled:", data)
+  }
+
+  return <AIContentAssistant onFill={handleFill} />
+}
 
 export default function App() {
   return (
@@ -35,6 +50,7 @@ export default function App() {
           <Route path="/book/:id"     element={<BookTicket />} />
           <Route path="/payment"      element={<Payment />} />
           <Route path= '/aichatbot'    element={<AIChatbot />} />
+          <Route path= '/aicontentassistant' element={<AIContentAssistantWrapper />} />
           <Route path="/user" element={
             <ProtectedRoute requiredRole="user">
               <UserDashboard />
