@@ -136,9 +136,8 @@ export default function Payment() {
         return
       }
 
-      // Card → direct success
-      setTrxId(paymentData.payment?.id?.toString()
-        || Math.random().toString(36).slice(2, 12).toUpperCase())
+      // Card
+      setTrxId(paymentData.transaction_id || paymentData.payment?.transaction_id || "—")
       setStep("success")
       setCountdown(8)
     } catch (err: any) {

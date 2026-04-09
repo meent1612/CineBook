@@ -1,8 +1,6 @@
 USE cinebook_db;
 GO
 
--- theaters table is created in 01_init.sql
-
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='seats' AND xtype='U')
 CREATE TABLE seats (
     id          BIGINT IDENTITY(1,1) PRIMARY KEY,
@@ -74,6 +72,7 @@ CREATE TABLE payments (
     amount           INT          NOT NULL,
     method           NVARCHAR(20) NOT NULL DEFAULT 'bkash'
                      CHECK (method IN ('bkash', 'nagad', 'card')),
+    transaction_id   NVARCHAR(50)  NULL,
     status           NVARCHAR(20) NOT NULL DEFAULT 'pending'
                      CHECK (status IN ('pending', 'completed', 'failed')),
     paid_at          DATETIME2    NULL,
