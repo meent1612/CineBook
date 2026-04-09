@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════
    BookTicket — full stylesheet
-   Screen is at the BOTTOM; VIP closest, Standard furthest
+   Screen is at the TOP; Standard closest, VIP furthest
    ═══════════════════════════════════════════════════════ */
 
 /* ── Page wrapper ───────────────────────────────────── */
@@ -58,15 +58,13 @@
   margin: 0 0 0.9rem;
   font-size: 0.95rem;
   font-weight: 700;
-  color:  #6B1829;
+  color: #6B1829;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid #f5c842;
   padding-bottom: 0.4rem;
   display: inline-block;
 }
-
-.book-section-body { /* no extra style needed */ }
 
 .book-empty {
   color: #9ca3af;
@@ -90,7 +88,7 @@
   text-align: center;
   font-size: 0.8rem;
   line-height: 1.4;
-  color:  #6B1829;
+  color: #6B1829;
   transition: all 0.15s;
   min-width: 52px;
 }
@@ -98,8 +96,8 @@
 .date-btn:hover { border-color: #f5c842; background: #fffbeb; }
 
 .date-btn.active {
-  background:  #6B1829;
-  border-color:  #6B1829;
+  background: #6B1829;
+  border-color: #6B1829;
   color: #f5c842;
   font-weight: 600;
 }
@@ -117,7 +115,7 @@
 
 .hall-badge {
   font-size: 0.78rem;
-  background:  #6B1829;
+  background: #6B1829;
   color: #f5c842;
   border-radius: 6px;
   padding: 0.3rem 0.7rem;
@@ -133,12 +131,12 @@
   padding: 0.4rem 0.9rem;
   font-size: 0.85rem;
   cursor: pointer;
-  color:  #6B1829;
+  color: #6B1829;
   transition: all 0.15s;
 }
 
 .showtime-btn:hover  { border-color: #f5c842; background: #fffbeb; }
-.showtime-btn.active { background:  #6B1829;; border-color:  #6B1829;; color: #f5c842; font-weight: 600; }
+.showtime-btn.active { background: #6B1829; border-color: #6B1829; color: #f5c842; font-weight: 600; }
 
 /* ── Seat type + quantity side-by-side ──────────────── */
 .seat-type-quantity-row {
@@ -294,19 +292,46 @@
 }
 
 /* ══════════════════════════════════════════════════════
-   SEAT MAP — white background, three-section hall layout
-   Screen at BOTTOM; VIP rows closest, Standard furthest
+   SEAT MAP — dark background like inspo, screen at TOP
+   Standard rows at top (far from screen visually),
+   VIP rows at bottom (closest to screen)
+   Fan/tapered shape: side sections narrow toward VIP rows
    ══════════════════════════════════════════════════════ */
 
 .seat-map-wrapper {
+  /* Dark background matching the inspo */
   background: #ffffff;
   border-radius: 12px;
-  padding: 1.2rem 0.75rem 1rem;
+  padding: 1rem 0.75rem 1.2rem;
   overflow-x: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #ffffff;
 }
 
-/* Hall: wall + left + aisle + center + aisle + right + wall */
+/* ── Screen at the TOP ───────────────────────────────── */
+.theatre-screen-top {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.theatre-screen-bar {
+  width: 80%;
+  margin: 0 auto;
+  height: 14px;
+  /* Curved upward — concave screen seen from audience below */
+  border-radius: 50% 50% 0 0 / 80% 80% 0 0;
+  background: linear-gradient(90deg, #b06a00 0%, #f5c842 35%, #ffdd55 50%, #f5c842 65%, #b06a00 100%);
+}
+
+.theatre-screen-label {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #c0a030;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ── Hall: wall + left + aisle + center + aisle + right + wall ── */
 .seat-hall {
   display: flex;
   flex-direction: row;
@@ -321,9 +346,9 @@
   text-orientation: mixed;
   font-size: 9px;
   letter-spacing: 3px;
-  color: #aaa;
-  background: #f0f0f0;
-  border: 1px solid #ddd;
+  color: #555;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
   padding: 8px 3px;
   align-self: stretch;
   display: flex;
@@ -345,10 +370,10 @@
   justify-content: center;
   align-self: stretch;
   font-size: 8px;
-  color: #c0c0c0;
+  color: #3d3d5c;
   letter-spacing: 1px;
-  padding: 0 4px;
-  min-width: 14px;
+  padding: 0 5px;
+  min-width: 16px;
   gap: 1px;
   user-select: none;
 }
@@ -360,22 +385,34 @@
   gap: 3px;
 }
 
-/* Each row inside a section */
-.hall-section .seat-row {
+/* Left section: rows right-aligned so taper fans outward to the right */
+.hall-section-left .seat-row {
   display: flex;
   align-items: center;
+  justify-content: flex-end;  /* right-align so narrow VIP rows hug the aisle */
   gap: 2px;
 }
 
-/* Center rows are horizontally centered */
-.seat-row-center {
+/* Center section: rows centered */
+.hall-section-center .seat-row {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 2px;
+}
+
+/* Right section: rows left-aligned so taper fans outward to the left */
+.hall-section-right .seat-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;  /* left-align so narrow VIP rows hug the aisle */
+  gap: 2px;
 }
 
 /* Row label (A, B, C …) */
 .seat-row-label {
   font-size: 9px;
-  color: #bbb;
+  color: #4a4a6a;
   width: 13px;
   text-align: center;
   flex-shrink: 0;
@@ -410,31 +447,8 @@
 }
 
 .seat-btn:not(:disabled):hover {
-  transform: scale(1.25);
+  transform: scale(1.3);
   z-index: 2;
-}
-
-/* ── Screen at the bottom ────────────────────────────── */
-.theatre-screen-bottom {
-  margin-top: 16px;
-  text-align: center;
-}
-
-.theatre-screen-bar {
-  width: 82%;
-  margin: 0 auto;
-  height: 14px;
-  /* curved downward — like a concave screen seen from audience */
-  border-radius: 0 0 50% 50% / 0 0 80% 80%;
-  background: linear-gradient(90deg, #b06a00 0%, #f5c842 35%, #ffdd55 50%, #f5c842 65%, #b06a00 100%);
-}
-
-.theatre-screen-label {
-  margin-top: 5px;
-  font-size: 10px;
-  color: #bbb;
-  letter-spacing: 3px;
-  text-transform: uppercase;
 }
 
 /* ── Summary card (right column) ────────────────────── */
@@ -446,7 +460,7 @@
 }
 
 .summary-header {
-  background: #000000;
+  background: #6B1829;
   color: #f5c842;
   font-weight: 700;
   font-size: 0.9rem;
@@ -486,11 +500,11 @@
   flex-shrink: 0;
 }
 
-.summary-movie-title    { font-weight: 700; font-size: 0.92rem; color: #1a1a2e; margin-bottom: 0.2rem; }
+.summary-movie-title    { font-weight: 700; font-size: 0.92rem; color: #6B1829; margin-bottom: 0.2rem; }
 .summary-movie-genre    { font-size: 0.78rem; color: #6b7280; margin-bottom: 0.15rem; }
 .summary-movie-category {
   font-size: 0.72rem;
-  background: #000000;
+  background: #6B1829;
   color: #f5c842;
   border-radius: 4px;
   padding: 0.15rem 0.45rem;
@@ -535,7 +549,7 @@
 
 .summary-total-amount {
   font-size: 1.05rem;
-  color: #1a1a2e;
+  color: #6B1829;
   font-weight: 700;
 }
 
@@ -583,7 +597,7 @@
 }
 
 .book-error button {
-  background: #1a1a2e;
+  background: #6B1829;
   color: #f5c842;
   border: none;
   border-radius: 8px;
@@ -594,7 +608,7 @@
 
 /* ── Footer ─────────────────────────────────────────── */
 .book-footer {
-  background: #1a1a2e;
+  background: #ffffff;
   color: #6b7280;
   text-align: center;
   font-size: 0.78rem;
@@ -614,3 +628,6 @@
   .seat-btn { width: 11px; height: 10px; }
   .hall-aisle { padding: 0 2px; min-width: 10px; }
 }
+
+
+  

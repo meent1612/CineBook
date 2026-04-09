@@ -76,7 +76,7 @@ const LEGEND_ITEMS = [
   { color: "#22c55e", label: "AI Recommended"},
 ]
 
-// ── Same 7-day window as ShowTimes ─────────────────────
+// ── 7-day window ───────────────────────────────────────
 const WEEK_DATES = new Set(
   Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
@@ -112,6 +112,34 @@ const formatDateLabel = (dateStr: string): { display: string; day: string } => {
   }
 }
 
+// ── Taper ratios per seat type ─────────────────────────
+// VIP rows (closest to screen) are narrow on sides → fan/wedge shape
+// Standard rows (furthest) are wide on sides
+const TAPER: Record<SeatTypeKey, { l: number; r: number }> = {
+  vip:           { l: 0.13, r: 0.13 },   // left=4, right=4  of 31
+  premium:       { l: 0.16, r: 0.16 },   // left=5, right=5  of 31
+  semi_recliner: { l: 0.22, r: 0.22 },   // left=7, right=7  of 31
+  standard:      { l: 0.28, r: 0.28 },   // left=8, right=8  of 30
+}
+
+// ── Split a row into left / center / right ─────────────
+// Uses seat_type-aware taper so VIP rows appear narrower on sides (fan shape)
+const splitRow = (seats: ApiSeat[]): { left: ApiSeat[]; center: ApiSeat[]; right: ApiSeat[] } => {
+  if (seats.length === 0) return { left: [], center: [], right: [] }
+  const sorted = [...seats].sort((a, b) => a.seat_number - b.seat_number)
+  const total  = sorted.length
+  // Use the seat type of the first seat in the row (all seats in a row share same type)
+  const stype  = sorted[0].seat_type
+  const ratio  = TAPER[stype] ?? { l: 0.28, r: 0.28 }
+  const lCount = Math.round(total * ratio.l)
+  const rCount = Math.round(total * ratio.r)
+  return {
+    left:   sorted.slice(0, lCount),
+    center: sorted.slice(lCount, total - rCount),
+    right:  sorted.slice(total - rCount),
+  }
+}
+
 // ── AI Seat Recommendation ─────────────────────────────
 interface RecommendResult {
   seats:  string[]
@@ -125,7 +153,7 @@ const recommendSeats = (
   seatType:      SeatTypeKey,
   quantity:      number,
 ): RecommendResult => {
-  const rows = Object.keys(seatsByRow).sort()
+  const rows      = Object.keys(seatsByRow).sort()
   const totalRows = rows.length
   if (totalRows === 0) return { seats: [], reason: "No seat data available." }
 
@@ -145,10 +173,9 @@ const recommendSeats = (
       s.seat_type === seatType &&
       (seatStatusMap[s.seat_label] === "available" || !seatStatusMap[s.seat_label])
     )
-
     if (availableSeats.length < quantity) return
 
-    const sorted   = [...availableSeats].sort((a, b) => a.seat_number - b.seat_number)
+    const sorted    = [...availableSeats].sort((a, b) => a.seat_number - b.seat_number)
     const totalCols = seats.length
     const centerCol = totalCols / 2
 
@@ -288,8 +315,15 @@ export default function BookTicket() {
         setScreenings(movieScreenings)
 
         const weekScreenings = movieScreenings.filter(s => WEEK_DATES.has(s.show_date))
-        if (weekScreenings.length > 0) {
-          const sorted = [...weekScreenings].sort((a, b) =>
+        // Fallback to nearest future screening if none in 7-day window
+        const today = new Date().toISOString().split("T")[0]
+        const futureScreenings = movieScreenings
+          .filter(s => s.show_date >= today)
+          .sort((a, b) => a.show_date.localeCompare(b.show_date) || a.start_time.localeCompare(b.start_time))
+        const screeningsToUse = weekScreenings.length > 0 ? weekScreenings : futureScreenings
+
+        if (screeningsToUse.length > 0) {
+          const sorted = [...screeningsToUse].sort((a, b) =>
             a.show_date.localeCompare(b.show_date) || a.start_time.localeCompare(b.start_time)
           )
           setSelectedDate(sorted[0].show_date)
@@ -355,6 +389,7 @@ export default function BookTicket() {
       setSeatType(prev => orderedTypes.includes(prev) ? prev : (orderedTypes[0] ?? "standard"))
     } catch {
       setSeatsByRow({})
+      setAvailableTypes([])
     } finally {
       setSeatsLoading(false)
     }
@@ -528,7 +563,7 @@ export default function BookTicket() {
     setSelectedScreening(screening)
   }
 
-  // ── Purchase → navigate to Payment page ───────────────
+  // ── Purchase ───────────────────────────────────────────
   const handlePurchase = () => {
     if (!user || !token) { navigate("/login"); return }
     if (!selectedScreening || selectedSeatIds.length === 0 || !movie) return
@@ -569,7 +604,7 @@ export default function BookTicket() {
     if (isSelected && !isAiPick) bg = "#FF9800"
     if (isSelected && isAiPick)  bg = "#22c55e"
 
-    const opacity = isTaken ? 0.5 : isWrongZone ? 0.18 : atLimit ? 0.35 : 1
+    const opacity = isTaken ? 0.5 : isWrongZone ? 0.25 : atLimit ? 0.4 : 1
     const cursor  = isTaken || isWrongZone || atLimit ? "not-allowed" : "pointer"
     const outline = isAiPick && isSelected ? "2px solid #16a34a" : "none"
 
@@ -590,20 +625,6 @@ export default function BookTicket() {
     )
   }
 
-  // ── Split a row's seats into left / center / right ─────
-  // The image shows roughly 28% left, 44% center, 28% right
-  const splitRow = (seats: ApiSeat[]) => {
-    const sorted = [...seats].sort((a, b) => a.seat_number - b.seat_number)
-    const total  = sorted.length
-    const lCount = Math.round(total * 0.28)
-    const rCount = Math.round(total * 0.28)
-    return {
-      left:   sorted.slice(0, lCount),
-      center: sorted.slice(lCount, total - rCount),
-      right:  sorted.slice(total - rCount),
-    }
-  }
-
   // ── Render guards ──────────────────────────────────────
   if (loading) return <div className="book-loading">Loading booking page…</div>
   if (error) return (
@@ -614,8 +635,11 @@ export default function BookTicket() {
   )
   if (!movie) return null
 
-  // Rows sorted A → Z  (A is closest to screen at the bottom, Z furthest)
-  const sortedRows = Object.keys(seatsByRow).sort()
+  // Rows A→Z sorted, then REVERSED so that:
+  // - Last row (O/N/M = Standard) renders at TOP of the map
+  // - Row A (VIP) renders at BOTTOM, closest to the screen bar
+  // This matches the inspo where Standard is at top and VIP is at bottom near screen
+  const sortedRows = Object.keys(seatsByRow).sort().reverse()
 
   return (
     <div className="book-wrapper">
@@ -680,8 +704,10 @@ export default function BookTicket() {
           {/* ── Seat type + quantity ── */}
           <div className="seat-type-quantity-row">
             <Section title="Select Seat Type">
-              {availableTypes.length === 0 ? (
+              {seatsLoading ? (
                 <p className="book-empty">Loading…</p>
+              ) : availableTypes.length === 0 ? (
+                <p className="book-empty">No seat types available.</p>
               ) : (
                 availableTypes.map(type => (
                   <label key={type} className="seat-type-option">
@@ -804,19 +830,26 @@ export default function BookTicket() {
             ) : (
               <div className="seat-map-wrapper">
 
+                {/* ── Screen at the TOP ── */}
+                <div className="theatre-screen-top">
+                  <div className="theatre-screen-bar" />
+                  <div className="theatre-screen-label">▲ SCREEN</div>
+                </div>
+
                 {/* ── Three-section hall ── */}
+                {/* sortedRows is reversed: Standard rows (O/N/M) at top, VIP (A/B) at bottom */}
                 <div className="seat-hall">
 
                   {/* WALL LEFT */}
                   <div className="hall-wall">WALL</div>
 
-                  {/* LEFT SECTION */}
-                  <div className="hall-section">
+                  {/* LEFT SECTION — tapered (fewer seats for VIP, more for Standard) */}
+                  <div className="hall-section hall-section-left">
                     {sortedRows.map(row => {
                       const { left } = splitRow(seatsByRow[row])
                       if (left.length === 0) return null
                       return (
-                        <div key={row} className="seat-row">
+                        <div key={row} className="seat-row seat-row-left">
                           <span className="seat-row-label">{row}</span>
                           {left.map(seat => renderSeat(seat))}
                         </div>
@@ -847,13 +880,13 @@ export default function BookTicket() {
                     {"AISLE".split("").map((ch, i) => <span key={i}>{ch}</span>)}
                   </div>
 
-                  {/* RIGHT SECTION */}
-                  <div className="hall-section">
+                  {/* RIGHT SECTION — tapered */}
+                  <div className="hall-section hall-section-right">
                     {sortedRows.map(row => {
                       const { right } = splitRow(seatsByRow[row])
                       if (right.length === 0) return null
                       return (
-                        <div key={row} className="seat-row">
+                        <div key={row} className="seat-row seat-row-right">
                           {right.map(seat => renderSeat(seat))}
                         </div>
                       )
@@ -863,12 +896,6 @@ export default function BookTicket() {
                   {/* WALL RIGHT */}
                   <div className="hall-wall hall-wall-right">WALL</div>
 
-                </div>
-
-                {/* ── Screen at the BOTTOM ── */}
-                <div className="theatre-screen-bottom">
-                  <div className="theatre-screen-bar" />
-                  <div className="theatre-screen-label">SCREEN</div>
                 </div>
 
               </div>
