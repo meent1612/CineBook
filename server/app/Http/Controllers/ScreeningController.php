@@ -172,11 +172,15 @@ class ScreeningController extends Controller
                 'success' => true,
                 'message' => 'Screening deleted successfully.',
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
+            } catch (\Exception $e) {
+        $msg = str_contains($e->getMessage(), 'FK__bookings')
+            ? 'This screening cannot be deleted because it has existing bookings.'
+            : $e->getMessage();
+
+        return response()->json([
+            'success' => false,
+            'message' => $msg,
+        ], 500);
+    }
     }
 }
