@@ -224,9 +224,10 @@ function useToast() {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Movie {
+  
   id: number; title: string; description: string | null; genre: string | null
   category: string; language: string | null; duration_mins: number | null
-  release_date: string | null; poster_url: string | null; trailer_url: string | null
+  release_date: string | null; poster_url: string | null; carasol_url: string | null; trailer_url: string | null
   status: "now_showing" | "coming_soon"; is_active: boolean
 }
 interface Hall {
@@ -325,7 +326,7 @@ const lbl: React.CSSProperties = { display: "block", fontSize: "0.72rem", fontWe
 const EMPTY_MOVIE = {
   title: "", description: "", genre: "", category: "2D",
   language: "English", duration_mins: "", release_date: "",
-  poster_url: "", trailer_url: "", status: "now_showing", is_active: true,
+  poster_url: "", carasol_url: "", trailer_url: "", status: "now_showing", is_active: true,
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -648,7 +649,7 @@ export default function AdminDashboard() {
       id: movie.id, title: movie.title, description: movie.description || "",
       genre: movie.genre || "", category: movie.category, language: movie.language || "",
       duration_mins: movie.duration_mins?.toString() || "", release_date: movie.release_date || "",
-      poster_url: movie.poster_url || "", trailer_url: movie.trailer_url || "",
+      poster_url: movie.poster_url || "",carasol_url: movie.carasol_url || "", trailer_url: movie.trailer_url || "",
       status: movie.status, is_active: movie.is_active,
     })
     setShowEditMovie(true)
@@ -1604,6 +1605,8 @@ export default function AdminDashboard() {
                 <label style={lbl}>Duration (mins)</label><input type="number" placeholder="e.g. 148" value={newMovie.duration_mins} onChange={setMovieField("duration_mins")} style={inp} min={1} />
                 <label style={lbl}>Release Date</label><input type="date" value={newMovie.release_date} onChange={setMovieField("release_date")} style={inp} />
                 <label style={lbl}>Poster URL</label><input type="text" placeholder="/posters/movie.jpg" value={newMovie.poster_url} onChange={setMovieField("poster_url")} style={inp} />
+                <label style={lbl}>Carousel URL</label>
+<input type="text" placeholder="https://…landscape image" value={newMovie.carasol_url as string} onChange={setMovieField("carasol_url")} style={inp} />
                 <label style={lbl}>Trailer URL</label><input type="text" placeholder="https://youtube.com/…" value={newMovie.trailer_url} onChange={setMovieField("trailer_url")} style={inp} />
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                   <input type="checkbox" id="is_active_check" checked={newMovie.is_active as boolean} onChange={setMovieField("is_active")} />
@@ -1646,6 +1649,8 @@ export default function AdminDashboard() {
                 <label style={lbl}>Duration (mins)</label><input type="number" value={editMovie.duration_mins as string} onChange={setEditField("duration_mins")} style={inp} min={1} />
                 <label style={lbl}>Release Date</label><input type="date" value={editMovie.release_date as string} onChange={setEditField("release_date")} style={inp} />
                 <label style={lbl}>Poster URL</label><input type="text" value={editMovie.poster_url as string} onChange={setEditField("poster_url")} style={inp} />
+                <label style={lbl}>Carousel URL</label>
+<input type="text" placeholder="https://…landscape image" value={editMovie.carasol_url as string} onChange={setEditField("carasol_url")} style={inp} />
                 <label style={lbl}>Trailer URL</label><input type="text" value={editMovie.trailer_url as string} onChange={setEditField("trailer_url")} style={inp} />
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                   <input type="checkbox" id="edit_is_active_check" checked={editMovie.is_active as boolean} onChange={setEditField("is_active")} />
