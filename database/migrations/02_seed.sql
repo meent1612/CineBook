@@ -38,12 +38,12 @@ GO
 IF NOT EXISTS (SELECT 1 FROM halls)
 BEGIN
     INSERT INTO halls (name, capacity, theater_id) VALUES
-    ('Hall 1', 100, 1),
-    ('Hall 2', 80,  1),
-    ('Hall 3', 120, 1),
-    ('Hall 1', 100, 2),
-    ('Hall 2', 80,  2),
-    ('Hall 3', 120, 2);
+    ('Hall 1', 397, 1),
+    ('Hall 2', 427,  1),
+    ('Hall 3', 457, 1),
+    ('Hall 1', 397, 2),
+    ('Hall 2', 427,  2),
+    ('Hall 3', 457, 2);
 END
 GO
 
