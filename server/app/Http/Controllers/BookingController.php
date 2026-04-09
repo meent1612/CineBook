@@ -273,7 +273,7 @@ class BookingController extends Controller
         }
 
         $bookings = Booking::where('user_id', $user->id)
-            ->with(['screening.movie', 'screening.hall'])
+            ->with(['screening.movie', 'screening.hall.theater'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -300,15 +300,22 @@ class BookingController extends Controller
 
             return [
                 'id'             => $first->id,
+                'booking_group_id' => $first->booking_group_id,
                 'movie_title'    => $movie?->title      ?? 'Unknown',
                 'movie_poster'   => $movie?->poster_url ?? null,
                 'show_date'      => $screening?->show_date  ?? '',
                 'start_time'     => $screening?->start_time ?? '',
-                'hall_name'      => $screening?->hall?->name ?? '',
+                'hall_name'      => $screening?->hall?->name    ?? '',
+                'theater_name'   => $screening?->hall?->theater?->name    ?? '',  // ← NEW
+                'theater_address'=> $screening?->hall?->theater?->address ?? '',  // ← NEW
                 'seats'          => $groupBookings->pluck('seat_label')->toArray(),
+                'seat_type'      => $first->seat_type,                            // ← NEW
+                'unit_price'     => $first->price,                                // ← NEW
                 'total_price'    => $groupBookings->sum('price'),
                 'status'         => $status,
-                'payment_method' => $payment?->method ?? null,
+                'payment_method' => $payment?->method         ?? null,
+                'transaction_id' => $payment?->transaction_id ?? null,            // ← NEW
+                'booking_date'   => $first->created_at?->toDateString() ?? '',    // ← NEW
             ];
         })->values();
 

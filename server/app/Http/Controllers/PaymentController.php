@@ -30,19 +30,23 @@ class PaymentController extends Controller
         ]);
 
         try {
+            $transactionId = 'TXN-' . now()->format('Ymd') . '-' . strtoupper(substr(md5(uniqid()), 0, 6));
+
             $payment = Payment::create([
                 'booking_group_id' => $request->booking_group_id,
                 'user_id'          => $user->id,
                 'amount'           => $request->amount,
                 'method'           => $request->method,
+                'transaction_id'   => $transactionId,
                 'status'           => 'completed',
                 'paid_at'          => now(),
             ]);
 
             return response()->json([
-                'success' => true,
-                'message' => 'Payment recorded successfully.',
-                'payment' => $payment,
+                'success'        => true,
+                'message'        => 'Payment recorded successfully.',
+                'payment'        => $payment,
+                'transaction_id' => $transactionId,   // ← frontend reads this
             ], 201);
 
         } catch (\Exception $e) {
