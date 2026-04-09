@@ -33,3 +33,14 @@ CREATE TABLE discounts (
     FOREIGN KEY (theater_id) REFERENCES theaters(id) ON DELETE NO ACTION
 );
 GO
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='otp_codes' AND xtype='U')
+CREATE TABLE otp_codes (
+    id         BIGINT IDENTITY(1,1) PRIMARY KEY,
+    email      NVARCHAR(255) NOT NULL,
+    code       NVARCHAR(6)   NOT NULL,
+    expires_at DATETIME2     NOT NULL,
+    used       BIT           NOT NULL DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE()
+);
+GO
