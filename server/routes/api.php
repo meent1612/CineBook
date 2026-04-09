@@ -50,8 +50,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/bookings',  [BookingController::class, 'getUserBookings']);
     Route::post('/bookings', [BookingController::class, 'createBooking']);
 
-    Route::post('/payments', [PaymentController::class, 'store']);
-
+    Route::post('/payments',            [PaymentController::class, 'store']);
+    Route::post('/payments/send-otp',   [PaymentController::class, 'sendOtp']);
+    Route::post('/payments/verify-otp', [PaymentController::class, 'verifyOtp']);
+    
     // Contact — user must be logged in
     Route::post('/contact',             [ContactController::class, 'store']);
     Route::get('/contact/my-messages',  [ContactController::class, 'myMessages']);
