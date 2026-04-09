@@ -1606,7 +1606,7 @@ export default function AdminDashboard() {
                 <label style={lbl}>Release Date</label><input type="date" value={newMovie.release_date} onChange={setMovieField("release_date")} style={inp} />
                 <label style={lbl}>Poster URL</label><input type="text" placeholder="/posters/movie.jpg" value={newMovie.poster_url} onChange={setMovieField("poster_url")} style={inp} />
                 <label style={lbl}>Carousel URL</label>
-<input type="text" placeholder="https://…landscape image" value={newMovie.carasol_url as string} onChange={setMovieField("carasol_url")} style={inp} />
+<input type="text" placeholder="/carasols/movie.jpg" value={newMovie.carasol_url as string} onChange={setMovieField("carasol_url")} style={inp} />
                 <label style={lbl}>Trailer URL</label><input type="text" placeholder="https://youtube.com/…" value={newMovie.trailer_url} onChange={setMovieField("trailer_url")} style={inp} />
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
                   <input type="checkbox" id="is_active_check" checked={newMovie.is_active as boolean} onChange={setMovieField("is_active")} />
