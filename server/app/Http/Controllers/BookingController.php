@@ -324,4 +324,13 @@ class BookingController extends Controller
             'bookings' => $result,
         ]);
     }
+    public function cancelGroup(string $bookingGroupId): JsonResponse
+    {
+        Booking::where('booking_group_id', $bookingGroupId)
+            ->where('user_id', auth()->id())
+            ->where('status', 'pending')
+            ->delete();
+
+        return response()->json(['success' => true]);
+    }
 }
