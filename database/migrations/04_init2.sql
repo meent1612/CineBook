@@ -27,10 +27,9 @@ CREATE TABLE bookings (
     seat_label       NVARCHAR(10) NOT NULL,
     seat_type        NVARCHAR(20) NOT NULL CHECK (seat_type IN ('standard', 'semi_recliner', 'premium', 'vip')),
     price            INT          NOT NULL,
-    status           NVARCHAR(20) NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled')),
+    status           NVARCHAR(20) NOT NULL DEFAULT 'confirmed' CHECK (status IN ('pending', 'confirmed', 'cancelled')),
     created_at       DATETIME2 DEFAULT GETDATE(),
     updated_at       DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT unique_booking UNIQUE (screening_id, seat_id),
     FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE NO ACTION,
     FOREIGN KEY (screening_id) REFERENCES screenings(id) ON DELETE NO ACTION,
     FOREIGN KEY (seat_id)      REFERENCES seats(id)      ON DELETE NO ACTION

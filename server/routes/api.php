@@ -49,6 +49,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/bookings',  [BookingController::class, 'getUserBookings']);
     Route::post('/bookings', [BookingController::class, 'createBooking']);
+    Route::delete('/bookings/group/{bookingGroupId}', [BookingController::class, 'cancelGroup']);
 
     Route::post('/payments',            [PaymentController::class, 'store']);
     Route::post('/payments/send-otp',   [PaymentController::class, 'sendOtp']);

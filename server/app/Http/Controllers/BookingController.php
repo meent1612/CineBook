@@ -227,15 +227,9 @@ class BookingController extends Controller
                     'seat_label'       => $seat->row_label . $seat->seat_number,
                     'seat_type'        => $seat->seat_type,
                     'price'            => $price,
-                    'status'           => 'confirmed',
+                    'status'           => 'pending',
                 ]);
             }
-
-            // Release this user's locks — seats are now confirmed
-            SeatLock::where('screening_id', $screeningId)
-                ->whereIn('seat_id', $seatIds)
-                ->where('user_id', $user->id)
-                ->delete();
 
             DB::commit();
 
@@ -273,6 +267,7 @@ class BookingController extends Controller
         }
 
         $bookings = Booking::where('user_id', $user->id)
+            ->whereIn('status', ['confirmed', 'cancelled'])
             ->with(['screening.movie', 'screening.hall.theater'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -323,5 +318,30 @@ class BookingController extends Controller
             'success'  => true,
             'bookings' => $result,
         ]);
+    }
+    public function cancelGroup(string $bookingGroupId): \Illuminate\Http\JsonResponse
+    {
+        $userId   = auth()->id();
+        $bookings = Booking::where('booking_group_id', $bookingGroupId)
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->get();
+
+        if ($bookings->isNotEmpty()) {
+            $screeningId = $bookings->first()->screening_id;
+            $seatIds     = $bookings->pluck('seat_id');
+
+            SeatLock::where('screening_id', $screeningId)
+                ->whereIn('seat_id', $seatIds)
+                ->where('user_id', $userId)
+                ->delete();
+
+            Booking::where('booking_group_id', $bookingGroupId)
+                ->where('user_id', $userId)
+                ->where('status', 'pending')
+                ->delete();
+        }
+
+        return response()->json(['success' => true]);
     }
 }

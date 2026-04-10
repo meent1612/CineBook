@@ -35,6 +35,14 @@ class SeatController extends Controller
                 ->pluck('seat_id')
                 ->toArray();
 
+            // Pending (not yet paid) bookings also count as locked
+            $pendingSeatIds = Booking::where('screening_id', $screeningId)
+                ->where('status', 'pending')
+                ->pluck('seat_id')
+                ->toArray();
+
+            $lockedSeatIds = array_unique(array_merge($lockedSeatIds, $pendingSeatIds));
+
             $seatsWithStatus = $seats->map(function ($seat) use ($bookedSeatIds, $lockedSeatIds) {
                 if (in_array($seat->id, $bookedSeatIds)) {
                     $status = 'taken';

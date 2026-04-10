@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OtpMail;
+use App\Models\Booking;
 use App\Models\OtpCode;
 use App\Models\Payment;
+use App\Models\SeatLock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -30,7 +32,8 @@ class PaymentController extends Controller
         OtpCode::create([
             'email'      => $request->email,
             'code'       => $code,
-            'expires_at' => now()->addMinutes(5),
+            'expires_at' => now()->addMinutes(1),
+            // 'expires_at' => now()->addSeconds(40),
             'used'       => false,
         ]);
 
@@ -93,6 +96,17 @@ class PaymentController extends Controller
             'paid_at'          => now(),
         ]);
 
+        // Confirm pending bookings now that OTP is verified
+        Booking::where('booking_group_id', $request->booking_group_id)
+            ->where('status', 'pending')
+            ->update(['status' => 'confirmed']);
+
+        $screeningId = Booking::where('booking_group_id', $request->booking_group_id)->value('screening_id');
+        if ($screeningId) {
+            $seatIds = Booking::where('booking_group_id', $request->booking_group_id)->pluck('seat_id');
+            SeatLock::where('screening_id', $screeningId)->whereIn('seat_id', $seatIds)->delete();
+        }
+
         return response()->json([
             'success'        => true,
             'message'        => 'Payment verified and recorded.',
@@ -132,6 +146,17 @@ class PaymentController extends Controller
                 'status'           => 'completed',
                 'paid_at'          => now(),
             ]);
+
+            // Confirm pending bookings now that card payment is complete
+            Booking::where('booking_group_id', $request->booking_group_id)
+                ->where('status', 'pending')
+                ->update(['status' => 'confirmed']);
+
+            $screeningId = Booking::where('booking_group_id', $request->booking_group_id)->value('screening_id');
+            if ($screeningId) {
+                $seatIds = Booking::where('booking_group_id', $request->booking_group_id)->pluck('seat_id');
+                SeatLock::where('screening_id', $screeningId)->whereIn('seat_id', $seatIds)->delete();
+            }
 
             return response()->json([
                 'success'        => true,
