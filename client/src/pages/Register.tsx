@@ -23,9 +23,21 @@ export default function Register() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // ✅ NEW: Special handler for mobile — digits only, max 10
+  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setForm((f) => ({ ...f, mobile: digitsOnly }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // ✅ NEW: Validate mobile is exactly 10 digits
+    if (form.mobile.length !== 10) {
+      setError("Mobile number must be exactly 10 digits.");
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match!");
@@ -83,8 +95,9 @@ export default function Register() {
                 type="tel"
                 placeholder="1xxxxxxxxx"
                 value={form.mobile}
-                onChange={set("mobile")}
+                onChange={handleMobileChange} 
                 required
+                maxLength={10}               
                 className="register-input flex-1"
               />
             </div>
