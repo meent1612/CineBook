@@ -24,7 +24,6 @@ interface Screening {
   start_time: string
   hall_name: string | null
   hall?: { id: number; name: string; capacity: number }
-  available_seats: number
 }
 
 interface ApiSeat {
@@ -74,6 +73,7 @@ const LEGEND_ITEMS = [
   { color: "#6B1829", label: "VIP"           },
   { color: "#FF9800", label: "Selected"      },
   { color: "#9E9E9E", label: "Taken"         },
+  { color: "#22c55e", label: "AI Recommended"},
 ]
 
 // ── 7-day window ───────────────────────────────────────
@@ -274,6 +274,8 @@ export default function BookTicket() {
   const [availableTypes, setAvailableTypes] = useState<SeatTypeKey[]>([])
   const [seatsLoading,   setSeatsLoading]   = useState(false)
 
+  const [discount, setDiscount] = useState<any | null>(null)
+
   const [seatType,        setSeatType]        = useState<SeatTypeKey>("standard")
   const [quantity,        setQuantity]        = useState(1)
   const [selectedSeats,   setSelectedSeats]   = useState<string[]>([])
@@ -312,7 +314,6 @@ export default function BookTicket() {
         setMovie(found)
         setScreenings(movieScreenings)
 
-        // ── Only pick the first screening within the 7-day window ──
         const weekScreenings = movieScreenings.filter(s => WEEK_DATES.has(s.show_date))
         // Fallback to nearest future screening if none in 7-day window
         const today = new Date().toISOString().split("T")[0]
@@ -352,6 +353,8 @@ export default function BookTicket() {
   // ── Load seats when screening changes ─────────────────
   const fetchSeats = useCallback(async (screeningId: number) => {
     setSeatsLoading(true)
+    setAiRecommendedSeats([])
+    setAiReason("")
     try {
       const res  = await fetch(`${API_URL}/seats/${screeningId}`)
       const data = await res.json()
@@ -467,7 +470,7 @@ export default function BookTicket() {
     .filter(s => s.show_date === selectedDate)
     .sort((a, b) => a.start_time.localeCompare(b.start_time))
 
-  const TOTAL = selectedSeats.length * PRICES[seatType]
+  const TOTAL = selectedSeats.length * getEffectivePrice(seatType)
 
   const locationDisplay = selectedTheater ? selectedTheater.name    : "—"
   const locationAddress = selectedTheater ? selectedTheater.address : "—"
@@ -479,6 +482,11 @@ export default function BookTicket() {
 
     if (localStatus === "taken")   return
     if (thisSeatType !== seatType) return
+
+    if (aiRecommendedSeats.length > 0) {
+      setAiRecommendedSeats([])
+      setAiReason("")
+    }
 
     if (localStatus === "selected") {
       setSeatStatusMap(prev => ({ ...prev, [key]: "available" }))
@@ -713,7 +721,16 @@ export default function BookTicket() {
                       borderRadius: "2px", background: ZONE_COLORS[type], flexShrink: 0,
                     }} />
                     <span>{SEAT_TYPE_DISPLAY[type]}</span>
-                    <span className="seat-type-price">BDT {PRICES[type]}</span>
+                    <span className="seat-type-price">
+                      {discount && (discount as any)[`${type}_pct`] > 0 ? (
+                        <>
+                          <span style={{ textDecoration: "line-through", color: "#9ca3af", marginRight: "0.3rem" }}>
+                            {PRICES[type]}
+                          </span>
+                          {getEffectivePrice(type)}
+                        </>
+                      ) : PRICES[type]} BDT
+                    </span>
                   </label>
                 ))
               )}
