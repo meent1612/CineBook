@@ -41,18 +41,79 @@ const STATUS_LABEL: Record<string, string> = {
 
 // ── Seat map layout ────────────────────────────────────
 // Rows O (top/standard) → A (bottom/VIP), mirroring the actual hall.
-// Each row has [left, center, right] seat counts.
+// Each row has [left, center, right] seat counts via taper ratios.
 const ALL_ROWS = ["O","N","M","L","K","J","I","H","G","F","E","D","C","B","A"] as const
 type RowKey = typeof ALL_ROWS[number]
 
-const ROW_CONFIG: Record<RowKey, { l: number; c: number; r: number }> = {
-  O: { l:5, c:10, r:5 }, N: { l:5, c:10, r:5 }, M: { l:5, c:10, r:5 },
-  L: { l:5, c:10, r:5 }, K: { l:5, c:10, r:5 }, J: { l:5, c:10, r:5 },
-  I: { l:5, c:10, r:5 }, H: { l:5, c:10, r:5 },
-  G: { l:6, c:12, r:6 }, F: { l:6, c:12, r:6 }, E: { l:6, c:12, r:6 },
-  D: { l:4, c:10, r:4 }, C: { l:4, c:10, r:4 },
-  B: { l:3, c:8,  r:3 }, A: { l:3, c:8,  r:3 },
+// Seat type per row (matches BookTicket zone layout)
+const ROW_TYPE: Record<RowKey, string> = {
+  O: "Standard",      N: "Standard",      M: "Standard",
+  L: "Standard",      K: "Standard",      J: "Standard",
+  I: "Standard",      H: "Standard",
+  G: "Semi-Recliner", F: "Semi-Recliner", E: "Semi-Recliner",
+  D: "Premium",       C: "Premium",
+  B: "VIP",           A: "VIP",
 }
+
+// Total seats per row (center + sides)
+const ROW_TOTAL: Record<RowKey, number> = {
+  O: 30, N: 30, M: 30, L: 30, K: 30, J: 30, I: 30, H: 30,
+  G: 36, F: 36, E: 36,
+  D: 28, C: 28,
+  B: 22, A: 22,
+}
+
+// Taper: VIP has narrower sides (fan/wedge shape), Standard wider sides
+const TAPER: Record<string, { l: number; r: number }> = {
+  Standard:      { l: 0.28, r: 0.28 },
+  "Semi-Recliner": { l: 0.22, r: 0.22 },
+  Premium:       { l: 0.16, r: 0.16 },
+  VIP:           { l: 0.13, r: 0.13 },
+}
+
+// Zone colors matching BookTicket (for reference only — not used in TicketDetail)
+const ZONE_COLOR: Record<string, string> = {
+  Standard:        "#2196F3",
+  "Semi-Recliner": "#9C27B0",
+  Premium:         "#c8a96e",
+  VIP:             "#6B1829",
+}
+
+// ── Build rows from labels ─────────────────────────────
+interface SeatCell {
+  label: string
+  section: "left" | "center" | "right"
+  isBought: boolean
+}
+
+interface RowData {
+  row: RowKey
+  type: string
+  left:   SeatCell[]
+  center: SeatCell[]
+  right:  SeatCell[]
+}
+
+const buildRows = (boughtSet: Set<string>): RowData[] =>
+  ALL_ROWS.map(row => {
+    const total  = ROW_TOTAL[row]
+    const type   = ROW_TYPE[row]
+    const ratio  = TAPER[type] ?? { l: 0.28, r: 0.28 }
+    const lCount = Math.round(total * ratio.l)
+    const rCount = Math.round(total * ratio.r)
+    const cCount = total - lCount - rCount
+
+    const makeCell = (seatNum: number, section: SeatCell["section"]): SeatCell => {
+      const label = `${row}${seatNum}`
+      return { label, section, isBought: boughtSet.has(label) }
+    }
+
+    const left:   SeatCell[] = Array.from({ length: lCount }, (_, i) => makeCell(i + 1, "left"))
+    const center: SeatCell[] = Array.from({ length: cCount }, (_, i) => makeCell(lCount + i + 1, "center"))
+    const right:  SeatCell[] = Array.from({ length: rCount }, (_, i) => makeCell(lCount + cCount + i + 1, "right"))
+
+    return { row, type, left, center, right }
+  })
 
 // ── Helpers ────────────────────────────────────────────
 const toArray = (s: string[] | string): string[] =>
@@ -111,36 +172,27 @@ function QRCode({ seed }: { seed: string }) {
 }
 
 // ── Seat Map ───────────────────────────────────────────
+// Fan-shaped 3-section layout identical to BookTicket image.
+// Bought seats = crimson/orange, all others = grey.
 function SeatMap({ boughtSeats }: { boughtSeats: string[] }) {
-  const bought = new Set(boughtSeats)
+  const boughtSet = useMemo(() => new Set(boughtSeats), [boughtSeats])
+  const rows      = useMemo(() => buildRows(boughtSet), [boughtSet])
 
-  const renderSection = (side: "l" | "c" | "r") =>
-    ALL_ROWS.map(row => {
-      const cfg   = ROW_CONFIG[row]
-      const count = side === "l" ? cfg.l : side === "c" ? cfg.c : cfg.r
-      const start = side === "l" ? 1 : side === "c" ? cfg.l + 1 : cfg.l + cfg.c + 1
+  const renderCell = (cell: SeatCell) => (
+    <span
+      key={cell.label}
+      title={cell.label}
+      className={`tdt-s ${cell.isBought ? "tdt-s-bought" : "tdt-s-other"}`}
+      aria-label={cell.label + (cell.isBought ? " — your seat" : "")}
+    />
+  )
 
-      return (
-        <div key={row} className="tdt-seat-row">
-          {side === "l" && <span className="tdt-row-lbl">{row}</span>}
-          {Array.from({ length: count }, (_, i) => {
-            const label = `${row}${start + i}`
-            const isBought = bought.has(label)
-            return (
-              <span
-                key={label}
-                title={label}
-                className={`tdt-s ${isBought ? "tdt-s-bought" : "tdt-s-taken"}`}
-              />
-            )
-          })}
-          {side === "r" && <span className="tdt-row-lbl tdt-row-lbl-r">{row}</span>}
-        </div>
-      )
-    })
+  // Group rows by type for zone dividers
+  let lastType = ""
 
   return (
     <div className="tdt-seatmap">
+
       {/* Screen */}
       <div className="tdt-screen-wrap">
         <div className="tdt-screen-bar" />
@@ -150,19 +202,71 @@ function SeatMap({ boughtSeats }: { boughtSeats: string[] }) {
       {/* Hall */}
       <div className="tdt-hall">
         <div className="tdt-hall-wall">WALL</div>
+
         <div className="tdt-hall-inner">
-          <div className="tdt-hall-sec">{renderSection("l")}</div>
+
+          {/* LEFT section */}
+          <div className="tdt-hall-sec tdt-hall-left">
+            {rows.map(({ row, type, left }) => {
+              if (left.length === 0) return null
+              const showDivider = type !== lastType
+              if (showDivider) lastType = type  // mutate for left pass — reset below
+              return (
+                <div key={row} className="tdt-seat-row">
+                  <span className="tdt-row-lbl">{row}</span>
+                  {left.map(renderCell)}
+                </div>
+              )
+            })}
+          </div>
+
           <div className="tdt-hall-aisle"><span className="tdt-aisle-lbl">AISLE</span></div>
-          <div className="tdt-hall-sec">{renderSection("c")}</div>
+
+          {/* CENTER section */}
+          <div className="tdt-hall-sec tdt-hall-center">
+            {(() => {
+              let _lastType = ""
+              return rows.map(({ row, type, center }) => {
+                if (center.length === 0) return null
+                const showDivider = type !== _lastType
+                if (showDivider) _lastType = type
+                return (
+                  <div key={row} className="tdt-seat-row">
+                    {showDivider && (
+                      <div className="tdt-zone-label" style={{ color: ZONE_COLOR[type] }}>
+                        {type}
+                      </div>
+                    )}
+                    {center.map(renderCell)}
+                  </div>
+                )
+              })
+            })()}
+          </div>
+
           <div className="tdt-hall-aisle"><span className="tdt-aisle-lbl">AISLE</span></div>
-          <div className="tdt-hall-sec">{renderSection("r")}</div>
+
+          {/* RIGHT section */}
+          <div className="tdt-hall-sec tdt-hall-right">
+            {rows.map(({ row, right }) => {
+              if (right.length === 0) return null
+              return (
+                <div key={row} className="tdt-seat-row tdt-seat-row-right">
+                  {right.map(renderCell)}
+                  <span className="tdt-row-lbl tdt-row-lbl-r">{row}</span>
+                </div>
+              )
+            })}
+          </div>
+
         </div>
-        <div className="tdt-hall-wall">WALL</div>
+
+        <div className="tdt-hall-wall tdt-hall-wall-r">WALL</div>
       </div>
 
       {/* Legend */}
       <div className="tdt-map-legend">
-        <span className="tdt-leg"><span className="tdt-leg-dot tdt-leg-taken" />Other seats</span>
+        <span className="tdt-leg"><span className="tdt-leg-dot tdt-leg-other" />Other seats</span>
         <span className="tdt-leg"><span className="tdt-leg-dot tdt-leg-bought" />Your seats</span>
       </div>
     </div>
@@ -267,9 +371,20 @@ export default function TicketDetail() {
         {/* ── Seats + map ── */}
         <div className="tdt-sec">
           <div className="tdt-sec-title">Your seats</div>
-          <div className="tdt-seats" style={{ marginBottom: "1rem" }}>
-            {seats.map(s => <span key={s} className="tdt-seat-chip">{s}</span>)}
+
+          {/* Seat chips with type label */}
+          <div className="tdt-seats">
+            {seats.map(s => (
+              <div key={s} className="tdt-seat-chip-wrap">
+                <span className="tdt-seat-chip">
+                  <i className="fa-solid fa-couch" />
+                  {s}
+                </span>
+                <span className="tdt-seat-chip-type">{booking.seat_type}</span>
+              </div>
+            ))}
           </div>
+
           <SeatMap boughtSeats={seats} />
         </div>
 
@@ -340,13 +455,7 @@ export default function TicketDetail() {
           <button className="tdt-btn">
             <i className="fa-solid fa-share-nodes" /> Share
           </button>
-          {canCancel && (
-            <button className="tdt-btn tdt-btn-cancel" onClick={handleCancel} disabled={cancelling}>
-              {cancelling
-                ? <><i className="fa-solid fa-spinner fa-spin" /> Cancelling…</>
-                : <><i className="fa-solid fa-xmark" /> Cancel</>}
-            </button>
-          )}
+          
         </div>
 
       </div>

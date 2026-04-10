@@ -1,460 +1,749 @@
-/* ────────────────────────────────────────
-   TicketDetail.css  —  crimson cinema theme
-   ──────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════
+   TicketDetail.css — CineBook Ticket View
+   Theme: Crimson Red & White · Refined Cinema Aesthetic
+   ═══════════════════════════════════════════════════════ */
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Variables ─────────────────────────────────────────── */
+:root {
+  --crimson:        #9B1C2E;
+  --crimson-dark:   #6B0F1F;
+  --crimson-light:  #C4253B;
+  --crimson-pale:   #fdf2f4;
+  --crimson-strip:  #8B1623;
+  --gold:           #c8a96e;
+  --white:          #ffffff;
+  --off-white:      #fafafa;
+  --grey-100:       #f5f5f5;
+  --grey-200:       #e8e8e8;
+  --grey-300:       #d1d5db;
+  --grey-500:       #9E9E9E;
+  --grey-700:       #555;
+  --text:           #1a1a1a;
+  --text-muted:     #888;
+  --seat-bought:    #e63946;
+  --seat-other:     #d1d5db;
+  --radius:         14px;
+  --shadow:         0 8px 40px rgba(155, 28, 46, 0.10);
+  --shadow-sm:      0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* ── Wrapper ───────────────────────────────────────────── */
 .tdt-wrapper {
-  max-width: 580px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f9eef0 0%, #fff7f8 50%, #fafafa 100%);
+  padding: 2rem 1rem 3rem;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
 }
 
-/* ── Empty state ── */
-.tdt-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 4rem 1rem;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  text-align: center;
-}
-.tdt-empty i { font-size: 28px; color: var(--color-text-tertiary); }
-.tdt-empty button {
-  margin-top: 0.5rem;
-  padding: 8px 20px;
-  border-radius: 8px;
-  border: 0.5px solid var(--color-border-secondary);
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--color-text-primary);
-}
-
-/* ── Back ── */
+/* ── Back button ───────────────────────────────────────── */
 .tdt-back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+  gap: 0.5rem;
   background: none;
-  border: none;
+  border: 1.5px solid var(--crimson);
+  color: var(--crimson);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 0;
-  margin-bottom: 1.25rem;
-  transition: color 0.15s;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.02em;
+  transition: background 0.18s, color 0.18s;
 }
-.tdt-back:hover { color: var(--color-text-primary); }
+.tdt-back:hover {
+  background: var(--crimson);
+  color: var(--white);
+}
 
-/* ── Ticket card ── */
+/* ── Ticket card ───────────────────────────────────────── */
 .tdt-ticket {
-  background: var(--color-background-primary);
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: 16px;
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   overflow: hidden;
+  border: 1px solid rgba(155, 28, 46, 0.08);
 }
 
-/* ── Hero ── */
+/* ── Hero ──────────────────────────────────────────────── */
 .tdt-hero {
-  background: #1a0a0e;
-  padding: 1.5rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.4rem;
   align-items: flex-start;
+  padding: 1.8rem 2rem 1.5rem;
+  background: linear-gradient(135deg, #fff 60%, #fdf2f4 100%);
+  border-bottom: 1px solid var(--grey-200);
 }
+
 .tdt-poster {
-  width: 72px;
-  height: 104px;
-  border-radius: 8px;
+  width: 80px;
+  height: 112px;
   object-fit: cover;
-  flex-shrink: 0;
-}
-.tdt-poster-fallback {
-  width: 72px;
-  height: 104px;
   border-radius: 8px;
-  background: #2d1018;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+.tdt-poster-fallback {
+  width: 80px;
+  height: 112px;
+  border-radius: 8px;
+  background: var(--grey-200);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--grey-500);
+  font-size: 1.8rem;
   flex-shrink: 0;
-  color: #7f3040;
-  font-size: 22px;
 }
-.tdt-hero-body { flex: 1; min-width: 0; }
+
+.tdt-hero-body {
+  flex: 1;
+}
+
 .tdt-movie-title {
-  font-size: 17px;
-  font-weight: 500;
-  color: #f9f0f2;
-  line-height: 1.3;
-  margin-bottom: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--crimson-dark);
+  margin-bottom: 0.55rem;
+  line-height: 1.25;
 }
-.tdt-badge-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+
+.tdt-badge-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
 .tdt-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
   border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.tdt-badge-type   { background: #3d0a14; color: #fca5a5; }
-.tdt-dot          { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-.tdt-status-upcoming  { background: #3d0a14; color: #fda4af; }
-.tdt-status-watched   { background: #052e16; color: #86efac; }
-.tdt-status-cancelled { background: #450a0a; color: #fca5a5; }
-.tdt-bid {
-  font-size: 11px;
-  color: #6b3040;
-  font-family: var(--font-mono, monospace);
-  margin-bottom: 3px;
-}
-.tdt-bon { font-size: 11px; color: #5a2a35; }
 
-/* ── Crimson strip ── */
-.tdt-strip { display: flex; background: #6B1829; }
+.tdt-badge-type {
+  background: rgba(155, 28, 46, 0.09);
+  color: var(--crimson);
+  border: 1px solid rgba(155, 28, 46, 0.18);
+}
+
+.tdt-badge-status {
+  border: 1px solid transparent;
+}
+.tdt-status-upcoming  { background: #e6f4ea; color: #1a7a3a; border-color: #b7dfc5; }
+.tdt-status-watched   { background: #e8edf5; color: #1e3a5f; border-color: #b8c9e0; }
+.tdt-status-cancelled { background: #fdecea; color: #9b1c2e; border-color: #f5b8be; }
+
+.tdt-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+.tdt-bid {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: 'DM Sans', monospace;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.tdt-bon {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ── Crimson info strip ─────────────────────────────────── */
+.tdt-strip {
+  display: flex;
+  background: linear-gradient(90deg, var(--crimson-strip) 0%, var(--crimson-light) 100%);
+  padding: 1rem 0;
+}
+
 .tdt-strip-item {
   flex: 1;
-  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  border-right: 0.5px solid rgba(255,255,255,0.12);
+  align-items: center;
+  gap: 0.2rem;
+  border-right: 1px solid rgba(255,255,255,0.18);
 }
 .tdt-strip-item:last-child { border-right: none; }
+
 .tdt-sl {
-  font-size: 10px;
-  color: rgba(255,255,255,0.55);
+  font-size: 0.65rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.65);
 }
+
 .tdt-sv {
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.02em;
 }
 
-/* ── Content sections ── */
+/* ── Sections ───────────────────────────────────────────── */
 .tdt-sec {
-  padding: 1rem 1.25rem;
-  border-bottom: 0.5px solid var(--color-border-tertiary);
+  padding: 1.4rem 2rem;
+  border-bottom: 1px solid var(--grey-200);
 }
+
 .tdt-sec-title {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--color-text-tertiary);
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--crimson-dark);
+  margin-bottom: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tdt-sec-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: var(--crimson);
+  border-radius: 2px;
+}
+
+.tdt-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.tdt-fl {
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin-bottom: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
 }
-.tdt-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tdt-fl { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 2px; }
-.tdt-fv { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
 
-/* ── Seat chips ── */
-.tdt-seats { display: flex; flex-wrap: wrap; gap: 6px; }
+.tdt-fv {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ── Seat chips ─────────────────────────────────────────── */
+.tdt-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.4rem;
+}
+
+.tdt-seat-chip-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .tdt-seat-chip {
-  padding: 5px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  background: #fef2f2;
-  color: #991b1b;
-  border: 0.5px solid #fca5a5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-light) 100%);
+  color: var(--white);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 8px rgba(155, 28, 46, 0.3);
+  white-space: nowrap;
+}
+.tdt-seat-chip i {
+  font-size: 0.75rem;
+  opacity: 0.85;
 }
 
-/* ══════════════════════════════════════
-   SEAT MAP
-   ══════════════════════════════════════ */
-.tdt-seatmap { padding-top: 0.25rem; }
+.tdt-seat-chip-type {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
 
-.tdt-screen-wrap { text-align: center; margin-bottom: 14px; }
+/* ═══════════════════════════════════════════════════════
+   SEAT MAP — Fan-shaped 3-section layout
+   ═══════════════════════════════════════════════════════ */
+
+.tdt-seatmap {
+  background: linear-gradient(180deg, #f9f9f9 0%, #f4f4f4 100%);
+  border-radius: 12px;
+  border: 1px solid var(--grey-200);
+  padding: 1.2rem 0.5rem 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Screen */
+.tdt-screen-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
 .tdt-screen-bar {
+  width: 75%;
   height: 6px;
-  background: #c8a96e;
-  border-radius: 0 0 40px 40px;
-  margin: 0 40px;
-}
-.tdt-screen-label {
-  font-size: 10px;
-  color: #c8a96e;
-  letter-spacing: 0.12em;
-  margin-top: 5px;
-  font-weight: 500;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, #e8d5a0 50%, var(--gold) 70%, transparent 100%);
+  border-radius: 4px;
+  box-shadow: 0 3px 12px rgba(200,169,110,0.4);
+  margin-bottom: 0.3rem;
 }
 
+.tdt-screen-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+/* Hall */
 .tdt-hall {
   display: flex;
   align-items: stretch;
   gap: 0;
+  justify-content: center;
+  width: 100%;
 }
+
+/* Wall labels */
 .tdt-hall-wall {
   writing-mode: vertical-rl;
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--color-text-tertiary);
+  text-orientation: mixed;
+  font-size: 0.6rem;
+  font-weight: 700;
   letter-spacing: 0.15em;
-  padding: 0 4px;
+  color: var(--grey-500);
+  background: var(--grey-200);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0.5px solid var(--color-border-tertiary);
+  padding: 0.6rem 0.3rem;
   border-radius: 4px;
-  background: var(--color-background-secondary);
+  min-width: 18px;
   flex-shrink: 0;
 }
-.tdt-hall-inner {
-  flex: 1;
-  display: flex;
-  gap: 0;
-  min-width: 0;
+.tdt-hall-wall-r {
+  border-radius: 4px;
 }
+
+/* Hall inner (3 sections + 2 aisles) */
+.tdt-hall-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  flex: 1;
+}
+
+/* Sections */
 .tdt-hall-sec {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
+  gap: 2px;
 }
+
+.tdt-hall-left  { align-items: flex-end; }
+.tdt-hall-right { align-items: flex-start; }
+.tdt-hall-center { flex: 1; align-items: center; }
+
+/* Aisle */
 .tdt-hall-aisle {
-  width: 14px;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--grey-500);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 4px;
+  min-width: 16px;
   flex-shrink: 0;
 }
+
 .tdt-aisle-lbl {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--grey-500);
   writing-mode: vertical-rl;
-  font-size: 7px;
-  letter-spacing: 0.1em;
-  color: var(--color-text-tertiary);
 }
 
+/* Seat rows */
 .tdt-seat-row {
   display: flex;
-  gap: 2px;
   align-items: center;
-  justify-content: center;
+  gap: 2px;
+  min-height: 14px;
 }
+
+.tdt-seat-row-right {
+  flex-direction: row;
+}
+
+/* Zone divider label in center section */
+.tdt-zone-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  width: 100%;
+  margin: 3px 0 1px;
+  opacity: 0.8;
+}
+
+/* Row labels */
 .tdt-row-lbl {
-  font-size: 8px;
-  color: var(--color-text-tertiary);
-  width: 10px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--grey-500);
+  min-width: 14px;
   text-align: right;
+  padding-right: 3px;
   flex-shrink: 0;
-  margin-right: 1px;
+  line-height: 1;
 }
+
 .tdt-row-lbl-r {
   text-align: left;
-  margin-right: 0;
-  margin-left: 1px;
+  padding-right: 0;
+  padding-left: 3px;
 }
 
-/* Individual seat squares */
+/* Individual seat dots */
 .tdt-s {
-  width: 9px;
-  height: 9px;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
   border-radius: 2px;
   flex-shrink: 0;
-}
-.tdt-s-taken  { background: #d1d5db; }
-.tdt-s-bought {
-  background: #f59e0b;
-  outline: 1.5px solid #d97706;
-  outline-offset: 0;
+  transition: transform 0.12s;
 }
 
-/* ── Map legend ── */
+/* Grey for other seats */
+.tdt-s-other {
+  background: var(--seat-other);
+  opacity: 0.7;
+}
+
+/* Crimson/orange for user's booked seats */
+.tdt-s-bought {
+  background: var(--seat-bought);
+  box-shadow: 0 0 4px rgba(230, 57, 70, 0.5);
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+/* Legend */
 .tdt-map-legend {
   display: flex;
-  gap: 12px;
   justify-content: center;
-  margin-top: 10px;
+  gap: 1.5rem;
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--grey-200);
 }
-.tdt-leg {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  color: var(--color-text-secondary);
-}
-.tdt-leg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-.tdt-leg-taken  { background: #d1d5db; }
-.tdt-leg-bought { background: #f59e0b; outline: 1.5px solid #d97706; outline-offset: 0; }
 
-/* ── Payment ── */
+.tdt-leg {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--grey-700);
+  font-weight: 500;
+}
+
+.tdt-leg-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tdt-leg-other  { background: var(--seat-other); }
+.tdt-leg-bought { background: var(--seat-bought); }
+
+/* ── Payment ─────────────────────────────────────────────── */
 .tdt-pay-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 0.8rem;
 }
+
 .tdt-trx {
-  font-size: 12px;
-  font-family: var(--font-mono, monospace);
-  color: var(--color-text-secondary);
-  margin-top: 2px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'DM Sans', monospace;
+  color: var(--text);
+  letter-spacing: 0.04em;
 }
+
 .tdt-method {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.9rem;
   border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
-  flex-shrink: 0;
-  white-space: nowrap;
 }
-.tdt-method i { font-size: 12px; }
 
-/* ── Pricing ── */
+/* ── Pricing ─────────────────────────────────────────────── */
 .tdt-pricing {
-  padding: 1rem 1.25rem;
-  background: var(--color-background-secondary);
+  padding: 1.2rem 2rem;
+  border-bottom: 1px solid var(--grey-200);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
 }
+
 .tdt-pr {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  padding: 3px 0;
-  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  color: var(--grey-700);
 }
-.tdt-pr span:last-child { color: var(--color-text-primary); }
+
 .tdt-ptotal {
   display: flex;
   justify-content: space-between;
-  font-size: 15px;
-  font-weight: 500;
-  padding-top: 10px;
-  margin-top: 8px;
-  border-top: 0.5px solid var(--color-border-secondary);
-  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--crimson-dark);
+  padding-top: 0.55rem;
+  border-top: 1.5px solid var(--grey-200);
+  margin-top: 0.2rem;
 }
-.tdt-ptotal span:last-child { color: #6B1829; font-size: 17px; }
 
-/* ── Perforated divider ── */
+/* ── Perforated divider ───────────────────────────────────── */
 .tdt-perf {
-  height: 20px;
   display: flex;
   align-items: center;
+  padding: 0;
   position: relative;
-  overflow: visible;
-}
-.tdt-perf-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-background-tertiary);
-  border: 0.5px solid var(--color-border-tertiary);
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  flex-shrink: 0;
-}
-.tdt-perf-l { left: -10px; }
-.tdt-perf-r { right: -10px; }
-.tdt-perf-line {
-  flex: 1;
-  margin: 0 14px;
-  border-top: 1.5px dashed var(--color-border-secondary);
+  height: 0;
+  margin: 0;
 }
 
-/* ── QR stub ── */
+.tdt-perf-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #f9eef0, #f0e0e4);
+  position: absolute;
+  top: -11px;
+  z-index: 2;
+  border: 1px solid var(--grey-200);
+}
+
+.tdt-perf-l { left: -11px; }
+.tdt-perf-r { right: -11px; }
+
+.tdt-perf-line {
+  width: 100%;
+  height: 1px;
+  border-top: 2px dashed var(--grey-200);
+}
+
+/* ── QR stub ─────────────────────────────────────────────── */
 .tdt-qr-row {
-  padding: 1.25rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-.tdt-qr {
-  width: 68px;
-  height: 68px;
-  flex-shrink: 0;
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(7, 1fr);
-  gap: 1.5px;
-  padding: 5px;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-tertiary);
-  border-radius: 8px;
-}
-.tdt-qr span { border-radius: 1px; }
-.tdt-qr-on   { background: var(--color-text-primary); }
-.tdt-qr-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-}
-.tdt-qr-desc {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
+  gap: 1.4rem;
+  padding: 1.6rem 2rem 1.4rem;
+  background: var(--crimson-pale);
 }
 
-/* ── Feedback ── */
+.tdt-qr {
+  display: grid;
+  grid-template-columns: repeat(7, 10px);
+  grid-template-rows:    repeat(7, 10px);
+  gap: 2px;
+  padding: 8px;
+  background: var(--white);
+  border-radius: 8px;
+  border: 1.5px solid rgba(155, 28, 46, 0.15);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.tdt-qr span {
+  width: 10px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--grey-200);
+}
+
+.tdt-qr span.tdt-qr-on {
+  background: var(--crimson-dark);
+}
+
+.tdt-qr-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--crimson-dark);
+  margin-bottom: 0.3rem;
+}
+
+.tdt-qr-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Feedback messages ───────────────────────────────────── */
 .tdt-msg {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 1.25rem;
-  padding: 10px 14px;
+  gap: 0.6rem;
+  padding: 0.8rem 1.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 0 1.5rem 0.5rem;
   border-radius: 8px;
-  font-size: 13px;
 }
-.tdt-msg-ok  { background: var(--color-background-success); color: var(--color-text-success); }
-.tdt-msg-err { background: var(--color-background-danger);  color: var(--color-text-danger);  }
 
-/* ── Actions ── */
+.tdt-msg-ok  { background: #e6f4ea; color: #1a7a3a; border: 1px solid #b7dfc5; }
+.tdt-msg-err { background: #fdecea; color: #9b1c2e; border: 1px solid #f5b8be; }
+
+/* ── Action buttons ──────────────────────────────────────── */
 .tdt-actions {
   display: flex;
-  gap: 8px;
-  padding: 1rem 1.25rem;
-  border-top: 0.5px solid var(--color-border-tertiary);
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 1.2rem 2rem 1.5rem;
+  justify-content: flex-end;
 }
+
 .tdt-btn {
-  flex: 1;
-  padding: 9px 6px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: 0.5px solid var(--color-border-secondary);
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
-  transition: background 0.15s;
+  gap: 0.45rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1.5px solid var(--crimson);
+  background: var(--white);
+  color: var(--crimson);
+  transition: background 0.18s, color 0.18s;
+  letter-spacing: 0.03em;
 }
-.tdt-btn:hover { background: var(--color-background-secondary); }
-.tdt-btn i { font-size: 12px; }
-.tdt-btn-cancel { color: #991b1b; border-color: #fca5a5; }
-.tdt-btn-cancel:hover { background: #fef2f2; }
-.tdt-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.tdt-btn:hover {
+  background: var(--crimson);
+  color: var(--white);
+}
 
-/* ── Footer ── */
+.tdt-btn-cancel {
+  border-color: #e53e3e;
+  color: #e53e3e;
+}
+.tdt-btn-cancel:hover {
+  background: #e53e3e;
+  color: var(--white);
+}
+.tdt-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Empty / loading states ──────────────────────────────── */
+.tdt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 50vh;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+.tdt-empty i { font-size: 2.5rem; color: var(--grey-300); }
+.tdt-empty button {
+  padding: 0.5rem 1.4rem;
+  background: var(--crimson);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
 .tdt-footer {
   text-align: center;
-  padding: 2rem 0 0;
-  font-size: 12px;
-  color: var(--color-text-tertiary);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2rem;
+  letter-spacing: 0.03em;
 }
 
-/* ── Responsive ── */
-@media (max-width: 480px) {
-  .tdt-grid2   { grid-template-columns: 1fr; }
-  .tdt-actions { flex-wrap: wrap; }
-  .tdt-actions .tdt-btn { flex: 1 1 calc(50% - 4px); }
-  .tdt-strip-item { padding: 8px 8px; }
-  .tdt-sv { font-size: 11px; }
-  .tdt-s  { width: 7px; height: 7px; }
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .tdt-wrapper { padding: 1rem 0.5rem 2rem; }
+  .tdt-hero    { padding: 1.2rem 1rem; }
+  .tdt-sec     { padding: 1.1rem 1rem; }
+  .tdt-pricing { padding: 1rem 1rem; }
+  .tdt-actions { padding: 1rem 1rem 1.2rem; }
+  .tdt-qr-row  { padding: 1.2rem 1rem; }
+
+  .tdt-strip { flex-wrap: wrap; }
+  .tdt-strip-item { min-width: 50%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.18); }
+  .tdt-strip-item:nth-child(even) { border-right: none; }
+
+  .tdt-movie-title { font-size: 1.2rem; }
+  .tdt-grid2 { grid-template-columns: 1fr; }
+  .tdt-actions { justify-content: center; }
+
+  .tdt-s { width: 8px; height: 8px; }
+  .tdt-hall-wall { min-width: 14px; font-size: 0.5rem; }
+  .tdt-row-lbl { font-size: 0.5rem; min-width: 12px; }
+  .tdt-hall-aisle { min-width: 12px; font-size: 0.42rem; }
+}
+
+/* ── Print styles ────────────────────────────────────────── */
+@media print {
+  .tdt-back, .tdt-actions { display: none; }
+  .tdt-wrapper { padding: 0; background: white; }
+  .tdt-ticket { box-shadow: none; border: 1px solid #ddd; }
 }
