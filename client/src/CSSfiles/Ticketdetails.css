@@ -1,0 +1,342 @@
+/* ─────────────────────────────────────────
+   TicketDetails.css
+   ───────────────────────────────────────── */
+
+.td-wrapper {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* ── Loading / Error ── */
+.td-loading,
+.td-error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-secondary, #6b7280);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+.td-error button {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 0.5px solid #d1d5db;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ── Back button ── */
+.td-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.25rem;
+  transition: color 0.15s;
+}
+.td-back-btn:hover { color: var(--color-text-primary, #111); }
+
+/* ── Card ── */
+.td-card {
+  background: var(--color-background-primary, #fff);
+  border: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12));
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.td-header {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.td-poster {
+  width: 72px;
+  height: 100px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.td-poster-fallback {
+  width: 72px;
+  height: 100px;
+  border-radius: 6px;
+  background: #2d2d4e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 24px;
+}
+.td-header-info { flex: 1; }
+.td-movie-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #f9fafb;
+  margin-bottom: 6px;
+}
+.td-meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.td-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.td-badge-genre    { background: #312e81; color: #c7d2fe; }
+.td-badge-category { background: #14532d; color: #bbf7d0; }
+.td-badge-lang     { background: #431407; color: #fed7aa; }
+.td-booking-id {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: var(--font-mono, monospace);
+}
+
+/* ── Status Row ── */
+.td-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.td-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.td-status-confirmed { background: var(--color-background-success, #f0fdf4); color: var(--color-text-success, #166534); }
+.td-status-cancelled { background: var(--color-background-danger,  #fef2f2); color: var(--color-text-danger,  #991b1b); }
+.td-status-pending   { background: var(--color-background-warning, #fffbeb); color: var(--color-text-warning, #92400e); }
+.td-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.td-booking-date {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+/* ── Sections ── */
+.td-section {
+  padding: 1rem 1.25rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+}
+.td-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+}
+.td-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.td-info-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #9ca3af);
+  margin-bottom: 2px;
+}
+.td-info-value {
+  font-size: 13px;
+  color: var(--color-text-primary, #111);
+  font-weight: 500;
+}
+.td-info-value.td-accent { color: #7c3aed; }
+
+/* ── Seats ── */
+.td-seats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+.td-seat-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--color-background-secondary, #f9fafb);
+  border: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+  color: var(--color-text-primary, #111);
+}
+.td-seat-chip.td-seat-ai {
+  background: #f3e8ff;
+  border-color: #c4b5fd;
+  color: #5b21b6;
+}
+.td-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  background: #f3e8ff;
+  color: #5b21b6;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+/* ── Transaction ── */
+.td-trx-section {
+  padding: 0.875rem 1.25rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+}
+.td-trx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.td-trx-id {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary, #6b7280);
+}
+.td-method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #fce7f3;
+  color: #9d174d;
+  white-space: nowrap;
+}
+
+/* ── Pricing ── */
+.td-price-section {
+  padding: 1rem 1.25rem;
+  background: var(--color-background-secondary, #f9fafb);
+}
+.td-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.td-price-lbl { color: var(--color-text-secondary, #6b7280); }
+.td-price-val { color: var(--color-text-primary, #111); }
+.td-discount  { color: var(--color-text-success, #166534); }
+.td-price-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0 0;
+  margin-top: 6px;
+  border-top: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+}
+.td-price-total-lbl { font-size: 14px; font-weight: 500; }
+.td-price-total-val { font-size: 16px; font-weight: 500; color: #7c3aed; }
+
+/* ── Ticket divider ── */
+.td-ticket-divider {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.td-divider-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-background-tertiary, #f3f4f6);
+  border: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
+  flex-shrink: 0;
+}
+.td-divider-dash {
+  flex: 1;
+  border-top: 1.5px dashed var(--color-border-secondary, rgba(0,0,0,0.2));
+}
+
+/* ── Cancel feedback ── */
+.td-cancel-msg {
+  margin: 0 1.25rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 0.5rem;
+}
+.td-cancel-success { background: var(--color-background-success, #f0fdf4); color: var(--color-text-success, #166534); }
+.td-cancel-error   { background: var(--color-background-danger,  #fef2f2); color: var(--color-text-danger,  #991b1b); }
+
+/* ── Actions ── */
+.td-actions {
+  display: flex;
+  gap: 8px;
+  padding: 1rem 1.25rem;
+}
+.td-btn {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0.5px solid var(--color-border-secondary, rgba(0,0,0,0.2));
+  background: var(--color-background-primary, #fff);
+  color: var(--color-text-primary, #111);
+  transition: background 0.15s;
+}
+.td-btn:hover { background: var(--color-background-secondary, #f9fafb); }
+.td-btn.td-btn-danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+.td-btn.td-btn-danger:hover { background: #fef2f2; }
+.td-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Footer ── */
+.td-footer {
+  text-align: center;
+  padding: 2rem 1rem 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary, #9ca3af);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .td-info-grid { grid-template-columns: 1fr; }
+  .td-actions { flex-wrap: wrap; }
+  .td-actions .td-btn { flex: 1 1 calc(50% - 4px); }
+  .td-status-row { flex-direction: column; align-items: flex-start; }
+}
