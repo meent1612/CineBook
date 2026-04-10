@@ -109,7 +109,7 @@ export default function Payment() {
     setError("")
 
     if (method === "bkash" || method === "nagad") {
-      if (!phone || phone.length <= 10) {
+      if (!phone || phone.length < 10) {
         setError("Please enter a valid phone number.")
         return
       }
@@ -452,9 +452,9 @@ export default function Payment() {
                 {method === "bkash" ? "bKash" : "Nagad"} Account Number *
               </label>
               <div className="pay-input-wrap">
-                <span className="pay-input-prefix">+88</span>
+                <span className="pay-input-prefix">+880</span>
                 <input type="tel" className="pay-input pay-input-with-prefix"
-                  placeholder="1XXXXXXXXX" maxLength={11}
+                  placeholder="1XXXXXXXXX" maxLength={10}
                   value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} />
               </div>
               <p className="pay-input-hint">
