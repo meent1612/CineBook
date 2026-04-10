@@ -8,12 +8,14 @@ export default function Register() {
     fullName: "",
     mobile: "",
     email: "",
-    gender: "Male",
+    gender: "Female",
     password: "",
     confirmPassword: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -23,17 +25,19 @@ export default function Register() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // ✅ NEW: Special handler for mobile — digits only, max 10
-  const handleMobileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setForm((f) => ({ ...f, mobile: digitsOnly }));
+  // Only allow digit keys in the mobile field
+  const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"];
+    if (allowedKeys.includes(e.key)) return;
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault(); // block alphabets and special chars
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // ✅ NEW: Validate mobile is exactly 10 digits
     if (form.mobile.length !== 10) {
       setError("Mobile number must be exactly 10 digits.");
       return;
@@ -65,6 +69,8 @@ export default function Register() {
 
   return (
     <div className="register-wrapper">
+      {/* Add Font Awesome CDN in your index.html if not already added:
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /> */}
       <div className="register-card">
         <div className="register-card-header">
           <h2>Register to CineBook</h2>
@@ -95,9 +101,10 @@ export default function Register() {
                 type="tel"
                 placeholder="1xxxxxxxxx"
                 value={form.mobile}
-                onChange={handleMobileChange} 
+                onChange={set("mobile")}
+                onKeyDown={handleMobileKeyDown}
+                maxLength={10}          // hard cap at 10 digits
                 required
-                maxLength={10}               
                 className="register-input flex-1"
               />
             </div>
@@ -127,25 +134,45 @@ export default function Register() {
           </Field>
 
           <Field label="Password*">
-            <input
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={set("password")}
-              required
-              className="register-input"
-            />
+            <div className="password-row">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={form.password}
+                onChange={set("password")}
+                required
+                className="register-input"
+              />
+              <button
+                type="button"
+                className="eye-btn"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                <i className={`fa-regular ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
+              </button>
+            </div>
           </Field>
 
           <Field label="Confirm Password*">
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={form.confirmPassword}
-              onChange={set("confirmPassword")}
-              required
-              className="register-input"
-            />
+            <div className="password-row">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                onChange={set("confirmPassword")}
+                required
+                className="register-input"
+              />
+              <button
+                type="button"
+                className="eye-btn"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                <i className={`fa-regular ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`} />
+              </button>
+            </div>
           </Field>
 
           <button type="submit" className="register-btn" disabled={loading}>

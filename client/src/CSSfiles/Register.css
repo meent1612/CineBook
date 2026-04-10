@@ -113,3 +113,38 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Password field wrapper */
+.password-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Make the input take full width and add right padding for the icon */
+.password-row .register-input {
+  width: 100%;
+  padding-right: 42px; /* space for eye icon */
+  box-sizing: border-box;
+}
+
+/* Eye button sits INSIDE the input box on the right */
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #aaa;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  z-index: 1;
+}
+
+.eye-btn:hover {
+  color: #555;
+}
