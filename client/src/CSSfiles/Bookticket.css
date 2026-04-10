@@ -76,6 +76,7 @@
 .date-btn-row {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .date-btn {
@@ -303,7 +304,7 @@
   border-radius: 12px;
   padding: 1rem 0.75rem 1.2rem;
   overflow-x: auto;
-  border: 1px solid #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 /* ── Screen at the TOP ───────────────────────────────── */
@@ -346,8 +347,8 @@
   font-size: 9px;
   letter-spacing: 3px;
   color: #555;
-  background: #e5e7eb;
-  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
   padding: 8px 3px;
   align-self: stretch;
   display: flex;
@@ -380,6 +381,7 @@
 /* ── Seat sections ───────────────────────────────────── */
 .hall-section {
   display: flex;
+  flex-direction: column;
   gap: 3px;
 }
 
@@ -519,7 +521,7 @@
 }
 
 .summary-row-key   { color: #9ca3af; flex-shrink: 0; }
-.summary-row-value { color: #1a1a2e; font-weight: 500; text-align: right; word-break: break-word; }
+.summary-row-value { color: #6B1829; font-weight: 500; text-align: right; word-break: break-word; }
 
 .summary-ai-badge {
   display: inline-flex;
@@ -547,7 +549,7 @@
 
 .summary-total-amount {
   font-size: 1.05rem;
-  color: #6B1829;
+  color: #1a1a2e;
   font-weight: 700;
 }
 
@@ -606,7 +608,7 @@
 
 /* ── Footer ─────────────────────────────────────────── */
 .book-footer {
-  background: #ffffff;
+  background: #fffefe;
   color: #6b7280;
   text-align: center;
   font-size: 0.78rem;
@@ -626,6 +628,3 @@
   .seat-btn { width: 11px; height: 10px; }
   .hall-aisle { padding: 0 2px; min-width: 10px; }
 }
-
-
-  

@@ -46,18 +46,19 @@ export default function Payment() {
 
   const booking = location.state as BookingData | null
 
-  const [method,      setMethod]      = useState<PaymentMethod>("bkash")
-  const [phone,       setPhone]       = useState("")
-  const [cardNumber,  setCardNumber]  = useState("")
-  const [cardExpiry,  setCardExpiry]  = useState("")
-  const [cardCvv,     setCardCvv]     = useState("")
-  const [cardName,    setCardName]    = useState("")
-  const [processing,  setProcessing]  = useState(false)
-  const [error,       setError]       = useState("")
-  const [step,        setStep]        = useState<"form" | "otp" | "success">("form")
-  const [otp,         setOtp]         = useState("")
-  const [trxId,       setTrxId]       = useState("")
-  const [countdown,   setCountdown]   = useState(0)
+  const [method,          setMethod]          = useState<PaymentMethod>("bkash")
+  const [phone,           setPhone]           = useState("")
+  const [cardNumber,      setCardNumber]      = useState("")
+  const [cardExpiry,      setCardExpiry]      = useState("")
+  const [cardCvv,         setCardCvv]         = useState("")
+  const [cardName,        setCardName]        = useState("")
+  const [processing,      setProcessing]      = useState(false)
+  const [error,           setError]           = useState("")
+  const [step,            setStep]            = useState<"form" | "otp" | "success">("form")
+  const [otp,             setOtp]             = useState("")
+  const [trxId,           setTrxId]           = useState("")
+  const [countdown,       setCountdown]       = useState(0)
+  const [bookingGroupId,  setBookingGroupId]  = useState("")  // Change 3: track across steps
 
   // Redirect if no booking data or not logged in
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function Payment() {
     setError("")
 
     if (method === "bkash" || method === "nagad") {
-      if (!phone || phone.length < 10) {
+      if (!phone || phone.length <= 10) {
         setError("Please enter a valid phone number.")
         return
       }
@@ -112,16 +113,18 @@ export default function Payment() {
       const bookingData = await bookingRes.json()
       if (!bookingData.success) throw new Error(bookingData.message)
 
-      const bookingGroupId = bookingData.booking_group_id
+      const resolvedBookingGroupId = bookingData.booking_group_id
         || bookingData.bookings?.[0]?.booking_group_id
         || crypto.randomUUID()
+
+      setBookingGroupId(resolvedBookingGroupId)  // Change 3: save to state
 
       // Step 2: Create payment record
       const paymentRes = await fetch(`${API_URL}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          booking_group_id: bookingGroupId,
+          booking_group_id: resolvedBookingGroupId,
           amount:           grandTotal,
           method:           method,
         }),
@@ -129,8 +132,19 @@ export default function Payment() {
       const paymentData = await paymentRes.json()
       if (!paymentData.success) throw new Error(paymentData.message)
 
-      // Mobile banking → OTP step
+      // Change 1: Mobile banking → send real OTP to email
       if (method === "bkash" || method === "nagad") {
+        const otpRes  = await fetch(`${API_URL}/payments/send-otp`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            email:       user?.email,
+            movie_title: booking.movieTitle,
+          }),
+        })
+        const otpData = await otpRes.json()
+        if (!otpData.success) throw new Error(otpData.message)
+
         setStep("otp")
         setProcessing(false)
         return
@@ -147,21 +161,34 @@ export default function Payment() {
     }
   }
 
-  // ── Verify OTP ──
+  // ── Verify OTP ── Change 2: real verify call
   const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 4) {
-      setError("Please enter the OTP sent to your phone.")
+    if (!otp || otp.length < 6) {
+      setError("Please enter the 6-digit OTP sent to your email.")
       return
     }
     setProcessing(true)
     setError("")
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      setTrxId(Math.random().toString(36).slice(2, 12).toUpperCase())
+      const res  = await fetch(`${API_URL}/payments/verify-otp`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          email:            user?.email,
+          code:             otp,
+          booking_group_id: bookingGroupId,
+          amount:           grandTotal,
+          method:           method,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+
+      setTrxId(data.transaction_id)
       setStep("success")
       setCountdown(8)
-    } catch {
-      setError("OTP verification failed.")
+    } catch (err: any) {
+      setError(err.message || "OTP verification failed.")
     } finally {
       setProcessing(false)
     }
@@ -179,18 +206,19 @@ export default function Payment() {
   }
 
   const handleBack = async () => {
-  if (token && booking) {
-    await fetch(`${API_URL}/seats/unlock`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body:    JSON.stringify({
-        screening_id: booking.screeningId,
-        seat_ids:     booking.seatIds,
-      }),
-    }).catch(() => {})
+    if (token && booking) {
+      await fetch(`${API_URL}/seats/unlock`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({
+          screening_id: booking.screeningId,
+          seat_ids:     booking.seatIds,
+        }),
+      }).catch(() => {})
+    }
+    navigate(-1)
   }
-  navigate(-1)
-}
+
   // ═══════════════════════════════════════════════════════
   // SUCCESS SCREEN
   // ═══════════════════════════════════════════════════════
@@ -244,8 +272,9 @@ export default function Payment() {
             <span>Verify {mLabel} Payment</span>
           </div>
           <div className="pay-otp-body">
+            {/* Change 4: email instead of phone */}
             <p className="pay-otp-msg">
-              An OTP has been sent to <strong>{phone.slice(0, 4)}****{phone.slice(-3)}</strong>.
+              A 6-digit OTP has been sent to <strong>{user?.email}</strong>.
               Enter it below to confirm your payment of <strong>{grandTotal.toLocaleString()} BDT</strong>.
             </p>
 
@@ -352,7 +381,7 @@ export default function Payment() {
           {(method === "bkash" || method === "nagad") && (
             <div className="pay-fields">
               <div className="pay-method-banner" style={{
-                background: method === "bkash" ? "#FDE8F0" : "#FFF3E0",
+                background:  method === "bkash" ? "#FDE8F0" : "#FFF3E0",
                 borderLeft: `4px solid ${method === "bkash" ? "#E2136E" : "#F6921E"}`,
               }}>
                 <i className="fa-solid fa-mobile-screen-button"
@@ -364,7 +393,7 @@ export default function Payment() {
                 {method === "bkash" ? "bKash" : "Nagad"} Account Number *
               </label>
               <div className="pay-input-wrap">
-                <span className="pay-input-prefix">+880</span>
+                <span className="pay-input-prefix">+88</span>
                 <input type="tel" className="pay-input pay-input-with-prefix"
                   placeholder="1XXXXXXXXX" maxLength={11}
                   value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} />
