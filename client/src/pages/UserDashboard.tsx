@@ -5,15 +5,22 @@ import "../CSSfiles/UserDashboard.css"
 
 interface Booking {
   id: number
+  booking_group_id: string
   movie_title: string
   movie_poster: string | null
   show_date: string
   start_time: string
   hall_name: string
+  theater_name: string
+  theater_address: string
   seats: string[]
+  seat_type: string
+  unit_price: number
   total_price: number
   status: "upcoming" | "watched" | "cancelled"
-  payment_method: "bkash" | "nagad" | "card" | null  // ADD
+  payment_method: "bkash" | "nagad" | "card" | null
+  transaction_id: string | null
+  booking_date: string
 }
 
 interface ProfileData {
@@ -64,8 +71,14 @@ function TicketPoster({ title, poster, className }: { title: string; poster: str
 }
 
 function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: boolean }) {
+  const navigate = useNavigate()
+
+  const handleViewDetail = () => {
+    navigate("/ticket-detail", { state: booking })
+  }
+
   return (
-    <div className={`ud-ticket-card ${booking.status}`}>
+    <div className={`ud-ticket-card ${booking.status}`} onClick={handleViewDetail} style={{ cursor: "pointer" }}>
       <TicketPoster
         title={booking.movie_title}
         poster={booking.movie_poster}
@@ -76,6 +89,7 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
         <div className="ud-ticket-meta">
           <span><i className="fa-regular fa-calendar" /> {formatDate(booking.show_date)}</span>
           <span><i className="fa-regular fa-clock" /> {formatTime(booking.start_time)}</span>
+          <span><i className="fa-solid fa-building" /> {booking.theater_name || "—"}</span>
           <span><i className="fa-solid fa-masks-theater" /> {booking.hall_name}</span>
         </div>
         <div className="ud-ticket-meta">
@@ -88,11 +102,7 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
       <div className="ud-ticket-right">
         {showStatus && (
           <span className={`ud-status-badge ${booking.status}`}>
-            {booking.status === "upcoming"
-              ? "Upcoming"
-              : booking.status === "watched"
-              ? "Watched"
-              : "Cancelled"}
+            {booking.status === "upcoming" ? "Upcoming" : booking.status === "watched" ? "Watched" : "Cancelled"}
           </span>
         )}
         <div className="ud-ticket-total">
@@ -103,6 +113,14 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
             <i className="fa-solid fa-credit-card" /> {booking.payment_method.charAt(0).toUpperCase() + booking.payment_method.slice(1)}
           </div>
         )}
+        {booking.transaction_id && (
+          <div className="ud-ticket-txn" title="Transaction ID">
+            <i className="fa-solid fa-receipt" /> {booking.transaction_id}
+          </div>
+        )}
+        <div className="ud-ticket-view-detail">
+          <i className="fa-solid fa-chevron-right" />
+        </div>
       </div>
     </div>
   )
