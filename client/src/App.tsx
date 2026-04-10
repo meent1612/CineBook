@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { BranchProvider } from "./context/BranchContext"
+import { BranchProvider } from "./context/Branchcontext"
 import Navbar from "./components/Navbar"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Home from "./pages/Home"
@@ -17,6 +17,7 @@ import MovieDetail from "./pages/MovieDetail"
 import Payment from "./pages/Payment"
 import AIChatbot from "./pages/Aichatbot"
 import AIContentAssistant from "./components/AIContentAssistant"
+import Ticketdetail from "./pages/Ticketdetail"
 
 interface MovieFormData {
   [key: string]: unknown
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/payment"      element={<Payment />} />
           <Route path= '/aichatbot'    element={<AIChatbot />} />
           <Route path= '/aicontentassistant' element={<AIContentAssistantWrapper />} />
+          <Route path="/ticket-detail" element={<Ticketdetail />} />
           <Route path="/user" element={
             <ProtectedRoute requiredRole="user">
               <UserDashboard />

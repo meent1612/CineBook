@@ -1,0 +1,306 @@
+/* ─────────────────────────────────────
+   TicketDetail.css
+   ───────────────────────────────────── */
+
+.tdt-wrapper {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* ── Empty / error state ── */
+.tdt-empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 1rem;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+.tdt-empty-wrap button {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+/* ── Back button ── */
+.tdt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.25rem;
+  transition: color 0.15s;
+}
+.tdt-back:hover { color: var(--color-text-primary); }
+
+/* ── Card ── */
+.tdt-card {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.tdt-header {
+  background: #15162c;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.tdt-poster {
+  width: 68px;
+  height: 96px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.tdt-poster-fallback {
+  width: 68px;
+  height: 96px;
+  border-radius: 6px;
+  background: #2a2a45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #6b7280;
+  font-size: 22px;
+}
+.tdt-header-body { flex: 1; }
+.tdt-movie-title {
+  font-size: 17px;
+  font-weight: 500;
+  color: #f9fafb;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.tdt-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.tdt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.tdt-badge-type     { background: #1e1b4b; color: #c7d2fe; }
+.tdt-status-dot     { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.tdt-status-upcoming  { background: #1c3554; color: #93c5fd; }
+.tdt-status-watched   { background: #14532d; color: #bbf7d0; }
+.tdt-status-cancelled { background: #450a0a; color: #fca5a5; }
+.tdt-booking-id {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 3px;
+}
+.tdt-booking-id span { font-family: var(--font-mono, monospace); }
+.tdt-booked-on {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* ── Sections ── */
+.tdt-section {
+  padding: 1rem 1.25rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.tdt-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.75rem;
+}
+.tdt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+.tdt-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 2px;
+}
+.tdt-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* ── Seats ── */
+.tdt-seats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tdt-seat-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+}
+
+/* ── Payment ── */
+.tdt-payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tdt-trx-id {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+.tdt-method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Pricing ── */
+.tdt-price-section {
+  padding: 1rem 1.25rem;
+  background: var(--color-background-secondary);
+}
+.tdt-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.tdt-price-row span:last-child { color: var(--color-text-primary); }
+.tdt-discount span:last-child  { color: var(--color-text-success); }
+.tdt-price-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 0.5px solid var(--color-border-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.tdt-price-total span:last-child { color: #7c3aed; font-size: 16px; }
+
+/* ── Perforated divider ── */
+.tdt-divider {
+  display: flex;
+  align-items: center;
+  padding: 0 0;
+  position: relative;
+  height: 20px;
+  overflow: visible;
+}
+.tdt-divider-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-background-tertiary);
+  border: 0.5px solid var(--color-border-tertiary);
+  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.tdt-divider-left  { left: -10px; }
+.tdt-divider-right { right: -10px; }
+.tdt-divider-line {
+  flex: 1;
+  margin: 0 14px;
+  border-top: 1.5px dashed var(--color-border-secondary);
+}
+
+/* ── Feedback ── */
+.tdt-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 1.25rem 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.tdt-msg-success { background: var(--color-background-success); color: var(--color-text-success); }
+.tdt-msg-error   { background: var(--color-background-danger);  color: var(--color-text-danger);  }
+
+/* ── Actions ── */
+.tdt-actions {
+  display: flex;
+  gap: 8px;
+  padding: 1rem 1.25rem;
+}
+.tdt-btn {
+  flex: 1;
+  padding: 9px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  transition: background 0.15s;
+}
+.tdt-btn:hover { background: var(--color-background-secondary); }
+.tdt-btn.tdt-btn-danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+.tdt-btn.tdt-btn-danger:hover { background: #fef2f2; }
+.tdt-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Footer ── */
+.tdt-footer {
+  text-align: center;
+  padding: 2rem 0 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .tdt-grid { grid-template-columns: 1fr; }
+  .tdt-actions { flex-wrap: wrap; }
+  .tdt-actions .tdt-btn { flex: 1 1 calc(50% - 4px); }
+  .tdt-payment-row { flex-direction: column; align-items: flex-start; }
+}
