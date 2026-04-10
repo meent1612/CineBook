@@ -455,13 +455,7 @@ export default function TicketDetail() {
           <button className="tdt-btn">
             <i className="fa-solid fa-share-nodes" /> Share
           </button>
-          {canCancel && (
-            <button className="tdt-btn tdt-btn-cancel" onClick={handleCancel} disabled={cancelling}>
-              {cancelling
-                ? <><i className="fa-solid fa-spinner fa-spin" /> Cancelling…</>
-                : <><i className="fa-solid fa-xmark" /> Cancel</>}
-            </button>
-          )}
+          
         </div>
 
       </div>
