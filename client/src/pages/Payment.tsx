@@ -26,6 +26,7 @@ interface BookingData {
 
 // ── Constants ──────────────────────────────────────────
 const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const OTP_SECONDS = 60  // ← change this to 40 or 30 if you want
 
 const METHODS: { key: PaymentMethod; label: string; icon: string; color: string }[] = [
   { key: "bkash", label: "bKash",  icon: "fa-solid fa-mobile-screen-button", color: "#E2136E" },
@@ -46,26 +47,28 @@ export default function Payment() {
 
   const booking = location.state as BookingData | null
 
-  const [method,      setMethod]      = useState<PaymentMethod>("bkash")
-  const [phone,       setPhone]       = useState("")
-  const [cardNumber,  setCardNumber]  = useState("")
-  const [cardExpiry,  setCardExpiry]  = useState("")
-  const [cardCvv,     setCardCvv]     = useState("")
-  const [cardName,    setCardName]    = useState("")
-  const [processing,  setProcessing]  = useState(false)
-  const [error,       setError]       = useState("")
-  const [step,        setStep]        = useState<"form" | "otp" | "success">("form")
-  const [otp,         setOtp]         = useState("")
-  const [trxId,       setTrxId]       = useState("")
-  const [countdown,   setCountdown]   = useState(0)
+  const [method,         setMethod]         = useState<PaymentMethod>("bkash")
+  const [phone,          setPhone]          = useState("")
+  const [cardNumber,     setCardNumber]     = useState("")
+  const [cardExpiry,     setCardExpiry]     = useState("")
+  const [cardCvv,        setCardCvv]        = useState("")
+  const [cardName,       setCardName]       = useState("")
+  const [processing,     setProcessing]     = useState(false)
+  const [error,          setError]          = useState("")
+  const [step,           setStep]           = useState<"form" | "otp" | "success">("form")
+  const [otp,            setOtp]            = useState("")
+  const [trxId,          setTrxId]          = useState("")
+  const [countdown,      setCountdown]      = useState(0)
+  const [bookingGroupId, setBookingGroupId] = useState("")
+  const [otpTimer,       setOtpTimer]       = useState(OTP_SECONDS)  // ← OTP countdown
 
-  // Redirect if no booking data or not logged in
+  // Redirect if no booking or not logged in
   useEffect(() => {
     if (!booking) navigate("/")
     if (!user || !token) navigate("/login")
   }, [booking, user, token])
 
-  // Countdown timer for success redirect
+  // Success screen redirect countdown
   useEffect(() => {
     if (step !== "success" || countdown <= 0) return
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
@@ -73,17 +76,40 @@ export default function Payment() {
     return () => clearTimeout(timer)
   }, [step, countdown])
 
+  // OTP countdown timer — starts when step becomes "otp"
+  useEffect(() => {
+    if (step !== "otp") return
+    setOtpTimer(OTP_SECONDS)
+    const interval = setInterval(() => {
+      setOtpTimer(t => {
+        if (t <= 1) { clearInterval(interval); return 0 }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [step])
+
   if (!booking) return null
 
   const convenienceCharge = 0
   const grandTotal        = booking.totalAmount + convenienceCharge
+
+  // ── Cancel pending booking (used when Back is hit from OTP screen) ──
+  const handleCancelBooking = async () => {
+    if (!bookingGroupId) return
+    await fetch(`${API_URL}/bookings/group/${bookingGroupId}`, {
+      method:  "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {})
+    setBookingGroupId("")
+  }
 
   // ── Submit Payment ──
   const handleSubmitPayment = async () => {
     setError("")
 
     if (method === "bkash" || method === "nagad") {
-      if (!phone || phone.length < 10) {
+      if (!phone || phone.length <= 10) {
         setError("Please enter a valid phone number.")
         return
       }
@@ -112,16 +138,36 @@ export default function Payment() {
       const bookingData = await bookingRes.json()
       if (!bookingData.success) throw new Error(bookingData.message)
 
-      const bookingGroupId = bookingData.booking_group_id
+      const resolvedBookingGroupId = bookingData.booking_group_id
         || bookingData.bookings?.[0]?.booking_group_id
         || crypto.randomUUID()
 
-      // Step 2: Create payment record
+      setBookingGroupId(resolvedBookingGroupId)
+
+      // Mobile banking → send OTP (payment record created only after OTP verify)
+      if (method === "bkash" || method === "nagad") {
+        const otpRes  = await fetch(`${API_URL}/payments/send-otp`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            email:       user?.email,
+            movie_title: booking.movieTitle,
+          }),
+        })
+        const otpData = await otpRes.json()
+        if (!otpData.success) throw new Error(otpData.message)
+
+        setStep("otp")
+        setProcessing(false)
+        return
+      }
+
+      // Card → create payment (this also confirms the booking)
       const paymentRes = await fetch(`${API_URL}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          booking_group_id: bookingGroupId,
+          booking_group_id: resolvedBookingGroupId,
           amount:           grandTotal,
           method:           method,
         }),
@@ -129,14 +175,7 @@ export default function Payment() {
       const paymentData = await paymentRes.json()
       if (!paymentData.success) throw new Error(paymentData.message)
 
-      // Mobile banking → OTP step
-      if (method === "bkash" || method === "nagad") {
-        setStep("otp")
-        setProcessing(false)
-        return
-      }
-
-      // Card
+      // Card → straight to success
       setTrxId(paymentData.transaction_id || paymentData.payment?.transaction_id || "—")
       setStep("success")
       setCountdown(8)
@@ -149,19 +188,36 @@ export default function Payment() {
 
   // ── Verify OTP ──
   const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 4) {
-      setError("Please enter the OTP sent to your phone.")
+    if (otpTimer === 0) {
+      setError("OTP has expired. Please go back and try again.")
+      return
+    }
+    if (!otp || otp.length < 6) {
+      setError("Please enter the 6-digit OTP sent to your email.")
       return
     }
     setProcessing(true)
     setError("")
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      setTrxId(Math.random().toString(36).slice(2, 12).toUpperCase())
+      const res  = await fetch(`${API_URL}/payments/verify-otp`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          email:            user?.email,
+          code:             otp,
+          booking_group_id: bookingGroupId,
+          amount:           grandTotal,
+          method:           method,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+
+      setTrxId(data.transaction_id)
       setStep("success")
       setCountdown(8)
-    } catch {
-      setError("OTP verification failed.")
+    } catch (err: any) {
+      setError(err.message || "OTP verification failed.")
     } finally {
       setProcessing(false)
     }
@@ -178,19 +234,32 @@ export default function Payment() {
     setCardExpiry(digits.length >= 3 ? digits.slice(0, 2) + "/" + digits.slice(2) : digits)
   }
 
+  // ── Back from payment form (before OTP) ──
   const handleBack = async () => {
-  if (token && booking) {
-    await fetch(`${API_URL}/seats/unlock`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body:    JSON.stringify({
-        screening_id: booking.screeningId,
-        seat_ids:     booking.seatIds,
-      }),
-    }).catch(() => {})
+    if (bookingGroupId) {
+      // booking was created (pending) but payment failed — cancel it (also releases locks)
+      await handleCancelBooking()
+    } else if (token && booking) {
+      // no booking created yet — just release seat locks from seat selection
+      await fetch(`${API_URL}/seats/unlock`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({
+          screening_id: booking.screeningId,
+          seat_ids:     booking.seatIds,
+        }),
+      }).catch(() => {})
+    }
+    navigate(-1)
   }
-  navigate(-1)
-}
+
+  // ── Back from OTP screen → cancel booking so seats are freed ──
+  const handleOtpBack = async () => {
+    await handleCancelBooking()
+    setStep("form")
+    setOtp("")
+  }
+
   // ═══════════════════════════════════════════════════════
   // SUCCESS SCREEN
   // ═══════════════════════════════════════════════════════
@@ -233,8 +302,9 @@ export default function Payment() {
   // OTP SCREEN
   // ═══════════════════════════════════════════════════════
   if (step === "otp") {
-    const mLabel = method === "bkash" ? "bKash" : "Nagad"
-    const mColor = method === "bkash" ? "#E2136E" : "#F6921E"
+    const mLabel  = method === "bkash" ? "bKash" : "Nagad"
+    const mColor  = method === "bkash" ? "#E2136E" : "#F6921E"
+    const expired = otpTimer === 0
 
     return (
       <div className="pay-wrapper">
@@ -245,7 +315,7 @@ export default function Payment() {
           </div>
           <div className="pay-otp-body">
             <p className="pay-otp-msg">
-              An OTP has been sent to <strong>{phone.slice(0, 4)}****{phone.slice(-3)}</strong>.
+              A 6-digit OTP has been sent to <strong>{user?.email}</strong>.
               Enter it below to confirm your payment of <strong>{grandTotal.toLocaleString()} BDT</strong>.
             </p>
 
@@ -254,17 +324,35 @@ export default function Payment() {
               type="text" className="pay-input pay-otp-input" maxLength={6}
               placeholder="e.g. 123456" value={otp}
               onChange={e => setOtp(e.target.value.replace(/\D/g, ""))}
+              disabled={expired}
               autoFocus
             />
+
+            {/* OTP Timer */}
+            {!expired
+              ? (
+                <p className="pay-otp-timer" style={{ color: otpTimer <= 10 ? "#dc2626" : "#6b7280", fontSize: "0.85rem", margin: "8px 0" }}>
+                  <i className="fa-solid fa-clock" /> OTP expires in <strong>{otpTimer}s</strong>
+                </p>
+              ) : (
+                <p className="pay-otp-expired" style={{ color: "#dc2626", fontSize: "0.85rem", margin: "8px 0", fontWeight: 600 }}>
+                  <i className="fa-solid fa-circle-exclamation" /> OTP expired. Please go back and try again.
+                </p>
+              )
+            }
 
             {error && <div className="pay-error"><i className="fa-solid fa-circle-exclamation" /> {error}</div>}
 
             <div className="pay-otp-actions">
-              <button className="pay-cancel-btn" onClick={() => { setStep("form"); setOtp("") }}>
+              <button className="pay-cancel-btn" onClick={handleOtpBack}>
                 <i className="fa-solid fa-arrow-left" /> Back
               </button>
-              <button className="pay-submit-btn" onClick={handleVerifyOtp}
-                disabled={processing} style={{ background: mColor }}>
+              <button
+                className="pay-submit-btn"
+                onClick={handleVerifyOtp}
+                disabled={processing || expired}
+                style={{ background: expired ? "#9ca3af" : mColor }}
+              >
                 {processing
                   ? <><i className="fa-solid fa-spinner fa-spin" /> Verifying…</>
                   : <><i className="fa-solid fa-check" /> Confirm Payment</>}
@@ -352,7 +440,7 @@ export default function Payment() {
           {(method === "bkash" || method === "nagad") && (
             <div className="pay-fields">
               <div className="pay-method-banner" style={{
-                background: method === "bkash" ? "#FDE8F0" : "#FFF3E0",
+                background:  method === "bkash" ? "#FDE8F0" : "#FFF3E0",
                 borderLeft: `4px solid ${method === "bkash" ? "#E2136E" : "#F6921E"}`,
               }}>
                 <i className="fa-solid fa-mobile-screen-button"
@@ -364,7 +452,7 @@ export default function Payment() {
                 {method === "bkash" ? "bKash" : "Nagad"} Account Number *
               </label>
               <div className="pay-input-wrap">
-                <span className="pay-input-prefix">+880</span>
+                <span className="pay-input-prefix">+88</span>
                 <input type="tel" className="pay-input pay-input-with-prefix"
                   placeholder="1XXXXXXXXX" maxLength={11}
                   value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} />
