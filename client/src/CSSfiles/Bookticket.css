@@ -76,7 +76,6 @@
 .date-btn-row {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .date-btn {
@@ -381,7 +380,6 @@
 /* ── Seat sections ───────────────────────────────────── */
 .hall-section {
   display: flex;
-  flex-direction: column;
   gap: 3px;
 }
 
