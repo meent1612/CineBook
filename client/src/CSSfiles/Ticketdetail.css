@@ -1,0 +1,460 @@
+/* ────────────────────────────────────────
+   TicketDetail.css  —  crimson cinema theme
+   ──────────────────────────────────────── */
+
+.tdt-wrapper {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* ── Empty state ── */
+.tdt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+.tdt-empty i { font-size: 28px; color: var(--color-text-tertiary); }
+.tdt-empty button {
+  margin-top: 0.5rem;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+/* ── Back ── */
+.tdt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.25rem;
+  transition: color 0.15s;
+}
+.tdt-back:hover { color: var(--color-text-primary); }
+
+/* ── Ticket card ── */
+.tdt-ticket {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── Hero ── */
+.tdt-hero {
+  background: #1a0a0e;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+.tdt-poster {
+  width: 72px;
+  height: 104px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.tdt-poster-fallback {
+  width: 72px;
+  height: 104px;
+  border-radius: 8px;
+  background: #2d1018;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #7f3040;
+  font-size: 22px;
+}
+.tdt-hero-body { flex: 1; min-width: 0; }
+.tdt-movie-title {
+  font-size: 17px;
+  font-weight: 500;
+  color: #f9f0f2;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.tdt-badge-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.tdt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.tdt-badge-type   { background: #3d0a14; color: #fca5a5; }
+.tdt-dot          { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.tdt-status-upcoming  { background: #3d0a14; color: #fda4af; }
+.tdt-status-watched   { background: #052e16; color: #86efac; }
+.tdt-status-cancelled { background: #450a0a; color: #fca5a5; }
+.tdt-bid {
+  font-size: 11px;
+  color: #6b3040;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 3px;
+}
+.tdt-bon { font-size: 11px; color: #5a2a35; }
+
+/* ── Crimson strip ── */
+.tdt-strip { display: flex; background: #6B1829; }
+.tdt-strip-item {
+  flex: 1;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 0.5px solid rgba(255,255,255,0.12);
+}
+.tdt-strip-item:last-child { border-right: none; }
+.tdt-sl {
+  font-size: 10px;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tdt-sv {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Content sections ── */
+.tdt-sec {
+  padding: 1rem 1.25rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.tdt-sec-title {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.tdt-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tdt-fl { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 2px; }
+.tdt-fv { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+
+/* ── Seat chips ── */
+.tdt-seats { display: flex; flex-wrap: wrap; gap: 6px; }
+.tdt-seat-chip {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 0.5px solid #fca5a5;
+}
+
+/* ══════════════════════════════════════
+   SEAT MAP
+   ══════════════════════════════════════ */
+.tdt-seatmap { padding-top: 0.25rem; }
+
+.tdt-screen-wrap { text-align: center; margin-bottom: 14px; }
+.tdt-screen-bar {
+  height: 6px;
+  background: #c8a96e;
+  border-radius: 0 0 40px 40px;
+  margin: 0 40px;
+}
+.tdt-screen-label {
+  font-size: 10px;
+  color: #c8a96e;
+  letter-spacing: 0.12em;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+.tdt-hall {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.tdt-hall-wall {
+  writing-mode: vertical-rl;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.15em;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 4px;
+  background: var(--color-background-secondary);
+  flex-shrink: 0;
+}
+.tdt-hall-inner {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  min-width: 0;
+}
+.tdt-hall-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.tdt-hall-aisle {
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tdt-aisle-lbl {
+  writing-mode: vertical-rl;
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  color: var(--color-text-tertiary);
+}
+
+.tdt-seat-row {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+}
+.tdt-row-lbl {
+  font-size: 8px;
+  color: var(--color-text-tertiary);
+  width: 10px;
+  text-align: right;
+  flex-shrink: 0;
+  margin-right: 1px;
+}
+.tdt-row-lbl-r {
+  text-align: left;
+  margin-right: 0;
+  margin-left: 1px;
+}
+
+/* Individual seat squares */
+.tdt-s {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.tdt-s-taken  { background: #d1d5db; }
+.tdt-s-bought {
+  background: #f59e0b;
+  outline: 1.5px solid #d97706;
+  outline-offset: 0;
+}
+
+/* ── Map legend ── */
+.tdt-map-legend {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.tdt-leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+.tdt-leg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.tdt-leg-taken  { background: #d1d5db; }
+.tdt-leg-bought { background: #f59e0b; outline: 1.5px solid #d97706; outline-offset: 0; }
+
+/* ── Payment ── */
+.tdt-pay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tdt-trx {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+.tdt-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.tdt-method i { font-size: 12px; }
+
+/* ── Pricing ── */
+.tdt-pricing {
+  padding: 1rem 1.25rem;
+  background: var(--color-background-secondary);
+}
+.tdt-pr {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+  color: var(--color-text-secondary);
+}
+.tdt-pr span:last-child { color: var(--color-text-primary); }
+.tdt-ptotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 500;
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 0.5px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+}
+.tdt-ptotal span:last-child { color: #6B1829; font-size: 17px; }
+
+/* ── Perforated divider ── */
+.tdt-perf {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+}
+.tdt-perf-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-background-tertiary);
+  border: 0.5px solid var(--color-border-tertiary);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+.tdt-perf-l { left: -10px; }
+.tdt-perf-r { right: -10px; }
+.tdt-perf-line {
+  flex: 1;
+  margin: 0 14px;
+  border-top: 1.5px dashed var(--color-border-secondary);
+}
+
+/* ── QR stub ── */
+.tdt-qr-row {
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.tdt-qr {
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: 1.5px;
+  padding: 5px;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 8px;
+}
+.tdt-qr span { border-radius: 1px; }
+.tdt-qr-on   { background: var(--color-text-primary); }
+.tdt-qr-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.tdt-qr-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Feedback ── */
+.tdt-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 1.25rem;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.tdt-msg-ok  { background: var(--color-background-success); color: var(--color-text-success); }
+.tdt-msg-err { background: var(--color-background-danger);  color: var(--color-text-danger);  }
+
+/* ── Actions ── */
+.tdt-actions {
+  display: flex;
+  gap: 8px;
+  padding: 1rem 1.25rem;
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+.tdt-btn {
+  flex: 1;
+  padding: 9px 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0.5px solid var(--color-border-secondary);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  transition: background 0.15s;
+}
+.tdt-btn:hover { background: var(--color-background-secondary); }
+.tdt-btn i { font-size: 12px; }
+.tdt-btn-cancel { color: #991b1b; border-color: #fca5a5; }
+.tdt-btn-cancel:hover { background: #fef2f2; }
+.tdt-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Footer ── */
+.tdt-footer {
+  text-align: center;
+  padding: 2rem 0 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .tdt-grid2   { grid-template-columns: 1fr; }
+  .tdt-actions { flex-wrap: wrap; }
+  .tdt-actions .tdt-btn { flex: 1 1 calc(50% - 4px); }
+  .tdt-strip-item { padding: 8px 8px; }
+  .tdt-sv { font-size: 11px; }
+  .tdt-s  { width: 7px; height: 7px; }
+}
