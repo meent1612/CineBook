@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { BranchProvider } from "./context/Branchcontext"
+import { BranchProvider } from "./context/BranchContext"
 import Navbar from "./components/Navbar"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Home from "./pages/Home"

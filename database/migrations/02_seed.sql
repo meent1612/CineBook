@@ -18,6 +18,8 @@ BEGIN
     ('Rahnuma Azra Mahjabin','mahjabin3619@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
     ('Farzana Mim','mimmysha1417@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
     ('Shayma Sharmeen','sshayma1612@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
+    ('Farin Maisha','farinmaishaa110@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
+    ('Anika','sultanaanika131@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
     
     ('Zumaina Tahsin','zumainatahsincat@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
     ('Tahsin','tahsin.011820283243@gmail.com','+8801836329304','Female','$2y$10$ac393V6L80itGe5JuoIOeOMV9ogvbWp1a4nwe7JlxGNFepZS5Knum','user'),
