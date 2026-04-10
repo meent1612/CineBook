@@ -30,7 +30,8 @@ class PaymentController extends Controller
         OtpCode::create([
             'email'      => $request->email,
             'code'       => $code,
-            'expires_at' => now()->addMinutes(5),
+            'expires_at' => now()->addMinutes(1),
+            // 'expires_at' => now()->addSeconds(40),
             'used'       => false,
         ]);
 

@@ -28,7 +28,7 @@
       <div class="otp-box">
         <div class="otp-code">{{ $otp }}</div>
       </div>
-      <p class="expiry">⏱ This code expires in 5 minutes.</p>
+      <p class="expiry">⏱ This code expires in 1 minute.</p>
       <p style="font-size:0.8rem;color:#8e8b90;">If you didn't request this, please ignore this email.</p>
     </div>
     <div class="footer">Copyright © 2026 CineBook Limited. All Rights Reserved.</div>
