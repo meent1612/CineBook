@@ -1,80 +1,65 @@
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'cinebook_db')
-    CREATE DATABASE cinebook_db;
-GO
+CREATE DATABASE IF NOT EXISTS cinebook_db;
 USE cinebook_db;
-GO
 
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='users' AND xtype='U')
-CREATE TABLE users (
-    id            BIGINT IDENTITY(1,1) PRIMARY KEY,
-    name          NVARCHAR(255) NOT NULL,
-    email         NVARCHAR(255) NOT NULL UNIQUE,
-    mobile_number NVARCHAR(20)  NULL,
-    gender        NVARCHAR(10)  NULL CHECK (gender IN ('Male', 'Female', 'Other')),
-    password      NVARCHAR(255) NOT NULL,
-    role          NVARCHAR(10)  NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
-    created_at    DATETIME2 DEFAULT GETDATE(),
-    updated_at    DATETIME2 DEFAULT GETDATE()
+CREATE TABLE IF NOT EXISTS users (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name          VARCHAR(255) NOT NULL,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    mobile_number VARCHAR(20)  NULL,
+    gender        VARCHAR(10)  NULL CHECK (gender IN ('Male', 'Female', 'Other')),
+    password      VARCHAR(255) NOT NULL,
+    role          VARCHAR(10)  NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    created_at    DATETIME DEFAULT NOW(),
+    updated_at    DATETIME DEFAULT NOW()
 );
-GO
 
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='movies' AND xtype='U')
-CREATE TABLE movies (
-    id            BIGINT IDENTITY(1,1) PRIMARY KEY,
-    title         NVARCHAR(255) NOT NULL,
-    description   NVARCHAR(MAX) NULL,
-    genre         NVARCHAR(255) NULL,
-    category      NVARCHAR(5)   NOT NULL DEFAULT '2D' CHECK (category IN ('2D', '3D')),
-    language      NVARCHAR(100) NOT NULL DEFAULT 'English',
-    duration_mins INT           NULL,
-    release_date  DATE          NULL,
-    poster_url    NVARCHAR(500) NULL,
-    carasol_url   NVARCHAR(500) NULL,
-    trailer_url   NVARCHAR(500) NULL,
-    status        NVARCHAR(20)  NOT NULL DEFAULT 'now_showing' CHECK (status IN ('now_showing', 'coming_soon')),
-    is_active     BIT           NOT NULL DEFAULT 1,
-    created_at    DATETIME2 DEFAULT GETDATE(),
-    updated_at    DATETIME2 DEFAULT GETDATE()
+CREATE TABLE IF NOT EXISTS movies (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title         VARCHAR(255) NOT NULL,
+    description   TEXT NULL,
+    genre         VARCHAR(255) NULL,
+    category      VARCHAR(5)   NOT NULL DEFAULT '2D' CHECK (category IN ('2D', '3D')),
+    language      VARCHAR(100) NOT NULL DEFAULT 'English',
+    duration_mins INT          NULL,
+    release_date  DATE         NULL,
+    poster_url    VARCHAR(500) NULL,
+    carasol_url   VARCHAR(500) NULL,
+    trailer_url   VARCHAR(500) NULL,
+    status        VARCHAR(20)  NOT NULL DEFAULT 'now_showing' CHECK (status IN ('now_showing', 'coming_soon')),
+    is_active     TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at    DATETIME DEFAULT NOW(),
+    updated_at    DATETIME DEFAULT NOW()
 );
-GO
 
--- theaters must exist before halls (halls has FK to theaters)
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='theaters' AND xtype='U')
-CREATE TABLE theaters (
-    id         BIGINT IDENTITY(1,1) PRIMARY KEY,
-    name       NVARCHAR(255) NOT NULL,
-    address    NVARCHAR(500) NOT NULL,
-    city       NVARCHAR(100) NOT NULL DEFAULT 'Dhaka',
-    is_active  BIT           NOT NULL DEFAULT 1,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+CREATE TABLE IF NOT EXISTS theaters (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name       VARCHAR(255) NOT NULL,
+    address    VARCHAR(500) NOT NULL,
+    city       VARCHAR(100) NOT NULL DEFAULT 'Dhaka',
+    is_active  TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT NOW(),
+    updated_at DATETIME DEFAULT NOW()
 );
-GO
 
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='halls' AND xtype='U')
-CREATE TABLE halls (
-    id         BIGINT IDENTITY(1,1) PRIMARY KEY,
-    name       NVARCHAR(100) NOT NULL,
-    capacity   INT           NOT NULL,
-    theater_id BIGINT        NOT NULL,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT fk_halls_theater
-        FOREIGN KEY (theater_id) REFERENCES theaters(id) ON DELETE NO ACTION
+CREATE TABLE IF NOT EXISTS halls (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name       VARCHAR(100) NOT NULL,
+    capacity   INT          NOT NULL,
+    theater_id BIGINT       NOT NULL,
+    created_at DATETIME DEFAULT NOW(),
+    updated_at DATETIME DEFAULT NOW(),
+    CONSTRAINT fk_halls_theater FOREIGN KEY (theater_id) REFERENCES theaters(id) ON DELETE NO ACTION
 );
-GO
 
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='screenings' AND xtype='U')
-CREATE TABLE screenings (
-    id              BIGINT IDENTITY(1,1) PRIMARY KEY,
-    movie_id        BIGINT NOT NULL,
-    hall_id         BIGINT NOT NULL,
-    start_time      TIME   NOT NULL,
-    show_date       DATE   NOT NULL,
-    created_at      DATETIME2 DEFAULT GETDATE(),
-    updated_at      DATETIME2 DEFAULT GETDATE(),
+CREATE TABLE IF NOT EXISTS screenings (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    movie_id   BIGINT NOT NULL,
+    hall_id    BIGINT NOT NULL,
+    start_time TIME   NOT NULL,
+    show_date  DATE   NOT NULL,
+    created_at DATETIME DEFAULT NOW(),
+    updated_at DATETIME DEFAULT NOW(),
     CONSTRAINT unique_screening UNIQUE (hall_id, show_date, start_time),
     FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
     FOREIGN KEY (hall_id)  REFERENCES halls(id)  ON DELETE CASCADE
 );
-GO

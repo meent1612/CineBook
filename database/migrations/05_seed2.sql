@@ -1,9 +1,6 @@
 USE cinebook_db;
-GO
 
-IF NOT EXISTS (SELECT 1 FROM screenings)
-BEGIN
-INSERT INTO screenings (movie_id, hall_id, show_date, start_time) VALUES
+INSERT IGNORE INTO screenings (movie_id, hall_id, show_date, start_time) VALUES
 
 -- ════════════════════════════════════════════
 -- DHANMONDI
@@ -145,13 +142,10 @@ INSERT INTO screenings (movie_id, hall_id, show_date, start_time) VALUES
 (6,5,'2026-04-18','10:00:00'),(5,5,'2026-04-18','15:00:00'),(4,5,'2026-04-18','20:00:00'),
 (3,6,'2026-04-18','10:00:00'),(2,6,'2026-04-18','15:00:00'),(1,6,'2026-04-18','20:00:00');
 
-END
-GO
-IF NOT EXISTS (SELECT 1 FROM seats)
-BEGIN
+
 
 -- Batch 1 of 3 (1000 rows)
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+INSERT IGNORE INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (1,'A',1,'vip'),(1,'A',2,'vip'),(1,'A',3,'vip'),(1,'A',4,'vip'),(1,'A',5,'vip'),(1,'A',6,'vip'),(1,'A',7,'vip'),(1,'A',8,'vip'),(1,'A',9,'vip'),(1,'A',10,'vip'),
 (1,'A',11,'vip'),(1,'A',12,'vip'),(1,'A',13,'vip'),(1,'A',14,'vip'),(1,'A',15,'vip'),(1,'A',16,'vip'),(1,'A',17,'vip'),(1,'A',18,'vip'),(1,'A',19,'vip'),(1,'A',20,'vip'),
 (1,'A',21,'vip'),(1,'A',22,'vip'),(1,'A',23,'vip'),(1,'A',24,'vip'),(1,'A',25,'vip'),(1,'A',26,'vip'),(1,'A',27,'vip'),(1,'A',28,'vip'),(1,'A',29,'vip'),(1,'A',30,'vip'),
@@ -254,7 +248,7 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (3,'F',12,'semi_recliner'),(3,'F',13,'semi_recliner'),(3,'F',14,'semi_recliner'),(3,'F',15,'semi_recliner'),(3,'F',16,'semi_recliner'),(3,'F',17,'semi_recliner'),(3,'F',18,'semi_recliner'),(3,'F',19,'semi_recliner'),(3,'F',20,'semi_recliner'),(3,'F',21,'semi_recliner');
 
 -- Batch 2 of 3 (1000 rows)
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+INSERT IGNORE INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (3,'F',22,'semi_recliner'),(3,'F',23,'semi_recliner'),(3,'F',24,'semi_recliner'),(3,'F',25,'semi_recliner'),(3,'F',26,'semi_recliner'),(3,'F',27,'semi_recliner'),(3,'F',28,'semi_recliner'),(3,'F',29,'semi_recliner'),(3,'F',30,'semi_recliner'),(3,'F',31,'semi_recliner'),
 (3,'G',1,'semi_recliner'),(3,'G',2,'semi_recliner'),(3,'G',3,'semi_recliner'),(3,'G',4,'semi_recliner'),(3,'G',5,'semi_recliner'),(3,'G',6,'semi_recliner'),(3,'G',7,'semi_recliner'),(3,'G',8,'semi_recliner'),(3,'G',9,'semi_recliner'),(3,'G',10,'semi_recliner'),
 (3,'G',11,'semi_recliner'),(3,'G',12,'semi_recliner'),(3,'G',13,'semi_recliner'),(3,'G',14,'semi_recliner'),(3,'G',15,'semi_recliner'),(3,'G',16,'semi_recliner'),(3,'G',17,'semi_recliner'),(3,'G',18,'semi_recliner'),(3,'G',19,'semi_recliner'),(3,'G',20,'semi_recliner'),
@@ -357,7 +351,7 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (5,'K',6,'standard'),(5,'K',7,'standard'),(5,'K',8,'standard'),(5,'K',9,'standard'),(5,'K',10,'standard'),(5,'K',11,'standard'),(5,'K',12,'standard'),(5,'K',13,'standard'),(5,'K',14,'standard'),(5,'K',15,'standard');
 
 -- Batch 3 of 3 (562 rows)
-INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
+INSERT IGNORE INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (5,'K',16,'standard'),(5,'K',17,'standard'),(5,'K',18,'standard'),(5,'K',19,'standard'),(5,'K',20,'standard'),(5,'K',21,'standard'),(5,'K',22,'standard'),(5,'K',23,'standard'),(5,'K',24,'standard'),(5,'K',25,'standard'),
 (5,'K',26,'standard'),(5,'K',27,'standard'),(5,'K',28,'standard'),(5,'K',29,'standard'),(5,'K',30,'standard'),(5,'L',1,'standard'),(5,'L',2,'standard'),(5,'L',3,'standard'),(5,'L',4,'standard'),(5,'L',5,'standard'),
 (5,'L',6,'standard'),(5,'L',7,'standard'),(5,'L',8,'standard'),(5,'L',9,'standard'),(5,'L',10,'standard'),(5,'L',11,'standard'),(5,'L',12,'standard'),(5,'L',13,'standard'),(5,'L',14,'standard'),(5,'L',15,'standard'),
@@ -416,17 +410,12 @@ INSERT INTO seats (hall_id, row_label, seat_number, seat_type) VALUES
 (6,'O',19,'standard'),(6,'O',20,'standard'),(6,'O',21,'standard'),(6,'O',22,'standard'),(6,'O',23,'standard'),(6,'O',24,'standard'),(6,'O',25,'standard'),(6,'O',26,'standard'),(6,'O',27,'standard'),(6,'O',28,'standard'),
 (6,'O',29,'standard'),(6,'O',30,'standard');
 
-END
-GO
 -- theaters seeded in 02_seed.sql
 
-IF NOT EXISTS (SELECT 1 FROM ticket_prices)
-BEGIN
-    INSERT INTO ticket_prices (seat_type, price) VALUES
-    ('standard',      400),
-    ('semi_recliner', 615),
-    ('premium',       815),
-    ('vip',          1200);
-END
-GO
+INSERT IGNORE INTO ticket_prices (seat_type, price) VALUES
+('standard',      400),
+('semi_recliner', 615),
+('premium',       815),
+('vip',          1200);
+
 
