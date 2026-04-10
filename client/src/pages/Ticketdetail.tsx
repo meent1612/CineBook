@@ -290,39 +290,18 @@ export default function TicketDetail() {
       <div className="tdt-empty">
         <i className="fa-solid fa-ticket" />
         <p>No ticket data found.</p>
-        <button onClick={() => navigate("/dashboard")}>Back to dashboard</button>
+        <button onClick={() => navigate("/user")}>Back to dashboard</button>
       </div>
     )
   }
 
   const seats     = toArray(booking.seats)
   const quantity  = seats.length
-  const isPast    = new Date(booking.show_date + "T00:00:00") < new Date()
-  const canCancel = status !== "cancelled" && !isPast
-
-  const handleCancel = async () => {
-    if (!window.confirm("Cancel this booking? This cannot be undone.")) return
-    setCancelling(true)
-    setCancelMsg("")
-    try {
-      const res  = await fetch(`${API_URL}/bookings/group/${booking.booking_group_id}/cancel`, {
-        method: "POST", headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.message)
-      setStatus("cancelled")
-      setCancelMsg("Booking cancelled successfully.")
-    } catch (err: any) {
-      setCancelMsg(err.message || "Cancellation failed. Please try again.")
-    } finally {
-      setCancelling(false)
-    }
-  }
-
+  
   return (
     <div className="tdt-wrapper">
 
-      <button className="tdt-back" onClick={() => navigate("/dashboard")}>
+      <button className="tdt-back" onClick={() => navigate("/user")}>
         <i className="fa-solid fa-arrow-left" /> Back to my bookings
       </button>
 
