@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useBranch } from "../context/BranchContext"
+import { useBranch } from "../context/Branchcontext"
 import "../CSSfiles/MovieDetail.css"
 
 // ── Types ──────────────────────────────────────────────

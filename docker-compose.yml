@@ -22,35 +22,41 @@ services:
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
       FRONTEND_URL: http://localhost:5173
-      DB_CONNECTION: sqlsrv
+      DB_CONNECTION: mysql
       DB_HOST: db
-      DB_PORT: 1433
+      DB_PORT: 3306
       DB_DATABASE: cinebook_db
-      DB_USERNAME: sa
+      DB_USERNAME: cinebook
       DB_PASSWORD: "CineBook@1234"
-      DB_TRUST_SERVER_CERTIFICATE: "true"
     depends_on:
-      - db
-      - db-init
+      db:
+        condition: service_healthy
 
   db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mysql:8.0
     container_name: cinebook_db
     restart: always
     environment:
-      ACCEPT_EULA: "Y"
-      SA_PASSWORD: "CineBook@1234"
-      MSSQL_PID: Express
+      MYSQL_ROOT_PASSWORD: "CineBook@1234"
+      MYSQL_DATABASE: cinebook_db
+      MYSQL_USER: cinebook
+      MYSQL_PASSWORD: "CineBook@1234"
     ports:
-      - "1434:1433"
+      - "3307:3306"
     volumes:
-      - cinebook_db_data:/var/opt/mssql
+      - cinebook_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ucinebook", "-pCineBook@1234"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   db-init:
-    image: mcr.microsoft.com/mssql-tools:latest
+    image: mysql:8.0
     container_name: cinebook_db_init
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./database/migrations:/sql
       - ./database/init/entrypoint.sh:/entrypoint.sh

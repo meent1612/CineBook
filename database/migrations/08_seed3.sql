@@ -1,4 +1,2 @@
 USE cinebook_db;
-GO
-PRINT 'contact_messages table ready.';
-GO
+SELECT 'contact_messages table ready.' AS status;
