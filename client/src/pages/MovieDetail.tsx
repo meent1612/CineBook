@@ -1,325 +1,445 @@
-import { useState, useEffect, useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useState, useMemo } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useBranch } from "../context/Branchcontext"
-import "../CSSfiles/MovieDetail.css"
+import "../CSSfiles/TicketDetail.css"
 
 // ── Types ──────────────────────────────────────────────
-interface Movie {
+interface Booking {
   id: number
-  title: string
-  description: string | null
-  genre: string | null
-  category: string
-  language: string | null
-  duration_mins: number | null
-  release_date: string | null
-  poster_url: string | null
-  trailer_url: string | null
-  status: string
-  is_active: boolean
-}
-
-interface Screening {
-  id: number
-  movie_id: number
+  booking_group_id: string
+  movie_title: string
+  movie_poster: string | null
   show_date: string
   start_time: string
-  hall_name: string | null
-  hall?: { name: string }
+  hall_name: string
+  theater_name: string
+  theater_address: string
+  seats: string[] | string
+  seat_type: string
+  unit_price: number
+  total_price: number
+  status: "upcoming" | "watched" | "cancelled"
+  payment_method: "bkash" | "nagad" | "card" | null
+  transaction_id: string | null
+  booking_date: string
 }
 
 // ── Constants ──────────────────────────────────────────
-const API_URL     = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
-const BACKEND     = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
-const FULL_DAY    = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
-const MONTH_NAMES = ["January","February","March","April","May","June",
-                     "July","August","September","October","November","December"]
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+const BACKEND  = import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:8000"
 
-// ── Same palette as Showtimes so colors are consistent ──
-const HALL_PALETTE = [
-  { bg: "#f5c518", text: "#111" },
-  { bg: "#00bcd4", text: "#111" },
-  { bg: "#4caf50", text: "#111" },
-  { bg: "#9c27b0", text: "#fff" },
-  { bg: "#ff5722", text: "#fff" },
-  { bg: "#e91e63", text: "#fff" },
-]
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+const DAY_SHORT   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
-const ordinal = (n: number): string => {
-  const s = ["th","st","nd","rd"]
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
+const PAYMENT_LABEL: Record<string, string> = { bkash: "bKash", nagad: "Nagad", card: "Card" }
+const PAYMENT_BG:    Record<string, string> = { bkash: "#fce7f3", nagad: "#fff3e0", card: "#e8edf5" }
+const PAYMENT_COLOR: Record<string, string> = { bkash: "#9d174d", nagad: "#92400e", card: "#1e3a5f" }
+
+const STATUS_LABEL: Record<string, string> = {
+  upcoming: "Upcoming", watched: "Watched", cancelled: "Cancelled",
 }
 
-const WEEK_DAYS = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() + i)
-  const yyyy = d.getFullYear()
-  const mm   = String(d.getMonth() + 1).padStart(2, "0")
-  const dd   = String(d.getDate()).padStart(2, "0")
-  return {
-    dateStr: `${yyyy}-${mm}-${dd}`,
-    fullDay: FULL_DAY[d.getDay()],
-    ordDate: ordinal(d.getDate()),
-    month:   MONTH_NAMES[d.getMonth()],
-    year:    d.getFullYear(),
-  }
-})
+// ── Seat map layout ────────────────────────────────────
+// Rows O (top/standard) → A (bottom/VIP), mirroring the actual hall.
+// Each row has [left, center, right] seat counts via taper ratios.
+const ALL_ROWS = ["O","N","M","L","K","J","I","H","G","F","E","D","C","B","A"] as const
+type RowKey = typeof ALL_ROWS[number]
 
-const formatTime = (time: string): string => {
-  const [h, m] = time.split(":")
-  const hour   = parseInt(h)
-  const ampm   = hour >= 12 ? "PM" : "AM"
-  const hour12 = hour % 12 || 12
-  return `${String(hour12).padStart(2, "0")}:${m} ${ampm}`
+// Seat type per row (matches BookTicket zone layout)
+const ROW_TYPE: Record<RowKey, string> = {
+  O: "Standard",      N: "Standard",      M: "Standard",
+  L: "Standard",      K: "Standard",      J: "Standard",
+  I: "Standard",      H: "Standard",
+  G: "Semi-Recliner", F: "Semi-Recliner", E: "Semi-Recliner",
+  D: "Premium",       C: "Premium",
+  B: "VIP",           A: "VIP",
 }
 
-// Resolve hall name — handles both flat and nested shape
-const getHallName = (s: Screening): string =>
-  s.hall_name || s.hall?.name || "Unknown Hall"
-
-// Build hall→color map from actual screenings (same logic as Showtimes)
-const buildHallColorMap = (screenings: Screening[]): Record<string, { bg: string; text: string }> => {
-  const halls  = [...new Set(screenings.map(getHallName))].sort()
-  const result: Record<string, { bg: string; text: string }> = {}
-  halls.forEach((hall, i) => { result[hall] = HALL_PALETTE[i % HALL_PALETTE.length] })
-  return result
+// Total seats per row (center + sides)
+const ROW_TOTAL: Record<RowKey, number> = {
+  O: 30, N: 30, M: 30, L: 30, K: 30, J: 30, I: 30, H: 30,
+  G: 36, F: 36, E: 36,
+  D: 28, C: 28,
+  B: 22, A: 22,
 }
 
-const posterSrc = (url: string | null): string => {
-  if (!url) return ""
-  return url.startsWith("/") ? `${BACKEND}${url}` : url
+// Taper: VIP has narrower sides (fan/wedge shape), Standard wider sides
+const TAPER: Record<string, { l: number; r: number }> = {
+  Standard:      { l: 0.28, r: 0.28 },
+  "Semi-Recliner": { l: 0.22, r: 0.22 },
+  Premium:       { l: 0.16, r: 0.16 },
+  VIP:           { l: 0.13, r: 0.13 },
 }
 
-// ── Main Component ─────────────────────────────────────
-export default function MovieDetail() {
-  const { id }              = useParams<{ id: string }>()
-  const navigate            = useNavigate()
-  const { user }            = useAuth()
-  const { selectedTheater } = useBranch()
-  const isAdmin             = user?.role === "admin"
+// Zone colors matching BookTicket (for reference only — not used in TicketDetail)
+const ZONE_COLOR: Record<string, string> = {
+  Standard:        "#2196F3",
+  "Semi-Recliner": "#9C27B0",
+  Premium:         "#c8a96e",
+  VIP:             "#6B1829",
+}
 
-  const [movie,     setMovie]     = useState<Movie | null>(null)
-  const [screenings, setScreenings] = useState<Screening[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState("")
-  const [posterErr, setPosterErr] = useState(false)
+// ── Build rows from labels ─────────────────────────────
+interface SeatCell {
+  label: string
+  section: "left" | "center" | "right"
+  isBought: boolean
+}
 
-  // Re-fetch when movie id OR selected theater changes
-  useEffect(() => {
-    if (!id) return
-    const fetchData = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        // Filter screenings by theater just like Showtimes does
-        const screeningsUrl = selectedTheater
-          ? `${API_URL}/screenings?theater_id=${selectedTheater.id}`
-          : `${API_URL}/screenings`
+interface RowData {
+  row: RowKey
+  type: string
+  left:   SeatCell[]
+  center: SeatCell[]
+  right:  SeatCell[]
+}
 
-        const [movieRes, screeningsRes] = await Promise.all([
-          fetch(`${API_URL}/movies`),
-          fetch(screeningsUrl),
-        ])
-        const moviesData     = await movieRes.json()
-        const screeningsData = await screeningsRes.json()
+const buildRows = (boughtSet: Set<string>): RowData[] =>
+  ALL_ROWS.map(row => {
+    const total  = ROW_TOTAL[row]
+    const type   = ROW_TYPE[row]
+    const ratio  = TAPER[type] ?? { l: 0.28, r: 0.28 }
+    const lCount = Math.round(total * ratio.l)
+    const rCount = Math.round(total * ratio.r)
+    const cCount = total - lCount - rCount
 
-        if (!moviesData.success)     throw new Error(moviesData.message)
-        if (!screeningsData.success) throw new Error(screeningsData.message)
-
-        const found = moviesData.movies.find((m: Movie) => m.id === parseInt(id))
-        if (!found) throw new Error("Movie not found.")
-
-        setMovie(found)
-        setScreenings(screeningsData.screenings.filter(
-          (s: Screening) => s.movie_id === parseInt(id)
-        ))
-      } catch (err: any) {
-        setError(err.message || "Failed to load movie.")
-      } finally {
-        setLoading(false)
-      }
+    const makeCell = (seatNum: number, section: SeatCell["section"]): SeatCell => {
+      const label = `${row}${seatNum}`
+      return { label, section, isBought: boughtSet.has(label) }
     }
-    fetchData()
-  }, [id, selectedTheater])  // ← re-fetch on theater change too
 
-  // Build color map reactively — resets whenever screenings change
-  const hallColorMap = useMemo(() => buildHallColorMap(screenings), [screenings])
-  const getColor     = (s: Screening) => hallColorMap[getHallName(s)] ?? HALL_PALETTE[0]
+    const left:   SeatCell[] = Array.from({ length: lCount }, (_, i) => makeCell(i + 1, "left"))
+    const center: SeatCell[] = Array.from({ length: cCount }, (_, i) => makeCell(lCount + i + 1, "center"))
+    const right:  SeatCell[] = Array.from({ length: rCount }, (_, i) => makeCell(lCount + cCount + i + 1, "right"))
 
-  const getScreeningsForDay = (dateStr: string): Screening[] =>
-    screenings
-      .filter(s => s.show_date === dateStr)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    return { row, type, left, center, right }
+  })
 
-  const allHalls = [...new Set(screenings.map(getHallName).filter(Boolean))].sort()
+// ── Helpers ────────────────────────────────────────────
+const toArray = (s: string[] | string): string[] =>
+  Array.isArray(s) ? s : s ? [s] : []
 
-  const src            = posterSrc(movie?.poster_url ?? null)
-  const locationDisplay = selectedTheater
-    ? `${selectedTheater.name}, ${selectedTheater.address}`
-    : "Select a theater"
+const formatShowDate = (d: string) => {
+  const dt = new Date(d + "T00:00:00")
+  return `${DAY_SHORT[dt.getDay()]}, ${String(dt.getDate()).padStart(2,"0")} ${MONTH_SHORT[dt.getMonth()]}`
+}
 
-  if (loading) return <div className="md-loading">Loading…</div>
-  if (error)   return <div className="md-error">{error} <button onClick={() => navigate(-1)}>Go Back</button></div>
-  if (!movie)  return null
+const formatBookingDate = (iso: string) => {
+  const d    = new Date(iso)
+  const day  = String(d.getDate()).padStart(2,"0")
+  const mon  = MONTH_SHORT[d.getMonth()]
+  const yr   = d.getFullYear()
+  const h    = d.getHours()
+  const m    = String(d.getMinutes()).padStart(2,"0")
+  const ampm = h >= 12 ? "PM" : "AM"
+  const h12  = h % 12 || 12
+  return `${day} ${mon} ${yr}, ${String(h12).padStart(2,"0")}:${m} ${ampm}`
+}
+
+const formatTime = (t: string) => {
+  const [h, m] = t.split(":")
+  const hour   = parseInt(h)
+  return `${String(hour % 12 || 12).padStart(2,"0")}:${m} ${hour >= 12 ? "PM" : "AM"}`
+}
+
+// Deterministic QR pattern from booking_group_id
+const makeQrPat = (seed: string): boolean[] => {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) { hash = ((hash << 5) - hash) + seed.charCodeAt(i); hash |= 0 }
+  const pat: boolean[] = []
+  for (let i = 0; i < 49; i++) pat.push(((hash >> (i % 32)) & 1) === 1)
+  ;[0,1,2,3,4,5,6,7,14,21,28,35,42,43,44,45,46,47,48].forEach(i => { pat[i] = true })
+  return pat
+}
+
+// ── Sub-components ─────────────────────────────────────
+function MoviePoster({ poster, title }: { poster: string | null; title: string }) {
+  const [failed, setFailed] = useState(false)
+  const src = poster ? (poster.startsWith("/") ? `${BACKEND}${poster}` : poster) : ""
+  if (!src || failed) {
+    return <div className="tdt-poster-fallback"><i className="fa-solid fa-film" /></div>
+  }
+  return <img src={src} alt={title} className="tdt-poster" onError={() => setFailed(true)} />
+}
+
+function QRCode({ seed }: { seed: string }) {
+  const pat = useMemo(() => makeQrPat(seed), [seed])
+  return (
+    <div className="tdt-qr" aria-label="Ticket QR code">
+      {pat.map((on, i) => <span key={i} className={on ? "tdt-qr-on" : ""} />)}
+    </div>
+  )
+}
+
+// ── Seat Map ───────────────────────────────────────────
+// Fan-shaped 3-section layout identical to BookTicket image.
+// Bought seats = crimson/orange, all others = grey.
+function SeatMap({ boughtSeats }: { boughtSeats: string[] }) {
+  const boughtSet = useMemo(() => new Set(boughtSeats), [boughtSeats])
+  const rows      = useMemo(() => buildRows(boughtSet), [boughtSet])
+
+  const renderCell = (cell: SeatCell) => (
+    <span
+      key={cell.label}
+      title={cell.label}
+      className={`tdt-s ${cell.isBought ? "tdt-s-bought" : "tdt-s-other"}`}
+      aria-label={cell.label + (cell.isBought ? " — your seat" : "")}
+    />
+  )
+
+  // Group rows by type for zone dividers
+  let lastType = ""
 
   return (
-    <div className="md-wrapper">
+    <div className="tdt-seatmap">
 
-      {/* Hero */}
-      <div className="md-hero" style={{ backgroundImage: src && !posterErr ? `url(${src})` : "none" }}>
-        <div className="md-hero-overlay" />
-        <div className="md-hero-content">
-          <div className="md-poster-wrap">
-            {src && !posterErr ? (
-              <img src={src} alt={movie.title} className="md-poster-img" onError={() => setPosterErr(true)} />
-            ) : (
-              <div className="md-poster-fallback"><i className="fa-solid fa-film" /></div>
-            )}
-          </div>
-
-          <div className="md-info">
-            <h1 className="md-title">{movie.title}</h1>
-            {movie.description && <p className="md-description">{movie.description}</p>}
-
-            <div className="md-meta-table">
-              <div className="md-meta-row">
-                <span className="md-meta-key">Category</span>
-                <span className="md-meta-sep">:</span>
-                <span className="md-meta-val">{movie.category}</span>
-              </div>
-              {movie.genre && (
-                <div className="md-meta-row">
-                  <span className="md-meta-key">Genre</span>
-                  <span className="md-meta-sep">:</span>
-                  <span className="md-meta-val">{movie.genre}</span>
-                </div>
-              )}
-              {movie.release_date && (
-                <div className="md-meta-row">
-                  <span className="md-meta-key">Release</span>
-                  <span className="md-meta-sep">:</span>
-                  <span className="md-meta-val">{movie.release_date}</span>
-                </div>
-              )}
-              {movie.language && (
-                <div className="md-meta-row">
-                  <span className="md-meta-key">Language</span>
-                  <span className="md-meta-sep">:</span>
-                  <span className="md-meta-val">{movie.language}</span>
-                </div>
-              )}
-              {movie.duration_mins && (
-                <div className="md-meta-row">
-                  <span className="md-meta-key">Duration</span>
-                  <span className="md-meta-sep">:</span>
-                  <span className="md-meta-val">{movie.duration_mins} min</span>
-                </div>
-              )}
-            </div>
-
-            <div className="md-action-btns">
-              <button className="md-showtime-btn"
-                onClick={() => document.getElementById("md-showtime-section")?.scrollIntoView({ behavior: "smooth" })}>
-                <i className="fa-solid fa-clock" /> Show Time
-              </button>
-              {movie.trailer_url && (
-                <a href={movie.trailer_url} target="_blank" rel="noreferrer" className="md-trailer-btn">
-                  <i className="fa-solid fa-circle-play" /> Watch Trailer
-                </a>
-              )}
-              {isAdmin && (
-                <button className="md-edit-btn"
-                  onClick={() => navigate("/admin", { state: { editMovieId: movie.id } })}>
-                  <i className="fa-solid fa-pen" /> Edit Movie
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Screen */}
+      <div className="tdt-screen-wrap">
+        <div className="tdt-screen-bar" />
+        <div className="tdt-screen-label">&#9650; SCREEN</div>
       </div>
 
-      {/* Showtime Section */}
-      <div className="md-showtime-section" id="md-showtime-section">
-        <div className="md-showtime-header">
-          <div className="md-showtime-title-row">
-            <h2 className="md-showtime-title">Showtime</h2>
-            <div className="md-location">
-              <i className="fa-solid fa-location-dot" />
-              <span>[ {locationDisplay} ]</span>
-            </div>
-          </div>
+      {/* Hall */}
+      <div className="tdt-hall">
+        <div className="tdt-hall-wall">WALL</div>
 
-          {/* Hall legend — color-coded, same as Showtimes */}
-          {allHalls.length > 0 && (
-            <div className="md-hall-legend">
-              {allHalls.map(hall => {
-                const color = hallColorMap[hall] ?? HALL_PALETTE[0]
-                return (
-                  <div key={hall} className="md-hall-badge">
-                    <span className="md-hall-dot" style={{ background: color.bg }} />
-                    {hall}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <div className="tdt-hall-inner">
 
-        {screenings.length === 0 ? (
-          <p className="md-no-screenings">No screenings scheduled for this theater this week.</p>
-        ) : (
-          <div className="md-schedule-grid">
-            {WEEK_DAYS.map(({ dateStr, fullDay, ordDate, month, year }) => {
-              const dayScreenings = getScreeningsForDay(dateStr)
+          {/* LEFT section */}
+          <div className="tdt-hall-sec tdt-hall-left">
+            {rows.map(({ row, type, left }) => {
+              if (left.length === 0) return null
+              const showDivider = type !== lastType
+              if (showDivider) lastType = type  // mutate for left pass — reset below
               return (
-                <div key={dateStr} className="md-day-col">
-                  <div className="md-day-header">
-                    <div className="md-day-name">{fullDay}</div>
-                    <div className="md-day-date">{ordDate}, {month} {year}</div>
-                  </div>
-                  <div className="md-slots">
-                    {dayScreenings.length === 0 ? (
-                      <div className="md-no-show">—</div>
-                    ) : (
-                      dayScreenings.map(s => {
-                        const color = getColor(s)
-                        return (
-                          <button
-                            key={s.id}
-                            className="md-time-btn"
-                            style={{ background: color.bg, color: color.text }}
-                            title={getHallName(s)}
-                          >
-                            <span>{formatTime(s.start_time)}</span>
-                          </button>
-                        )
-                      })
-                    )}
-                  </div>
-                  {dayScreenings.length > 0 && (
-                    <button
-                      className={`md-get-ticket-btn ${isAdmin ? "md-admin-btn" : ""}`}
-                      onClick={() => isAdmin
-                        ? navigate("/admin", { state: { editMovieId: movie.id } })
-                        : navigate(`/book/${movie.id}`)
-                      }
-                    >
-                      {isAdmin
-                        ? <><i className="fa-solid fa-pen" /> Edit Data</>
-                        : <><i className="fa-solid fa-ticket" /> Get Tickets</>
-                      }
-                    </button>
-                  )}
+                <div key={row} className="tdt-seat-row">
+                  <span className="tdt-row-lbl">{row}</span>
+                  {left.map(renderCell)}
                 </div>
               )
             })}
           </div>
-        )}
+
+          <div className="tdt-hall-aisle"><span className="tdt-aisle-lbl">AISLE</span></div>
+
+          {/* CENTER section */}
+          <div className="tdt-hall-sec tdt-hall-center">
+            {(() => {
+              let _lastType = ""
+              return rows.map(({ row, type, center }) => {
+                if (center.length === 0) return null
+                const showDivider = type !== _lastType
+                if (showDivider) _lastType = type
+                return (
+                  <div key={row} className="tdt-seat-row">
+                    {showDivider && (
+                      <div className="tdt-zone-label" style={{ color: ZONE_COLOR[type] }}>
+                        {type}
+                      </div>
+                    )}
+                    {center.map(renderCell)}
+                  </div>
+                )
+              })
+            })()}
+          </div>
+
+          <div className="tdt-hall-aisle"><span className="tdt-aisle-lbl">AISLE</span></div>
+
+          {/* RIGHT section */}
+          <div className="tdt-hall-sec tdt-hall-right">
+            {rows.map(({ row, right }) => {
+              if (right.length === 0) return null
+              return (
+                <div key={row} className="tdt-seat-row tdt-seat-row-right">
+                  {right.map(renderCell)}
+                  <span className="tdt-row-lbl tdt-row-lbl-r">{row}</span>
+                </div>
+              )
+            })}
+          </div>
+
+        </div>
+
+        <div className="tdt-hall-wall tdt-hall-wall-r">WALL</div>
       </div>
 
-      <div className="md-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
+      {/* Legend */}
+      <div className="tdt-map-legend">
+        <span className="tdt-leg"><span className="tdt-leg-dot tdt-leg-other" />Other seats</span>
+        <span className="tdt-leg"><span className="tdt-leg-dot tdt-leg-bought" />Your seats</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ──────────────────────────────────────────
+export default function TicketDetail() {
+  const location  = useLocation()
+  const navigate  = useNavigate()
+  const { token } = useAuth()
+
+  const booking = location.state as Booking | null
+
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelMsg,  setCancelMsg]  = useState("")
+  const [status,     setStatus]     = useState<Booking["status"]>(booking?.status ?? "upcoming")
+
+  if (!booking) {
+    return (
+      <div className="tdt-empty">
+        <i className="fa-solid fa-ticket" />
+        <p>No ticket data found.</p>
+        <button onClick={() => navigate("/user")}>Back to dashboard</button>
+      </div>
+    )
+  }
+
+  const seats     = toArray(booking.seats)
+  const quantity  = seats.length
+  
+  return (
+    <div className="tdt-wrapper">
+
+      <button className="tdt-back" onClick={() => navigate("/user")}>
+        <i className="fa-solid fa-arrow-left" /> Back to my bookings
+      </button>
+
+      <div className="tdt-ticket">
+
+        {/* ── Hero ── */}
+        <div className="tdt-hero">
+          <MoviePoster poster={booking.movie_poster} title={booking.movie_title} />
+          <div className="tdt-hero-body">
+            <div className="tdt-movie-title">{booking.movie_title}</div>
+            <div className="tdt-badge-row">
+              <span className="tdt-badge tdt-badge-type">{booking.seat_type}</span>
+              <span className={`tdt-badge tdt-badge-status tdt-status-${status}`}>
+                <span className="tdt-dot" />{STATUS_LABEL[status] ?? status}
+              </span>
+            </div>
+            <div className="tdt-bid">#{booking.booking_group_id}</div>
+            <div className="tdt-bon">Booked {formatBookingDate(booking.booking_date)}</div>
+          </div>
+        </div>
+
+        {/* ── Crimson strip ── */}
+        <div className="tdt-strip">
+          {[
+            { l: "Date",    v: formatShowDate(booking.show_date)   },
+            { l: "Time",    v: formatTime(booking.start_time)      },
+            { l: "Hall",    v: booking.hall_name || "—"            },
+            { l: "Tickets", v: String(quantity)                    },
+          ].map(({ l, v }) => (
+            <div key={l} className="tdt-strip-item">
+              <span className="tdt-sl">{l}</span>
+              <span className="tdt-sv">{v}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Venue ── */}
+        <div className="tdt-sec">
+          <div className="tdt-sec-title">Venue</div>
+          <div className="tdt-grid2">
+            <div><div className="tdt-fl">Theater</div><div className="tdt-fv">{booking.theater_name || "—"}</div></div>
+            <div><div className="tdt-fl">Location</div><div className="tdt-fv">{booking.theater_address || "—"}</div></div>
+          </div>
+        </div>
+
+        {/* ── Seats + map ── */}
+        <div className="tdt-sec">
+          <div className="tdt-sec-title">Your seats</div>
+
+          {/* Seat chips with type label */}
+          <div className="tdt-seats">
+            {seats.map(s => (
+              <div key={s} className="tdt-seat-chip-wrap">
+                <span className="tdt-seat-chip">
+                  <i className="fa-solid fa-couch" />
+                  {s}
+                </span>
+                <span className="tdt-seat-chip-type">{booking.seat_type}</span>
+              </div>
+            ))}
+          </div>
+
+          <SeatMap boughtSeats={seats} />
+        </div>
+
+        {/* ── Payment ── */}
+        {(booking.transaction_id || booking.payment_method) && (
+          <div className="tdt-sec">
+            <div className="tdt-sec-title">Payment</div>
+            <div className="tdt-pay-row">
+              <div>
+                <div className="tdt-fl">Transaction ID</div>
+                <div className="tdt-trx">{booking.transaction_id || "—"}</div>
+              </div>
+              {booking.payment_method && (
+                <span className="tdt-method" style={{
+                  background: PAYMENT_BG[booking.payment_method]    ?? "#f3f4f6",
+                  color:      PAYMENT_COLOR[booking.payment_method] ?? "#374151",
+                }}>
+                  <i className="fa-solid fa-mobile-screen-button" />
+                  {PAYMENT_LABEL[booking.payment_method] ?? booking.payment_method}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Pricing ── */}
+        <div className="tdt-pricing">
+          <div className="tdt-pr">
+            <span>{booking.unit_price.toLocaleString()} BDT × {quantity} ticket{quantity > 1 ? "s" : ""}</span>
+            <span>{booking.total_price.toLocaleString()} BDT</span>
+          </div>
+          <div className="tdt-pr"><span>Convenience charge</span><span>0 BDT</span></div>
+          <div className="tdt-ptotal">
+            <span>Total paid</span>
+            <span>{booking.total_price.toLocaleString()} BDT</span>
+          </div>
+        </div>
+
+        {/* ── Perforated divider ── */}
+        <div className="tdt-perf">
+          <div className="tdt-perf-dot tdt-perf-l" />
+          <div className="tdt-perf-line" />
+          <div className="tdt-perf-dot tdt-perf-r" />
+        </div>
+
+        {/* ── QR stub ── */}
+        <div className="tdt-qr-row">
+          <QRCode seed={booking.booking_group_id} />
+          <div>
+            <div className="tdt-qr-title">Show this at the counter</div>
+            <div className="tdt-qr-desc">Present at the cinema entrance. Valid for one-time entry only.</div>
+          </div>
+        </div>
+
+        {/* ── Feedback ── */}
+        {cancelMsg && (
+          <div className={`tdt-msg ${status === "cancelled" ? "tdt-msg-ok" : "tdt-msg-err"}`}>
+            <i className={`fa-solid ${status === "cancelled" ? "fa-circle-check" : "fa-circle-exclamation"}`} />
+            {cancelMsg}
+          </div>
+        )}
+
+        {/* ── Actions ── */}
+        <div className="tdt-actions">
+          <button className="tdt-btn" onClick={() => window.print()}>
+            <i className="fa-solid fa-download" /> Download
+          </button>
+          <button className="tdt-btn">
+            <i className="fa-solid fa-share-nodes" /> Share
+          </button>
+          
+        </div>
+
+      </div>
+
+      <div className="tdt-footer">Copyright© 2026 CineBook Limited. All Rights Reserved.</div>
     </div>
   )
 }
