@@ -2,9 +2,12 @@ import { render } from '@testing-library/react'
 import { describe, it, vi } from 'vitest'
 import React from 'react'
 
-// Mock AIChatbot because jsdom doesn't support scrollIntoView
 vi.mock('../pages/Aichatbot', () => ({
   default: () => <div data-testid="mock-aichatbot" />,
+}))
+
+vi.mock('../pages/Ticketdetail', () => ({
+  default: () => <div data-testid="mock-ticketdetail" />,
 }))
 
 vi.mock('../context/AuthContext', () => ({
