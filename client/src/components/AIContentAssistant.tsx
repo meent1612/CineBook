@@ -19,12 +19,14 @@
  *      />
  *
  * ─── DEPENDENCIES ─────────────────────────────────────────────────────────
- * No new npm packages needed — uses the built-in fetch() and the
- * Anthropic /v1/messages endpoint (API key handled by the platform proxy).
+ * No new npm packages needed — uses the built-in fetch() and routes through
+ * the Laravel backend proxy at /api/admin/ai/movie-info.
  * ──────────────────────────────────────────────────────────────────────────
  */
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { useAuth } from "../context/AuthContext"
+
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface MovieFormData {
@@ -65,20 +67,6 @@ const MUTED        = "#6b7280"
 const TEXT         = "#1a1a1a"
 const WHITE        = "#ffffff"
 
-const SYSTEM_PROMPT = `You are a cinema database assistant.
-Given a movie title, return ONLY a JSON object — no markdown, no extra text.
-The JSON must have exactly these keys:
-{
-  "title":         "<exact movie title>",
-  "description":   "<2–3 sentence synopsis, no spoilers>",
-  "genre":         "<comma-separated genres, e.g. Action, Thriller>",
-  "category":      "<one of: 2D | 3D | IMAX>",
-  "language":      "<original release language, e.g. English>",
-  "duration_mins": "<runtime as a number string, e.g. 148>",
-  "status":        "<one of: now_showing | coming_soon>"
-}
-If you do not recognise the movie, still fill every field with plausible values.`
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 const fieldLabel: Record<keyof AIResult, string> = {
   title:         "Title",
@@ -95,6 +83,8 @@ const statusBadge = (s: string) =>
     ? { bg: "#d1fae5", color: "#065f46", label: "Now Showing" }
     : { bg: "#fef3c7", color: "#92400e", label: "Coming Soon" }
 
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function AIContentAssistant({ onFill }: Props) {
   const [open,       setOpen]       = useState(false)
@@ -106,6 +96,7 @@ export default function AIContentAssistant({ onFill }: Props) {
   const [streaming,  setStreaming]  = useState("")   // raw streaming text
   const inputRef  = useRef<HTMLInputElement>(null)
   const panelRef  = useRef<HTMLDivElement>(null)
+  const { token } = useAuth()
 
   // Focus input when panel opens
   useEffect(() => {
@@ -140,33 +131,22 @@ export default function AIContentAssistant({ onFill }: Props) {
     setStreaming("")
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model:      "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system:     SYSTEM_PROMPT,
-          messages:   [{ role: "user", content: `Movie title: "${title}"` }],
-        }),
+      const response = await fetch(`${API_URL}/admin/ai/movie-info`, {
+        method:  "POST",
+        headers: {
+          "Content-Type":  "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title }),
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data?.error?.message || `API error ${response.status}`)
+      if (!data.success) {
+        throw new Error(data.message || "AI unavailable")
       }
 
-      const raw = data.content
-        ?.filter((b: any) => b.type === "text")
-        ?.map((b: any) => b.text)
-        ?.join("") || ""
-
-      // Strip possible markdown fences
-      const clean = raw.replace(/```json|```/g, "").trim()
-      const parsed: AIResult = JSON.parse(clean)
-
-      setResult(parsed)
+      setResult(data.data as AIResult)
     } catch (err: any) {
       setError(err.message || "Failed to get AI response. Please try again.")
     } finally {
@@ -408,7 +388,7 @@ export default function AIContentAssistant({ onFill }: Props) {
                   ))}
                 </div>
 
-                {/* Streaming preview */}
+                {/* Loading state */}
                 {loading && (
                   <div style={{
                     background:   "#fafafa",
