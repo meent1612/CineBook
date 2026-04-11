@@ -30,4 +30,4 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 
-CMD sh -c "php artisan config:clear && php artisan migrate:fresh --force && php-fpm -D && nginx -g 'daemon off;'"
+CMD sh -c "php artisan config:clear && php artisan migrate --force && php-fpm -D && nginx -g 'daemon off;'"
