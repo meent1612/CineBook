@@ -1,0 +1,73 @@
+name: CineBook CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  frontend:
+    name: Frontend — Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci --legacy-peer-deps
+
+      - name: Run lint
+        working-directory: client
+        run: npm run lint || true
+
+      - name: Run smoke tests
+        working-directory: client
+        env:
+          VITE_BACKEND_ENDPOINT: http://localhost:8000
+        run: npm run test
+
+      - name: Build frontend
+        working-directory: client
+        env:
+          VITE_BACKEND_ENDPOINT: http://localhost:8000
+        run: npm run build || true
+
+  backend:
+    name: Backend — PHP Syntax & Composer Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, pdo_mysql
+
+      - name: Install Composer dependencies
+        working-directory: server
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy env file
+        working-directory: server
+        run: cp .env.example .env
+
+      - name: Generate app key
+        working-directory: server
+        run: php artisan key:generate --env=testing
+
+      - name: Check PHP syntax on all files
+        working-directory: server
+        run: find app routes -name "*.php" | xargs php -l

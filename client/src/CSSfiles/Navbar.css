@@ -1,0 +1,292 @@
+/* Navbar.css */
+
+.nav {
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Logo ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 44px;
+  height: 44px;
+  background: #6b1829;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.logo-text {
+  font-family: "Playfair Display", serif;
+  font-size: 1.1rem;
+  color: white;
+  letter-spacing: 0.02em;
+}
+
+.logo-sub {
+  color: #aaa;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+}
+
+/* ── Nav Links ── */
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.nav-link {
+  color: #ccc;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.nav-link.active {
+  color: white;
+  border-bottom: 2px solid #6b1829;
+  padding-bottom: 2px;
+}
+
+/* ── Right Side ── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.location-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.login-btn {
+  background: #6b1829;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.nav-username-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-username-btn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.hamburger {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* ── Mobile Menu ── */
+.mobile-menu {
+  position: fixed;
+  top: 64px;
+  right: 0;
+  background: #1a1a1a;
+  width: 220px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  z-index: 200;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+}
+
+.mobile-menu-link {
+  color: #ccc;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.nav-username {
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Paste at the BOTTOM of your existing Navbar.css ── */
+
+/* Branch dropdown wrapper */
+.branch-dropdown-wrap {
+  position: relative;
+}
+
+/* Trigger button */
+.branch-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+
+.branch-dropdown-btn:hover {
+  border-color: #c8a96e;
+  background: rgba(200,169,110,0.1);
+}
+
+.branch-dropdown-btn i:first-child {
+  color: #c8a96e;
+  font-size: 0.8rem;
+}
+
+.branch-name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-chevron {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+/* Dropdown menu */
+.branch-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  min-width: 240px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.branch-dropdown-label {
+  padding: 0.6rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+/* Each branch option */
+.branch-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.branch-dropdown-item:hover {
+  background: #2a2a2a;
+}
+
+.branch-dropdown-item.active {
+  background: rgba(200,169,110,0.12);
+  color: #fff;
+}
+
+.branch-dropdown-item > i:first-child {
+  color: #c8a96e;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.branch-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.branch-item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.branch-item-address {
+  font-size: 0.72rem;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-check {
+  color: #c8a96e;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* username button (no background) */
+.nav-username-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #ffffff;
+}
+
+.nav-username-btn:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}

@@ -1,0 +1,77 @@
+services:
+  client:
+    build:
+      context: ./client
+    container_name: cinebook-client
+    restart: always
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client/src:/app/src
+
+  server:
+    build:
+      context: ./server
+    container_name: cinebook-server
+    restart: always
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: CineBook
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:5173
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: cinebook_db
+      DB_USERNAME: cinebook
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_KEY: ${APP_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      MAIL_MAILER: smtp
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_USERNAME: admin.cinebook@gmail.com
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_ADDRESS: admin.cinebook@gmail.com
+      MAIL_FROM_NAME: "CineBook"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: cinebook_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: cinebook_db
+      MYSQL_USER: cinebook
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - cinebook_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ucinebook", "-pCineBook@1234"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  db-init:
+    image: mysql:8.0
+    container_name: cinebook_db_init
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./database/migrations:/sql
+      - ./database/init/entrypoint.sh:/entrypoint.sh
+    command: /bin/bash /entrypoint.sh
+
+volumes:
+  cinebook_db_data:

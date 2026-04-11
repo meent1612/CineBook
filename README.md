@@ -23,6 +23,10 @@ The platform focuses on centralized data management, real-time availability trac
 
 ---
 
+### Live Deployment URL: https://cinebook-production-a987.up.railway.app/
+
+---
+
 # Tech Stack
 
 ### 1. Backend
