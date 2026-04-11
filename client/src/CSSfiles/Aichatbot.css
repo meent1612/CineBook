@@ -1,7 +1,7 @@
-/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    AIChatbot.css  —  CineBook AI Chat Widget
    Aesthetic: Cinema dark · Gold accents · Glass panels
-   ═══════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 
 /* ── Variables ── */
 :root {
@@ -221,6 +221,40 @@
   color: var(--cb-text);
 }
 
+/* ── Tab Bar ── */
+.cb-tab-bar {
+  display: flex;
+  background: var(--cb-bg-header);
+  border-bottom: 1px solid var(--cb-border);
+  flex-shrink: 0;
+}
+
+.cb-tab {
+  flex: 1;
+  padding: 0.55rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--cb-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.cb-tab:hover {
+  color: var(--cb-text);
+}
+
+.cb-tab--active {
+  color: var(--cb-gold);
+  border-bottom-color: var(--cb-gold);
+}
+
 /* ── Messages ── */
 .cb-messages {
   flex: 1;
@@ -264,7 +298,25 @@
   font-size: 0.78rem;
   color: var(--cb-text-muted);
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 12px;
+}
+
+.cb-welcome-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.cb-welcome-examples span {
+  background: var(--cb-bg-chip);
+  border: 1px solid var(--cb-border);
+  color: var(--cb-text-muted);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-style: italic;
 }
 
 /* Message rows */
@@ -277,6 +329,17 @@
 
 .cb-msg-row--user {
   flex-direction: row-reverse;
+}
+
+.cb-msg-content-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.cb-msg-row--user .cb-msg-content-col {
+  align-items: flex-end;
 }
 
 .cb-msg-avatar {
@@ -294,7 +357,7 @@
 
 /* Bubbles */
 .cb-bubble {
-  max-width: 78%;
+  max-width: 100%;
   padding: 10px 13px;
   border-radius: 14px;
   position: relative;
@@ -360,7 +423,15 @@
   40%            { transform: translateY(-7px); opacity: 1;   }
 }
 
-/* ── Quick Chips ── */
+/* Movie cards row */
+.cb-movie-cards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* ── Quick Chips (chat tab) ── */
 .cb-chips {
   padding: 0 14px 10px;
   display: flex;
@@ -388,7 +459,7 @@
   transform: translateY(-1px);
 }
 
-/* ── Input Row ── */
+/* ── Input Row (chat) ── */
 .cb-input-row {
   display: flex;
   align-items: flex-end;
@@ -459,6 +530,283 @@
   margin: 0;
   flex-shrink: 0;
   background: var(--cb-bg-header);
+}
+
+/* ══════════════════════════════════════
+   SEARCH TAB
+══════════════════════════════════════ */
+
+.cb-search-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 14px;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.cb-search-panel::-webkit-scrollbar       { width: 4px; }
+.cb-search-panel::-webkit-scrollbar-track { background: transparent; }
+.cb-search-panel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+.cb-search-intro {
+  font-size: 0.75rem;
+  color: var(--cb-text-muted);
+  line-height: 1.5;
+  animation: cb-fade-up 0.3s ease both;
+}
+
+/* Search input row */
+.cb-search-input-row {
+  display: flex;
+  gap: 8px;
+  animation: cb-fade-up 0.3s 0.05s ease both;
+}
+
+.cb-search-input {
+  flex: 1;
+  background: var(--cb-bg-input);
+  border: 1px solid var(--cb-border);
+  border-radius: 12px;
+  color: var(--cb-text);
+  font-size: 0.82rem;
+  padding: 9px 12px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.cb-search-input::placeholder {
+  color: var(--cb-text-muted);
+}
+
+.cb-search-input:focus {
+  border-color: rgba(245, 200, 66, 0.4);
+}
+
+.cb-search-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255,255,255,0.07);
+  color: var(--cb-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: not-allowed;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.cb-search-btn--active {
+  background: linear-gradient(135deg, #f5c842 0%, #c8860a 100%);
+  color: #0a0c14;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(245,200,66,0.3);
+}
+
+.cb-search-btn--active:hover {
+  transform: scale(1.08);
+}
+
+/* Suggestion chips for search */
+.cb-search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  animation: cb-fade-up 0.3s 0.1s ease both;
+}
+
+/* Loading state in search */
+.cb-search-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  color: var(--cb-text-muted);
+  font-size: 0.78rem;
+}
+
+/* Search results wrapper */
+.cb-search-results-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: cb-fade-up 0.25s ease both;
+}
+
+.cb-search-count {
+  font-size: 0.75rem;
+  color: var(--cb-text-muted);
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--cb-border);
+}
+
+.cb-search-count strong {
+  color: var(--cb-gold);
+}
+
+/* Empty state */
+.cb-search-empty {
+  text-align: center;
+  padding: 24px 8px;
+  color: var(--cb-text-muted);
+}
+
+.cb-search-empty i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  display: block;
+  opacity: 0.4;
+}
+
+.cb-search-empty p {
+  margin: 0 0 4px;
+  font-size: 0.82rem;
+  color: var(--cb-text);
+}
+
+.cb-search-empty strong {
+  color: var(--cb-gold);
+}
+
+.cb-search-empty-hint {
+  font-size: 0.72rem;
+  color: var(--cb-text-muted) !important;
+}
+
+/* Clear/new search button */
+.cb-search-clear {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--cb-border);
+  color: var(--cb-text-muted);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.73rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cb-search-clear:hover {
+  background: var(--cb-gold-dim);
+  color: var(--cb-gold);
+  border-color: rgba(245,200,66,0.35);
+}
+
+/* ── Movie Cards (shared between chat + search) ── */
+.cb-movie-card {
+  width: 100px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--cb-border);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.cb-movie-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  border-color: rgba(245,200,66,0.3);
+}
+
+.cb-movie-card-poster {
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  position: relative;
+}
+
+.cb-movie-card-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cb-movie-card-poster-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.3);
+}
+
+.cb-movie-card-status {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  font-size: 0.52rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status--showing {
+  background: rgba(76, 175, 80, 0.9);
+  color: #fff;
+}
+
+.status--soon {
+  background: rgba(255, 152, 0, 0.9);
+  color: #fff;
+}
+
+.cb-movie-card-info {
+  padding: 6px 7px 8px;
+}
+
+.cb-movie-card-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--cb-text);
+  margin: 0 0 3px;
+  line-height: 1.3;
+}
+
+.cb-movie-card-meta {
+  font-size: 0.6rem;
+  color: var(--cb-text-muted);
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.cb-movie-card-btn {
+  width: 100%;
+  padding: 4px 0;
+  background: linear-gradient(135deg, #f5c842 0%, #c8860a 100%);
+  border: none;
+  border-radius: 5px;
+  color: #0a0c14;
+  font-size: 0.58rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: opacity 0.15s;
+}
+
+.cb-movie-card-btn:hover {
+  opacity: 0.88;
 }
 
 /* ── Backdrop (mobile) ── */
