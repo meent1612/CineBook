@@ -1,26 +1,16 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm-alpine
 
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
+    nginx \
     git \
     curl \
     libpng-dev \
-    libonig-dev \
+    oniguruma-dev \
     libxml2-dev \
     zip \
-    unzip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    unzip
 
 RUN docker-php-ext-install mbstring exif pcntl bcmath gd pdo_mysql
-
-RUN a2enmod rewrite
-RUN a2dismod mpm_event && a2enmod mpm_prefork
-
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/sites-available/*.conf \
-    /etc/apache2/apache2.conf \
-    /etc/apache2/conf-available/*.conf
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -36,6 +26,8 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD sh -c "php-fpm -D && nginx -g 'daemon off;'"
