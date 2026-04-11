@@ -27,7 +27,18 @@ services:
       DB_PORT: 3306
       DB_DATABASE: cinebook_db
       DB_USERNAME: cinebook
-      DB_PASSWORD: "CineBook@1234"
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_KEY: ${APP_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      MAIL_MAILER: smtp
+      MAIL_HOST: smtp.gmail.com
+      MAIL_PORT: "587"
+      MAIL_USERNAME: admin.cinebook@gmail.com
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: tls
+      MAIL_FROM_ADDRESS: admin.cinebook@gmail.com
+      MAIL_FROM_NAME: "CineBook"
     depends_on:
       db:
         condition: service_healthy
@@ -37,10 +48,10 @@ services:
     container_name: cinebook_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: "CineBook@1234"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: cinebook_db
       MYSQL_USER: cinebook
-      MYSQL_PASSWORD: "CineBook@1234"
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
