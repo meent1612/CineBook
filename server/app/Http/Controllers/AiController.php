@@ -252,4 +252,52 @@ Use only real IDs from the list above, max 4. Never mention MOVIE_IDS to the use
             'debug_genres' => $genreRows, // helpful for Postman debugging
         ]);
     }
+
+    // ── POST /api/admin/ai/movie-info ────────────────────
+    public function movieInfo(Request $request)
+    {
+        $request->validate(['title' => 'required|string|max:200']);
+
+        $title = $request->input('title');
+
+        $system = "You are a cinema database assistant.
+Given a movie title, return ONLY a JSON object — no markdown, no extra text.
+The JSON must have exactly these keys:
+{
+  \"title\":         \"<exact movie title>\",
+  \"description\":   \"<2-3 sentence synopsis, no spoilers>\",
+  \"genre\":         \"<comma-separated genres, e.g. Action, Thriller>\",
+  \"category\":      \"<one of: 2D | 3D | IMAX>\",
+  \"language\":      \"<original release language, e.g. English>\",
+  \"duration_mins\": \"<runtime as a number string, e.g. 148>\",
+  \"status\":        \"<one of: now_showing | coming_soon>\"
+}
+If you do not recognise the movie, still fill every field with plausible values.";
+
+        $raw = $this->callGroq($system, "Movie title: \"{$title}\"", 500);
+
+        if ($raw === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI service unavailable. Please try again.',
+            ], 503);
+        }
+
+        // Strip markdown fences if present
+        $clean = trim(preg_replace('/```json|```/', '', $raw));
+
+        $parsed = json_decode($clean, true);
+
+        if (!is_array($parsed)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI returned invalid data. Please try again.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $parsed,
+        ]);
+    }
 }
