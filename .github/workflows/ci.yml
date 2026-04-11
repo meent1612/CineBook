@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: client
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Run lint
         working-directory: client
@@ -32,10 +32,14 @@ jobs:
 
       - name: Run smoke tests
         working-directory: client
+        env:
+          VITE_BACKEND_ENDPOINT: http://localhost:8000
         run: npm run test
 
       - name: Build frontend
         working-directory: client
+        env:
+          VITE_BACKEND_ENDPOINT: http://localhost:8000
         run: npm run build || true
 
   backend:

@@ -20,7 +20,7 @@ class AiController extends Controller
         $this->model  = config('services.groq.model', 'llama-3.3-70b-versatile');
     }
 
-    // ── Core Groq API caller (OpenAI-compatible) ─────────
+    // ── Core Groq API caller ─────────────────────────────
     private function callGroq(string $systemPrompt, string $userMessage, int $maxTokens = 400): ?string
     {
         if (empty($this->apiKey)) {
@@ -57,7 +57,7 @@ class AiController extends Controller
         }
     }
 
-    // ── Minimal movie list to keep prompts short ─────────
+    // ── Minimal movie list for prompts ───────────────────
     private function getMinimalMovies(): \Illuminate\Support\Collection
     {
         return Movie::where('is_active', true)
@@ -101,19 +101,16 @@ Use only real IDs from the list above, max 4. Never mention MOVIE_IDS to the use
             ], 503);
         }
 
-        // Parse MOVIE_IDS out of response
-       $movieIds = [];
-if (preg_match('/MOVIE_IDS::\[([^\]]*)\]/', $text, $match)) {
-    // Format: MOVIE_IDS::[1,2,3]
-    $text     = trim(str_replace($match[0], '', $text));
-    $rawIds   = array_map('trim', explode(',', $match[1]));
-    $movieIds = array_values(array_filter(array_map('intval', $rawIds)));
-} elseif (preg_match('/MOVIE_IDS::([0-9,\s]+)/', $text, $match)) {
-    // Format: MOVIE_IDS::1,2,3  (no brackets)
-    $text     = trim(str_replace($match[0], '', $text));
-    $rawIds   = array_map('trim', explode(',', $match[1]));
-    $movieIds = array_values(array_filter(array_map('intval', $rawIds)));
-}
+        $movieIds = [];
+        if (preg_match('/MOVIE_IDS::\[([^\]]*)\]/', $text, $match)) {
+            $text     = trim(str_replace($match[0], '', $text));
+            $rawIds   = array_map('trim', explode(',', $match[1]));
+            $movieIds = array_values(array_filter(array_map('intval', $rawIds)));
+        } elseif (preg_match('/MOVIE_IDS::([0-9,\s]+)/', $text, $match)) {
+            $text     = trim(str_replace($match[0], '', $text));
+            $rawIds   = array_map('trim', explode(',', $match[1]));
+            $movieIds = array_values(array_filter(array_map('intval', $rawIds)));
+        }
 
         $recommendedMovies = [];
         if (!empty($movieIds)) {
@@ -148,10 +145,8 @@ if (preg_match('/MOVIE_IDS::\[([^\]]*)\]/', $text, $match)) {
             return response()->json(['success' => false, 'message' => 'AI unavailable.'], 503);
         }
 
-        // Strip markdown fences if present
         $clean = trim(preg_replace('/```json|```/', '', $raw));
 
-        // Extract JSON array even if there's extra text
         if (preg_match('/\[[\d,\s]*\]/', $clean, $m)) {
             $clean = $m[0];
         }
@@ -168,48 +163,64 @@ if (preg_match('/MOVIE_IDS::\[([^\]]*)\]/', $text, $match)) {
     }
 
     // ── GET /api/ai/recommendations ──────────────────────
+    // Returns ALL active movies (both statuses), sorted by relevance if user has booking history.
+    // Frontend splits them into now_showing / coming_soon tabs itself.
     public function recommendations(Request $request)
     {
-        $user   = $request->user();
-        $movies = Movie::where('is_active', true)
-            ->where('status', 'now_showing')
+        $user = $request->user();
+
+        // Get ALL active movies (not just now_showing) so frontend can split by tab
+        $allMovies = Movie::where('is_active', true)
             ->get(['id', 'title', 'genre', 'category', 'language', 'duration_mins', 'status', 'poster_url']);
 
-        // Get user's genre preferences from booking history
-        $genreHistory = DB::table('bookings')
+        // ── Get genre history from confirmed bookings ──────────────────
+        // bookings → screenings → movies (via movie_id on screenings)
+        $genreRows = DB::table('bookings')
             ->join('screenings', 'bookings.screening_id', '=', 'screenings.id')
             ->join('movies',     'screenings.movie_id',   '=', 'movies.id')
             ->where('bookings.user_id', $user->id)
             ->where('bookings.status',  'confirmed')
+            ->whereNotNull('movies.genre')
+            ->where('movies.genre', '!=', '')
             ->select('movies.genre')
             ->distinct()
             ->limit(5)
-            ->pluck('genre')
-            ->filter()
-            ->implode(', ');
+            ->pluck('movies.genre')
+            ->toArray();
 
-        if (!$genreHistory) {
+        // No booking history → return default order, personalised=false
+        if (empty($genreRows)) {
             return response()->json([
                 'success'      => true,
-                'movies'       => $movies,
+                'movies'       => $allMovies,
                 'personalised' => false,
+                'debug_genres' => [], // helpful for Postman debugging
             ]);
         }
 
-        $catalog = $movies->map(fn($m) => [
-            'id'    => $m->id,
-            'title' => $m->title,
-            'genre' => $m->genre,
+        $genreHistory = implode(', ', $genreRows);
+
+        // Build a compact catalog for the prompt (all movies, both statuses)
+        $catalog = $allMovies->map(fn($m) => [
+            'id'     => $m->id,
+            'title'  => $m->title,
+            'genre'  => $m->genre ?? 'Unknown',
+            'status' => $m->status,
         ])->toJson();
 
-        $system = "You are a movie recommendation engine. Return ONLY a valid JSON array of movie IDs sorted from most to least relevant. No markdown, no explanation, just the array.";
+        $system = "You are a movie recommendation engine. Return ONLY a valid JSON array of ALL movie IDs sorted from most to least relevant based on user genre preferences. Include every ID from the list — just reorder them. No markdown, no explanation, just the array.";
 
-        $userMsg = "User preferred genres: {$genreHistory}\nAvailable movies: {$catalog}\nReturn all IDs sorted by relevance. Example: [3,1,2]";
+        $userMsg = "User preferred genres: {$genreHistory}\nAll movies: {$catalog}\nReturn ALL IDs sorted by relevance. Example: [3,1,2,5,4]";
 
-        $raw = $this->callGroq($system, $userMsg, 150);
+        $raw = $this->callGroq($system, $userMsg, 200);
 
+        // If Groq fails, return default order with personalised=false
         if ($raw === null) {
-            return response()->json(['success' => true, 'movies' => $movies, 'personalised' => false]);
+            return response()->json([
+                'success'      => true,
+                'movies'       => $allMovies,
+                'personalised' => false,
+            ]);
         }
 
         $clean = trim(preg_replace('/```json|```/', '', $raw));
@@ -220,13 +231,25 @@ if (preg_match('/MOVIE_IDS::\[([^\]]*)\]/', $text, $match)) {
 
         $ids = json_decode($clean, true);
 
+        // Groq returned bad JSON → fall back
         if (!is_array($ids) || empty($ids)) {
-            return response()->json(['success' => true, 'movies' => $movies, 'personalised' => false]);
+            return response()->json([
+                'success'      => true,
+                'movies'       => $allMovies,
+                'personalised' => false,
+            ]);
         }
 
+        // Sort movies by Groq's recommended order
+        // Movies not in the returned list (Groq missed some) go to the end
         $idOrder = array_flip($ids);
-        $sorted  = $movies->sortBy(fn($m) => $idOrder[$m->id] ?? 999)->values();
+        $sorted  = $allMovies->sortBy(fn($m) => $idOrder[$m->id] ?? 9999)->values();
 
-        return response()->json(['success' => true, 'movies' => $sorted, 'personalised' => true]);
+        return response()->json([
+            'success'      => true,
+            'movies'       => $sorted,
+            'personalised' => true,
+            'debug_genres' => $genreRows, // helpful for Postman debugging
+        ]);
     }
 }
