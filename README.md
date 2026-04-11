@@ -1,3 +1,4 @@
+![CineBook CI](https://github.com/meent1612/CineBook/actions/workflows/ci.yml/badge.svg?branch=develop)
 # Project Title: CineBook
 >### *Movie Ticket Booking Platform*
 
