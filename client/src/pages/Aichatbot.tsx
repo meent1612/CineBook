@@ -31,7 +31,6 @@ interface RecommendedMovie {
   duration_mins: number | null
   status: string
   poster_url: string | null
-  reason?: string
 }
 
 interface QuickChip {
@@ -56,91 +55,10 @@ const QUICK_CHIPS: QuickChip[] = [
 
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
-// ── System prompt factory ─────────────────────────────
-const buildSystemPrompt = (movies: Movie[]): string => {
-  const catalog = movies.map(m => ({
-    id:            m.id,
-    title:         m.title,
-    genre:         m.genre          ?? "Unknown",
-    category:      m.category,
-    language:      m.language       ?? "Unknown",
-    duration_mins: m.duration_mins  ?? null,
-    status:        m.status,
-    description:   m.description    ?? null,
-    rating:        m.rating         ?? null,
-  }))
-
-  return `You are CineBot, an expert AI movie assistant for CineBook — a cinema booking platform in Bangladesh.
-
-## CURRENT MOVIE CATALOG:
-${JSON.stringify(catalog, null, 2)}
-
-## YOUR CORE JOB:
-1. **Mood / Preference Recommendations** — When users describe a feeling or vibe ("I want something scary but not gory", "good for a date night", "something fun with family"), pick the BEST matching movies from the catalog above.
-2. **Natural Language Search** — When users search like "movies like Inception", "action movies under 2 hours", "non-English films", "comedies", filter and rank from the catalog.
-3. **General Questions** — Showtimes: direct to /showtimes. Ticket prices: 200–350 BDT. Branches: selectable in navbar. Refund policy: cancel 2+ hrs before for full refund. Seat availability: visible at /book/:id.
-
-## STRICT RECOMMENDATION FORMAT:
-- Only recommend movies that exist in the catalog (match by id and title exactly).
-- After your 1–3 sentence friendly response, if recommending movies append this block:
-
-MOVIE_CARDS_JSON::[{"id":1,"title":"Exact Title","reason":"Why this matches in under 15 words"}]
-
-- Include 1–4 movies max. Use real IDs and exact titles from the catalog.
-- NEVER mention the JSON format to the user.
-- If no good match exists, say so honestly before suggesting the closest option.
-
-## SEARCH LOGIC:
-- "like Inception" / "mind-bending" → match thriller, sci-fi, mystery genres
-- "under 2 hours" → duration_mins < 120
-- "non-English" / language requests → filter by language field
-- "now showing" / "playing now" → status === "now_showing"
-- "coming soon" → status === "coming_soon"
-- "scary but not gory" → horror genre, avoid extreme violence descriptors in description
-
-## TONE:
-Warm, concise, cinema-enthusiast. 2–3 sentences max before cards. Use occasional emojis 🎬🍿.
-If asked outside your scope: "That's beyond my popcorn-powered brain 🍿 — reach us at support@cinebook.com"`
-}
-
 // ── Helpers ───────────────────────────────────────────
 const posterSrc = (url: string | null): string => {
   if (!url) return ""
   return url.startsWith("/") ? `${BACKEND}${url}` : url
-}
-
-const parseMovieCards = (
-  text: string,
-  catalog: Movie[]
-): { cleanText: string; cards: RecommendedMovie[] } => {
-  const marker = "MOVIE_CARDS_JSON::"
-  const idx    = text.indexOf(marker)
-  if (idx === -1) return { cleanText: text.trim(), cards: [] }
-
-  const cleanText = text.slice(0, idx).trim()
-  const jsonStr   = text.slice(idx + marker.length).trim()
-
-  try {
-    const parsed: Array<{ id: number; title: string; reason?: string }> = JSON.parse(jsonStr)
-    const cards: RecommendedMovie[] = parsed
-      .map(p => {
-        const movie = catalog.find(m => m.id === p.id || m.title === p.title)
-        if (!movie) return null
-        return {
-          id:            movie.id,
-          title:         movie.title,
-          genre:         movie.genre,
-          duration_mins: movie.duration_mins,
-          status:        movie.status,
-          poster_url:    movie.poster_url,
-          reason:        p.reason,
-        } as RecommendedMovie
-      })
-      .filter((c): c is RecommendedMovie => c !== null)
-    return { cleanText, cards }
-  } catch {
-    return { cleanText, cards: [] }
-  }
 }
 
 const formatTime = (): string =>
@@ -186,9 +104,6 @@ const MovieResultCard = ({
             .filter(Boolean)
             .join(" · ")}
         </p>
-        {movie.reason && (
-          <p className="cb-movie-card-reason">"{movie.reason}"</p>
-        )}
         <button
           className="cb-movie-card-btn"
           onClick={() => onBook(movie.id)}
@@ -227,7 +142,7 @@ export default function AIChatbot({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef       = useRef<HTMLTextAreaElement>(null)
 
-  // Fetch catalog on mount
+  // Fetch catalog on mount (for display count only — AI uses backend catalog)
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
@@ -235,7 +150,7 @@ export default function AIChatbot({
         const data = await res.json()
         if (data.success) setCatalog(data.movies)
       } catch {
-        // silently fail — chatbot still works without catalog
+        // silently fail
       } finally {
         setCatalogLoaded(true)
       }
@@ -267,46 +182,40 @@ export default function AIChatbot({
   const handleToggle = () => setIsOpen(prev => !prev)
   const handleReset  = () => { setMessages([]); setShowChips(true); setInput("") }
 
+  // ── KEY CHANGE: call Laravel backend instead of Anthropic directly ──
   const handleSend = useCallback(async (text?: string) => {
     const userText = (text ?? input).trim()
     if (!userText || isLoading) return
 
     const userMsg: ChatMessage = { role: "user", content: userText }
-    const nextMessages         = [...messages, userMsg]
-
-    setMessages(nextMessages)
+    setMessages(prev => [...prev, userMsg])
     setInput("")
     setShowChips(false)
     setIsLoading(true)
 
-    // Strip movieCards before sending to API (only role+content needed)
-    const apiHistory = nextMessages.map(m => ({ role: m.role, content: m.content }))
-
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch(`${API_URL}/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model:      "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system:     buildSystemPrompt(catalog),
-          messages:   apiHistory,
-        }),
+        body: JSON.stringify({ message: userText }),
       })
 
-      const data     = await response.json()
-      const rawText: string =
-        data?.content?.find((b: any) => b.type === "text")?.text ??
-        "Sorry, something went wrong 🎥 — please try again!"
+      const data = await response.json()
 
-      const { cleanText, cards } = parseMovieCards(rawText, catalog)
+      if (!data.success) {
+        throw new Error(data.message || "AI unavailable")
+      }
+
+      // Backend returns: { success, reply, movies[] }
+      const replyText: string  = data.reply  ?? "Sorry, something went wrong 🎥"
+      const movies: RecommendedMovie[] = data.movies ?? []
 
       setMessages(prev => [
         ...prev,
         {
           role:       "assistant",
-          content:    cleanText,
-          movieCards: cards.length > 0 ? cards : undefined,
+          content:    replyText,
+          movieCards: movies.length > 0 ? movies : undefined,
         },
       ])
     } catch {
@@ -317,7 +226,7 @@ export default function AIChatbot({
     } finally {
       setIsLoading(false)
     }
-  }, [input, messages, isLoading, catalog])
+  }, [input, isLoading])
 
   const handleChipClick = (chip: QuickChip) => handleSend(chip.prompt)
 
@@ -498,7 +407,7 @@ export default function AIChatbot({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder='Try "scary but not gory" or "movies like Inception"…'
+           placeholder={`Try "scary but not gory" or "what's showing now"…`}
             rows={1}
             aria-label="Type your movie request"
             disabled={isLoading}
@@ -516,7 +425,7 @@ export default function AIChatbot({
 
         <p className="cb-footer-note" aria-hidden="true">
           <i className="fa-solid fa-wand-magic-sparkles" style={{ marginRight: 4, color: "var(--cb-gold)" }} />
-          Claude AI · Matching from your live catalog
+          Powered by Groq · Matching from your live catalog
         </p>
       </div>
 
