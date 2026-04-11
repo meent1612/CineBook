@@ -104,5 +104,8 @@ Route::middleware('auth:api')->group(function () {
 
         Route::get('/contact-messages',           [ContactController::class, 'index']);
         Route::put('/contact-messages/{id}/read', [ContactController::class, 'markRead']);
+
+        Route::post('/ai/movie-info',             [AiController::class,     'movieInfo']);
+        
     });
 });
