@@ -41,7 +41,7 @@ class PaymentController extends Controller
                 'Content-Type'  => 'application/json',
             ])->post('https://api.resend.com/emails', [
                 'from'    => 'CineBook <onboarding@resend.dev>',
-                'to'      => [$request->email],
+                'to'      => [env('MAIL_TEST_RECIPIENT', $request->email)],
                 'subject' => 'Your CineBook OTP Code',
                 'html'    => '
                     <div style="font-family: Arial, sans-serif; padding: 20px;">
