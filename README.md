@@ -13,6 +13,10 @@ The platform focuses on centralized data management, real-time availability trac
 
 ---
 
+### Live Deployment URL: https://cinebook-production-a987.up.railway.app/
+
+---
+
 ### Target Audience
 
 - *Moviegoers* seeking a convenient platform to browse movies, view showtimes, select seats, and securely book tickets with instant confirmation.
