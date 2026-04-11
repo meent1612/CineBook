@@ -11,4 +11,4 @@ RUN npm run build
 
 RUN npm install -g serve
 
-CMD serve -s dist --listen tcp://0.0.0.0:$PORT
+CMD sh -c "serve -s dist -l $PORT"
