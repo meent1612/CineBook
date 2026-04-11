@@ -35,54 +35,6 @@ const posterSrc = (url: string | null): string => {
 
 const FALLBACK_COLORS = ["#0f2744", "#2d1b2e", "#1a3a1a", "#3b1f00", "#1a1a3b"]
 
-// ── AI: reorder movies based on user's genre history ──
-const reorderMoviesWithAI = async (
-  movies: Movie[],
-  preferredGenres: string[]
-): Promise<Movie[]> => {
-  if (preferredGenres.length === 0 || movies.length === 0) return movies
-
-  try {
-    const movieList = movies.map(m => ({
-      id: m.id,
-      title: m.title,
-      genre: m.genre || "Unknown",
-    }))
-
-    const prompt = `You are a movie recommendation engine.
-A user has previously watched movies in these genres: ${preferredGenres.join(", ")}.
-Reorder the following movies so the most relevant ones appear first.
-Return ONLY a JSON array of movie IDs in recommended order, nothing else.
-Example: [3, 1, 5, 2, 4]
-
-Movies: ${JSON.stringify(movieList)}`
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-
-    const data = await response.json()
-    const text = data.content?.[0]?.text?.trim() || ""
-
-    const orderedIds: number[] = JSON.parse(text)
-    const idToMovie = new Map(movies.map(m => [m.id, m]))
-    const reordered = orderedIds
-      .map(id => idToMovie.get(id))
-      .filter(Boolean) as Movie[]
-    const included = new Set(orderedIds)
-    const remaining = movies.filter(m => !included.has(m.id))
-    return [...reordered, ...remaining]
-  } catch {
-    return movies
-  }
-}
-
 // ── Poster with fallback ───────────────────────────────
 function MoviePoster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false)
@@ -206,17 +158,18 @@ export default function Home() {
   const [error,         setError]         = useState("")
   const [hoveredId,     setHoveredId]     = useState<number | null>(null)
 
-  const [aiOrdering,     setAiOrdering]     = useState(false)
-  const [isPersonalized, setIsPersonalized] = useState(false)
-  const [nowShowingAI,   setNowShowingAI]   = useState<Movie[]>([])
-  const [comingSoonAI,   setComingSoonAI]   = useState<Movie[]>([])
+  // Personalization — single sorted list from backend, split by tab here
+  const [aiOrdering,        setAiOrdering]        = useState(false)
+  const [isPersonalized,    setIsPersonalized]    = useState(false)
+  const [personalizedMovies, setPersonalizedMovies] = useState<Movie[]>([])
 
-  const navigate   = useNavigate()
+  const navigate        = useNavigate()
   const { user, token } = useAuth()
-  const isAdmin    = user?.role === "admin"
-  const isLoggedIn = !!user
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isAdmin         = user?.role === "admin"
+  const isLoggedIn      = !!user
+  const intervalRef     = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── Fetch movies ───────────────────────────────────────
   useEffect(() => {
     const fetchMovies = async () => {
       setLoading(true)
@@ -243,45 +196,36 @@ export default function Home() {
     fetchPopular()
   }, [])
 
+  // ── Personalization ────────────────────────────────────
+  // Only runs after movies are loaded and user is logged in
   useEffect(() => {
     if (!isLoggedIn || !token || movieList.length === 0) return
 
     const personalize = async () => {
       setAiOrdering(true)
       try {
-        const res  = await fetch(`${API_URL}/bookings/history`, {
+        const res  = await fetch(`${API_URL}/ai/recommendations`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
-        if (!data.success || !data.bookings?.length) return
 
-        const genreCount: Record<string, number> = {}
-        data.bookings.forEach((b: any) => {
-          const genre = b.movie?.genre
-          if (genre) {
-            genreCount[genre] = (genreCount[genre] || 0) + 1
-          }
+        if (!data.success || !data.personalised) {
+          // No booking history or AI failed — keep default order
+          return
+        }
+
+        // Backend returns ALL movies sorted by relevance
+        // We merge with movieList to fill in any missing fields (carasol_url etc.)
+        const movieMap = new Map(movieList.map((m: Movie) => [m.id, m]))
+        const merged: Movie[] = (data.movies as Movie[]).map((rec: Movie) => {
+          const full = movieMap.get(rec.id)
+          return full ? { ...full, ...rec } : rec
         })
-        const preferredGenres = Object.entries(genreCount)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([g]) => g)
 
-        if (preferredGenres.length === 0) return
-
-        const nowShowing = movieList.filter(m => m.status === "now_showing")
-        const comingSoon = movieList.filter(m => m.status === "coming_soon")
-
-        const [reorderedNow, reorderedSoon] = await Promise.all([
-          reorderMoviesWithAI(nowShowing, preferredGenres),
-          reorderMoviesWithAI(comingSoon, preferredGenres),
-        ])
-
-        setNowShowingAI(reorderedNow)
-        setComingSoonAI(reorderedSoon)
+        setPersonalizedMovies(merged)
         setIsPersonalized(true)
       } catch {
-        // silently fall back to default order
+        // silently fall back
       } finally {
         setAiOrdering(false)
       }
@@ -290,13 +234,18 @@ export default function Home() {
     personalize()
   }, [isLoggedIn, token, movieList])
 
-  const nowShowing = isPersonalized ? nowShowingAI : movieList.filter(m => m.status === "now_showing")
-  const comingSoon = isPersonalized ? comingSoonAI : movieList.filter(m => m.status === "coming_soon")
+  // ── Derived lists ──────────────────────────────────────
+  // Use personalized order if available, else default movieList
+  const sourceList = isPersonalized ? personalizedMovies : movieList
+
+  const nowShowing = sourceList.filter(m => m.status === "now_showing")
+  const comingSoon = sourceList.filter(m => m.status === "coming_soon")
   const displayed  = activeTab === "Now Showing" ? nowShowing : comingSoon
 
   const heroMovies = displayed.length > 0 ? displayed : movieList
   const heroMovie  = heroMovies.length > 0 ? heroMovies[heroIdx % heroMovies.length] : null
 
+  // ── Hero carousel ──────────────────────────────────────
   useEffect(() => {
     if (heroMovies.length <= 1) return
     intervalRef.current = setInterval(() => {
@@ -333,7 +282,6 @@ export default function Home() {
 
       {/* ── Hero Banner ── */}
       <div className="hero-banner">
-        {/* ↓ CHANGED: use carasol_url instead of poster_url for the hero background */}
         {heroMovie && posterSrc(heroMovie.carasol_url) ? (
           <img
             key={heroMovie.id}
@@ -486,7 +434,8 @@ export default function Home() {
           Copyright© 2026 CineBook Limited. All Rights Reserved.
         </div>
       </div>
-      <AIChatbot />
+
+      <AIChatbot onNavigate={(path) => navigate(path)} />
     </div>
   )
 }
