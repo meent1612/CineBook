@@ -11,7 +11,7 @@ class HallController extends Controller
     public function index()
     {
         try {
-            $halls = Hall::all();
+            $halls = Hall::with('theater')->get();
 
             return response()->json([
                 'success' => true,

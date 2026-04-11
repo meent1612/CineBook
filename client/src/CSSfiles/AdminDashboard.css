@@ -1,8 +1,3 @@
-/* ══════════════════════════════════════════
-   AdminDashboard.css
-   CineBook Admin — Crimson & Ivory theme
-   ══════════════════════════════════════════ */
-
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap');
 
 /* ── Root Variables ── */
@@ -642,4 +637,382 @@
   .admin-stats-row     { grid-template-columns: 1fr 1fr; }
   .movie-card          { width: 145px; }
   .movie-card-img-wrap { height: 180px; }
+}
+/* ═══════════════════════════════════════════════════════
+   Edit Screening Modal — append to AdminDashboard.css
+   ═══════════════════════════════════════════════════════ */
+
+.edit-screening-header {
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0d6cf;
+}
+
+.edit-screening-movie-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.edit-screening-movie-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #3a1a1a;
+}
+
+.edit-screening-date {
+  font-size: 0.92rem;
+  color: #7a6a5a;
+}
+
+.edit-screening-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.edit-screening-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.edit-screening-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: #f5f0eb;
+  color: #5a4a3a;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #d9cfc5;
+}
+
+.edit-screening-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #ebe5de;
+  vertical-align: middle;
+}
+
+.edit-screening-table tbody tr:hover {
+  background: #faf7f4;
+}
+
+.edit-screening-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.screening-edit-btn,
+.screening-delete-btn,
+.screening-save-btn,
+.screening-cancel-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.screening-edit-btn {
+  background: #e8ddd3;
+  color: #5a4a3a;
+}
+.screening-edit-btn:hover {
+  background: #d9cfc5;
+}
+
+.screening-delete-btn {
+  background: #f5e0e0;
+  color: #8b2020;
+}
+.screening-delete-btn:hover {
+  background: #ecc8c8;
+}
+
+.screening-save-btn {
+  background: #d4edda;
+  color: #1a5c2e;
+}
+.screening-save-btn:hover {
+  background: #bde0c5;
+}
+
+.screening-cancel-btn {
+  background: #e8ddd3;
+  color: #5a4a3a;
+}
+.screening-cancel-btn:hover {
+  background: #d9cfc5;
+}
+
+.add-screening-inline-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem 1.2rem;
+  background: none;
+  border: 2px dashed #c5b8aa;
+  border-radius: 8px;
+  color: #7a6a5a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.add-screening-inline-btn:hover {
+  border-color: #6B1829;
+  color: #6B1829;
+  background: #faf5f0;
+}
+
+.inline-add-screening {
+  margin: 0.75rem 0;
+  padding: 1rem;
+  background: #faf7f4;
+  border-radius: 10px;
+  border: 1px solid #e0d6cf;
+}
+
+.inline-add-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3a1a1a;
+}
+
+.inline-add-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.inline-add-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.inline-add-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+/* ═══════════════════════════════════════════════════════
+   Edit Screening Modal — append to AdminDashboard.css
+   ═══════════════════════════════════════════════════════ */
+
+.edit-screening-header {
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0d6cf;
+}
+
+.edit-screening-movie-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.edit-screening-movie-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #3a1a1a;
+}
+
+.edit-screening-date {
+  font-size: 0.92rem;
+  color: #7a6a5a;
+}
+
+.edit-screening-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.edit-screening-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.edit-screening-table th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: #f5f0eb;
+  color: #5a4a3a;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #d9cfc5;
+}
+
+.edit-screening-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #ebe5de;
+  vertical-align: middle;
+}
+
+.edit-screening-table tbody tr:hover {
+  background: #faf7f4;
+}
+
+.edit-screening-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.screening-edit-btn,
+.screening-delete-btn,
+.screening-save-btn,
+.screening-cancel-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.screening-edit-btn {
+  background: #e8ddd3;
+  color: #5a4a3a;
+}
+.screening-edit-btn:hover {
+  background: #d9cfc5;
+}
+
+.screening-delete-btn {
+  background: #f5e0e0;
+  color: #8b2020;
+}
+.screening-delete-btn:hover {
+  background: #ecc8c8;
+}
+
+.screening-save-btn {
+  background: #d4edda;
+  color: #1a5c2e;
+}
+.screening-save-btn:hover {
+  background: #bde0c5;
+}
+
+.screening-cancel-btn {
+  background: #e8ddd3;
+  color: #5a4a3a;
+}
+.screening-cancel-btn:hover {
+  background: #d9cfc5;
+}
+
+.add-screening-inline-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem 1.2rem;
+  background: none;
+  border: 2px dashed #c5b8aa;
+  border-radius: 8px;
+  color: #7a6a5a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.add-screening-inline-btn:hover {
+  border-color: #6B1829;
+  color: #6B1829;
+  background: #faf5f0;
+}
+
+.inline-add-screening {
+  margin: 0.75rem 0;
+  padding: 1rem;
+  background: #faf7f4;
+  border-radius: 10px;
+  border: 1px solid #e0d6cf;
+}
+
+.inline-add-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3a1a1a;
+}
+
+.inline-add-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.inline-add-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.inline-add-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Slot Buttons — Time slot selection
+   ═══════════════════════════════════════════════════════ */
+.slot-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.slot-btn {
+  flex: 1;
+  padding: 0.65rem 0.5rem;
+  border: 2px solid #d9cfc5;
+  border-radius: 8px;
+  background: #faf7f4;
+  color: #3a1a1a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.slot-btn:hover:not(:disabled) {
+  border-color: #6B1829;
+  background: #f5eeea;
+}
+
+.slot-btn.slot-selected {
+  background: #6B1829;
+  border-color: #6B1829;
+  color: #fff;
+}
+
+.slot-btn.slot-taken {
+  background: #e8e3de;
+  border-color: #d0c8c0;
+  color: #aaa;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.slot-taken-label {
+  font-size: 0.65rem;
+  color: #c0574a;
+  font-weight: 500;
 }

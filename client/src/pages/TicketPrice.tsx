@@ -1,47 +1,85 @@
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useBranch } from "../context/Branchcontext"
+
+const API_URL = `${import.meta.env.VITE_BACKEND_ENDPOINT}/api`
+
+const METADATA: Record<string, { type: string; desc: string; icon: string; features: string[]; highlight: boolean }> = {
+  standard: {
+    type: "Standard", icon: "fa-solid fa-chair", highlight: false,
+    desc: "Regular comfortable seating for the everyday movie lover.",
+    features: ["Standard seat", "Regular screen", "Basic amenities"],
+  },
+  semi_recliner: {
+    type: "Semi-Recliner", icon: "fa-solid fa-couch", highlight: false,
+    desc: "Upgraded seating with partial recliner function for extra comfort.",
+    features: ["Semi-recliner seat", "Premium screen", "Armrest table"],
+  },
+  premium: {
+    type: "Premium", icon: "fa-solid fa-star", highlight: true,
+    desc: "Full recliner seats with extra legroom and a superior view.",
+    features: ["Full recliner seat", "4K screen", "Extra legroom", "Priority entry"],
+  },
+  vip: {
+    type: "VIP", icon: "fa-solid fa-crown", highlight: false,
+    desc: "Luxury private lounge seating with dedicated concierge service.",
+    features: ["Private lounge pod", "IMAX screen", "Concierge service", "Complimentary snacks"],
+  },
+}
+
 export default function TicketPrice() {
-  const prices = [
-    {
-      type: "Standard",
-      price: 400,
-      desc: "Regular comfortable seating for the everyday movie lover.",
-      icon: "fa-solid fa-chair",
-      features: ["Standard seat", "Regular screen", "Basic amenities"],
-      highlight: false,
-    },
-    {
-      type: "Semi-Recliner",
-      price: 615,
-      desc: "Upgraded seating with partial recliner function for extra comfort.",
-      icon: "fa-solid fa-couch",
-      features: ["Semi-recliner seat", "Premium screen", "Armrest table"],
-      highlight: false,
-    },
-    {
-      type: "Premium",
-      price: 815,
-      desc: "Full recliner seats with extra legroom and a superior view.",
-      icon: "fa-solid fa-star",
-      features: ["Full recliner seat", "4K screen", "Extra legroom", "Priority entry"],
-      highlight: true,
-    },
-    {
-      type: "VIP",
-      price: 1200,
-      desc: "Luxury private lounge seating with dedicated concierge service.",
-      icon: "fa-solid fa-crown",
-      features: ["Private lounge pod", "IMAX screen", "Concierge service", "Complimentary snacks"],
-      highlight: false,
-    },
-  ];
+  const navigate = useNavigate()
+  const { selectedTheater } = useBranch()
+
+  const [prices,   setPrices]   = useState<{ seat_type: string; price: number }[]>([])
+  const [discount, setDiscount] = useState<any | null>(null)
+
+  // Prices fetch — runs once
+  useEffect(() => {
+    fetch(`${API_URL}/ticket-prices`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success)
+          setPrices(data.prices.map((p: any) => ({ ...p, price: parseInt(p.price) })))
+      })
+      .catch(() => {})
+  }, [])
+
+  // Discount fetch — re-runs when selected theater changes
+  useEffect(() => {
+    const theaterId = selectedTheater?.id ?? 1
+    fetch(`${API_URL}/discounts?theater_id=${theaterId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.discounts.length > 0) setDiscount(data.discounts[0])
+        else setDiscount(null)
+      })
+      .catch(() => {})
+  }, [selectedTheater])
+
+  const getPct = (seatType: string): number => {
+    if (!discount) return 0
+    const map: Record<string, number> = {
+      standard:      discount.standard_pct,
+      semi_recliner: discount.semi_recliner_pct,
+      premium:       discount.premium_pct,
+      vip:           discount.vip_pct,
+    }
+    return map[seatType] ?? 0
+  }
+
+  const cards = prices.map(p => {
+    const pct             = getPct(p.seat_type)
+    const discountedPrice = pct > 0 ? Math.round(p.price * (1 - pct / 100)) : null
+    return { ...METADATA[p.seat_type], price: p.price, discountedPrice, pct }
+  })
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f0f0f", fontFamily: "'Georgia', serif" }}>
 
-      
+      {/* Hero */}
       <div style={{ background: "linear-gradient(160deg, #1a0008 0%, #6B1829 50%, #1a0008 100%)", padding: "4rem 2rem 5rem", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "18px", background: "repeating-linear-gradient(90deg, #000 0px, #000 18px, #1a0008 18px, #1a0008 36px)" }} />
-
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.03) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255,200,100,0.04) 0%, transparent 50%)" }} />
 
         <p style={{ color: "rgba(255,200,120,0.8)", fontSize: "0.75rem", letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "1rem" }}>
@@ -57,42 +95,57 @@ export default function TicketPrice() {
           From everyday screenings to luxury lounges — find the perfect seat for every occasion.
         </p>
 
-        
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "18px", background: "repeating-linear-gradient(90deg, #000 0px, #000 18px, #0f0f0f 18px, #0f0f0f 36px)" }} />
       </div>
 
-     
+      {/* Offer banner — shown only when active discount for selected theater */}
+      {discount && (
+        <div style={{ background: "#fff8e1", border: "1px solid #f5c842", borderRadius: "10px", padding: "0.75rem 1.5rem", maxWidth: "600px", margin: "-1.5rem auto 0", textAlign: "center", position: "relative", zIndex: 1 }}>
+          <i className="fa-solid fa-tag" style={{ color: "#b45309", marginRight: "0.5rem" }} />
+          <strong style={{ color: "#92400e", fontSize: "0.9rem" }}>{discount.name}</strong>
+          <span style={{ color: "#78350f", fontSize: "0.82rem", marginLeft: "0.5rem" }}>
+            — up to {Math.max(discount.standard_pct, discount.semi_recliner_pct, discount.premium_pct, discount.vip_pct)}% off at {selectedTheater?.name ?? "Dhanmondi"}!
+          </span>
+        </div>
+      )}
+
+      {/* Cards */}
       <div style={{ display: "flex", gap: "1.25rem", justifyContent: "center", flexWrap: "wrap", padding: "3.5rem 2rem", maxWidth: "1100px", margin: "0 auto" }}>
-        {prices.map(p => (
+        {cards.map(p => (
           <div
             key={p.type}
             style={{
-              background: p.highlight ? "linear-gradient(160deg, #6B1829 0%, #9a2035 100%)" : "linear-gradient(160deg, #1a1a1a 0%, #222 100%)",
+              background: p.highlight
+                ? "linear-gradient(160deg, #6B1829 0%, #9a2035 100%)"
+                : "linear-gradient(160deg, #1a1a1a 0%, #222 100%)",
               borderRadius: "16px",
               width: "230px",
-              boxShadow: p.highlight ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)" : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
+              boxShadow: p.highlight
+                ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)"
+                : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)",
               transform: p.highlight ? "translateY(-12px) scale(1.03)" : "translateY(0)",
               transition: "transform 0.3s, box-shadow 0.3s",
               position: "relative",
               overflow: "hidden",
-              cursor: "pointer",
+              cursor: "default",
             }}
             onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
+              const el = e.currentTarget as HTMLElement
               if (!p.highlight) {
-                el.style.transform = "translateY(-8px)";
-                el.style.boxShadow = "0 16px 48px rgba(107,24,41,0.4), 0 0 0 1px rgba(107,24,41,0.5)";
+                el.style.transform = "translateY(-8px)"
+                el.style.boxShadow = "0 16px 48px rgba(107,24,41,0.4), 0 0 0 1px rgba(107,24,41,0.5)"
               } else {
-                el.style.transform = "translateY(-16px) scale(1.04)";
+                el.style.transform = "translateY(-16px) scale(1.04)"
               }
             }}
             onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = p.highlight ? "translateY(-12px) scale(1.03)" : "translateY(0)";
-              el.style.boxShadow = p.highlight ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)" : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)";
+              const el = e.currentTarget as HTMLElement
+              el.style.transform = p.highlight ? "translateY(-12px) scale(1.03)" : "translateY(0)"
+              el.style.boxShadow = p.highlight
+                ? "0 20px 60px rgba(107,24,41,0.6), 0 0 0 1px rgba(245,200,66,0.3)"
+                : "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)"
             }}
           >
-           
             {p.highlight && (
               <div style={{ background: "#f5c842", color: "#1a0008", fontSize: "0.65rem", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", textAlign: "center", padding: "0.35rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
                 <i className="fa-solid fa-star" style={{ fontSize: "0.6rem" }} /> Most Popular
@@ -106,10 +159,32 @@ export default function TicketPrice() {
                 {p.type}
               </div>
 
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.4rem", fontWeight: 800, color: p.highlight ? "#f5c842" : "white", lineHeight: 1, marginBottom: "0.2rem" }}>
-                {p.price.toLocaleString()}
-              </div>
-              <div style={{ fontSize: "0.7rem", color: p.highlight ? "rgba(255,255,255,0.6)" : "#666", marginBottom: "1rem" }}>BDT / ticket</div>
+              {/* Price display */}
+              {p.discountedPrice ? (
+                <>
+                  <div style={{ fontSize: "0.9rem", color: p.highlight ? "rgba(255,255,255,0.5)" : "#666", textDecoration: "line-through", lineHeight: 1, marginBottom: "0.1rem" }}>
+                    {p.price.toLocaleString()}
+                  </div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.4rem", fontWeight: 800, color: p.highlight ? "#f5c842" : "white", lineHeight: 1, marginBottom: "0.1rem" }}>
+                    {p.discountedPrice.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: p.highlight ? "rgba(255,255,255,0.6)" : "#666", marginBottom: "0.4rem" }}>
+                    BDT / ticket
+                  </div>
+                  <div style={{ background: "#f5c842", color: "#1a0008", fontSize: "0.62rem", fontWeight: 800, padding: "0.15rem 0.5rem", borderRadius: "999px", display: "inline-block", marginBottom: "0.75rem" }}>
+                    {p.pct}% OFF
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.4rem", fontWeight: 800, color: p.highlight ? "#f5c842" : "white", lineHeight: 1, marginBottom: "0.2rem" }}>
+                    {p.price.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: p.highlight ? "rgba(255,255,255,0.6)" : "#666", marginBottom: "1rem" }}>
+                    BDT / ticket
+                  </div>
+                </>
+              )}
 
               <div style={{ height: "1px", background: p.highlight ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", marginBottom: "1rem" }} />
 
@@ -127,10 +202,22 @@ export default function TicketPrice() {
               </div>
 
               <button
-                style={{ width: "100%", padding: "0.65rem", background: p.highlight ? "#f5c842" : "transparent", color: p.highlight ? "#1a0008" : "white", border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.2)", borderRadius: "8px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", letterSpacing: "0.05em", transition: "opacity 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.85"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-                onClick={() => window.location.href = "/showtimes"}
+                onClick={() => navigate("/showtimes")}
+                style={{
+                  width: "100%",
+                  padding: "0.65rem",
+                  background: p.highlight ? "#f5c842" : "transparent",
+                  color: p.highlight ? "#1a0008" : "white",
+                  border: p.highlight ? "none" : "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: "8px",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  letterSpacing: "0.05em",
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.82" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1" }}
               >
                 Book Now <i className="fa-solid fa-arrow-right" style={{ marginLeft: "0.3rem" }} />
               </button>
@@ -147,8 +234,8 @@ export default function TicketPrice() {
       </div>
 
       <div style={{ background: "#0a0a0a", borderTop: "1px solid #1a1a1a", color: "#555", textAlign: "center", padding: "1rem", fontSize: "0.78rem" }}>
-        Copyright© 2026 CineBook Limited . All Rights Reserved.
+        Copyright© 2026 CineBook Limited. All Rights Reserved.
       </div>
     </div>
-  );
+  )
 }

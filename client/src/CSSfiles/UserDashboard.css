@@ -325,6 +325,12 @@
   color: var(--crimson);
 }
 
+.ud-ticket-method {
+  font-size: 0.75rem;
+  color: #8a7a6a;
+  margin-top: 0.25rem;
+}
+
 /* Status badge */
 .ud-status-badge {
   font-size: 0.68rem;
@@ -497,3 +503,31 @@
   .ud-ticket-card      { flex-wrap: wrap; }
   .ud-ticket-right     { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
 }
+
+/* ══════════════════════════════════════════
+   TICKET CARD — new fields
+   ══════════════════════════════════════════ */
+.ud-ticket-txn {
+  font-size: 0.68rem;
+  color: var(--gray-500);
+  font-family: monospace;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.ud-ticket-view-detail {
+  font-size: 0.75rem;
+  color: var(--crimson);
+  margin-top: auto;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.ud-ticket-card:hover .ud-ticket-view-detail {
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+/* cancelled badge in filter row */
+.ud-filter-badge.cancelled { background: var(--danger-bg); color: var(--danger); }

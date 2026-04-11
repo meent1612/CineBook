@@ -20,12 +20,18 @@ class Movie extends Model
         'duration_mins',
         'release_date',
         'poster_url',
+        'carasol_url',
         'trailer_url',
         'status',
         'is_active',
     ];
 
-    
+    protected $casts = [
+        'id'            => 'integer',
+        'duration_mins' => 'integer',
+        'is_active'     => 'boolean',
+    ];
+
     public function screenings()
     {
         return $this->hasMany(Screening::class);

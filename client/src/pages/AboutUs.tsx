@@ -1,6 +1,6 @@
 export default function AboutUs() {
   const team = [
-    { name: "Shayma Sarmeen", role: "CEO & Founder", icon: "fa-solid fa-user" },
+    { name: "Shayma Sharmeen", role: "CEO & Founder", icon: "fa-solid fa-user" },
     { name: "Zumaina Tahsin", role: "Head of Operations", icon: "fa-solid fa-user" },
     { name: "Rahnuma Azra Mahajabin", role: "Lead Developer", icon: "fa-solid fa-user" },
     { name: "Farzana Mim", role: "Marketing Director", icon: "fa-solid fa-user" },

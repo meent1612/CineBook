@@ -5,14 +5,22 @@ import "../CSSfiles/UserDashboard.css"
 
 interface Booking {
   id: number
+  booking_group_id: string
   movie_title: string
   movie_poster: string | null
   show_date: string
   start_time: string
   hall_name: string
+  theater_name: string
+  theater_address: string
   seats: string[]
+  seat_type: string
+  unit_price: number
   total_price: number
   status: "upcoming" | "watched" | "cancelled"
+  payment_method: "bkash" | "nagad" | "card" | null
+  transaction_id: string | null
+  booking_date: string
 }
 
 interface ProfileData {
@@ -63,8 +71,14 @@ function TicketPoster({ title, poster, className }: { title: string; poster: str
 }
 
 function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: boolean }) {
+  const navigate = useNavigate()
+
+  const handleViewDetail = () => {
+    navigate("/ticket-detail", { state: booking })
+  }
+
   return (
-    <div className={`ud-ticket-card ${booking.status}`}>
+    <div className={`ud-ticket-card ${booking.status}`} onClick={handleViewDetail} style={{ cursor: "pointer" }}>
       <TicketPoster
         title={booking.movie_title}
         poster={booking.movie_poster}
@@ -75,6 +89,7 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
         <div className="ud-ticket-meta">
           <span><i className="fa-regular fa-calendar" /> {formatDate(booking.show_date)}</span>
           <span><i className="fa-regular fa-clock" /> {formatTime(booking.start_time)}</span>
+          <span><i className="fa-solid fa-building" /> {booking.theater_name || "—"}</span>
           <span><i className="fa-solid fa-masks-theater" /> {booking.hall_name}</span>
         </div>
         <div className="ud-ticket-meta">
@@ -92,6 +107,19 @@ function TicketCard({ booking, showStatus }: { booking: Booking; showStatus?: bo
         )}
         <div className="ud-ticket-total">
           {booking.total_price.toLocaleString()} BDT
+        </div>
+        {booking.payment_method && (
+          <div className="ud-ticket-method">
+            <i className="fa-solid fa-credit-card" /> {booking.payment_method.charAt(0).toUpperCase() + booking.payment_method.slice(1)}
+          </div>
+        )}
+        {booking.transaction_id && (
+          <div className="ud-ticket-txn" title="Transaction ID">
+            <i className="fa-solid fa-receipt" /> {booking.transaction_id}
+          </div>
+        )}
+        <div className="ud-ticket-view-detail">
+          <i className="fa-solid fa-chevron-right" />
         </div>
       </div>
     </div>
@@ -157,6 +185,7 @@ export default function UserDashboard() {
 
   const upcoming   = bookings.filter(b => b.status === "upcoming")
   const watched    = bookings.filter(b => b.status === "watched")
+  const cancelled  = bookings.filter(b => b.status === "cancelled")
   const totalSpent = bookings.reduce((sum, b) => sum + b.total_price, 0)
 
   const initials = profile.name
@@ -187,7 +216,6 @@ export default function UserDashboard() {
 
   const handleLogout = () => { logout(); navigate("/") }
 
-  
   const tabIcon = (tab: Tab) => {
     if (tab === "Overview")   return "fa-chart-bar"
     if (tab === "My Tickets") return "fa-ticket"
@@ -197,7 +225,7 @@ export default function UserDashboard() {
   return (
     <div className="ud-wrapper">
 
-     
+      {/* ── Sidebar ── */}
       <aside className="ud-sidebar">
         <div className="ud-avatar">{initials}</div>
         <div className="ud-sidebar-name">{profile.name || "User"}</div>
@@ -225,10 +253,10 @@ export default function UserDashboard() {
         </button>
       </aside>
 
-      
+      {/* ── Main ── */}
       <main className="ud-main">
 
-        
+        {/* ── Overview Tab ── */}
         {activeTab === "Overview" && (
           <div className="ud-section">
             <h2 className="ud-section-title">
@@ -255,14 +283,26 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* Upcoming Bookings */}
             <h3 className="ud-sub-title">Upcoming Bookings</h3>
             {loadingBooks && <p className="ud-state-msg">Loading…</p>}
-            {/*bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>*/}
-            {!loadingBooks && upcoming.length === 0 && <div className="ud-empty">No upcoming bookings.</div>}
-            {/*upcoming.map(b => <TicketCard key={b.id} booking={b} />)*/}
+            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
+            {!loadingBooks && upcoming.length === 0 && (
+              <div className="ud-empty">
+                <i className="fa-regular fa-calendar-xmark" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
+                No upcoming bookings.
+              </div>
+            )}
+            {!loadingBooks && upcoming.map(b => <TicketCard key={b.id} booking={b} />)}
 
+            {/* Recently Watched */}
             <h3 className="ud-sub-title">Recently Watched</h3>
-            {!loadingBooks && watched.length === 0 && <div className="ud-empty">No watched movies yet.</div>}
+            {!loadingBooks && watched.length === 0 && (
+              <div className="ud-empty">
+                <i className="fa-regular fa-film" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
+                No watched movies yet.
+              </div>
+            )}
             <div className="ud-recent-row">
               {watched.map(b => (
                 <div key={b.id} className="ud-recent-card">
@@ -275,24 +315,71 @@ export default function UserDashboard() {
           </div>
         )}
 
-        
+        {/* ── My Tickets Tab ── */}
         {activeTab === "My Tickets" && (
           <div className="ud-section">
             <h2 className="ud-section-title">My Tickets</h2>
+
             <div className="ud-ticket-filter-row">
-              <span className="ud-filter-badge upcoming">{upcoming.length} Upcoming</span>
-              <span className="ud-filter-badge watched">{watched.length} Watched</span>
+              <span className="ud-filter-badge upcoming">
+                <i className="fa-regular fa-calendar" /> {upcoming.length} Upcoming
+              </span>
+              <span className="ud-filter-badge watched">
+                <i className="fa-solid fa-circle-check" /> {watched.length} Watched
+              </span>
+              {cancelled.length > 0 && (
+                <span className="ud-filter-badge cancelled">
+                  <i className="fa-solid fa-ban" /> {cancelled.length} Cancelled
+                </span>
+              )}
             </div>
-            {loadingBooks  && <p className="ud-state-msg">Loading tickets…</p>}
-            {/*bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>*/}
+
+            {loadingBooks && <p className="ud-state-msg">Loading tickets…</p>}
+            {bookingsError && <p className="ud-state-msg ud-state-error">{bookingsError}</p>}
+
             {!loadingBooks && bookings.length === 0 && (
-              <div className="ud-empty">You haven't booked any tickets yet.</div>
+              <div className="ud-empty">
+                <i className="fa-solid fa-ticket" style={{ fontSize: "1.5rem", marginBottom: "0.5rem", display: "block" }} />
+                You haven't booked any tickets yet.
+              </div>
             )}
-            {/*bookings.map(b => <TicketCard key={b.id} booking={b} showStatus />)*/}
+
+            {/* Upcoming section */}
+            {!loadingBooks && upcoming.length > 0 && (
+              <>
+                <h3 className="ud-sub-title">
+                  <i className="fa-regular fa-calendar" style={{ marginRight: "0.4rem", color: "#6B1829" }} />
+                  Upcoming
+                </h3>
+                {upcoming.map(b => <TicketCard key={b.id} booking={b} showStatus />)}
+              </>
+            )}
+
+            {/* Watched section */}
+            {!loadingBooks && watched.length > 0 && (
+              <>
+                <h3 className="ud-sub-title" style={{ marginTop: "1.5rem" }}>
+                  <i className="fa-solid fa-circle-check" style={{ marginRight: "0.4rem", color: "#2e7d32" }} />
+                  Watched
+                </h3>
+                {watched.map(b => <TicketCard key={b.id} booking={b} showStatus />)}
+              </>
+            )}
+
+            {/* Cancelled section */}
+            {!loadingBooks && cancelled.length > 0 && (
+              <>
+                <h3 className="ud-sub-title" style={{ marginTop: "1.5rem" }}>
+                  <i className="fa-solid fa-ban" style={{ marginRight: "0.4rem", color: "#c62828" }} />
+                  Cancelled
+                </h3>
+                {cancelled.map(b => <TicketCard key={b.id} booking={b} showStatus />)}
+              </>
+            )}
           </div>
         )}
 
-       
+        {/* ── Profile Tab ── */}
         {activeTab === "Profile" && (
           <div className="ud-section">
             <div className="ud-profile-header">
