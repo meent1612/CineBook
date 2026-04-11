@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\OtpMail;
 use App\Models\Booking;
 use App\Models\OtpCode;
 use App\Models\Payment;
 use App\Models\SeatLock;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
     // ═══════════════════════════════════════════════════════
     // POST /api/payments/send-otp
-    // Generates a 6-digit OTP, saves it, emails it.
+    // Generates a 6-digit OTP, saves it, emails it via Resend API.
     // Body: { email, movie_title }
     // ═══════════════════════════════════════════════════════
     public function sendOtp(Request $request)
@@ -33,18 +32,41 @@ class PaymentController extends Controller
             'email'      => $request->email,
             'code'       => $code,
             'expires_at' => now()->addMinutes(1),
-            // 'expires_at' => now()->addSeconds(40),
             'used'       => false,
         ]);
 
         try {
-            Mail::to($request->email)->send(new OtpMail($code, $request->movie_title));
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('RESEND_API_KEY'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.resend.com/emails', [
+                'from'    => 'CineBook <onboarding@resend.dev>',
+                'to'      => [$request->email],
+                'subject' => 'Your CineBook OTP Code',
+                'html'    => '
+                    <div style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h2 style="color: #8B0000;">CineBook OTP Verification</h2>
+                        <p>Your OTP for booking <b>' . $request->movie_title . '</b> is:</p>
+                        <h1 style="color: #8B0000; letter-spacing: 8px;">' . $code . '</h1>
+                        <p>This code is valid for <b>1 minute</b>.</p>
+                        <p style="color: gray; font-size: 12px;">If you did not request this, please ignore this email.</p>
+                    </div>
+                ',
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send OTP email. ' . $response->body(),
+                ], 500);
+            }
+
         } catch (\Exception $e) {
-    return response()->json([
-        'success' => false,
-        'message' => $e->getMessage(), // this will show exact error
-    ], 500);
-}
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
