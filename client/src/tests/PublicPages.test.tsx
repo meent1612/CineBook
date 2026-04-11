@@ -5,6 +5,11 @@ import Home from '../pages/Home'
 import Login from '../pages/Login'
 import Register from '../pages/Register'
 
+// Mock AIChatbot because jsdom doesn't support scrollIntoView
+vi.mock('../pages/Aichatbot', () => ({
+  default: () => <div data-testid="mock-aichatbot" />,
+}))
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ user: null }),
 }))
