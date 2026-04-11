@@ -1621,11 +1621,13 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
-          {<AIContentAssistant
-            onFill={(data) => setNewMovie(prev => ({ ...prev, ...data }))}
-          />}
         </div>
       )}
+
+      {/* AI Content Assistant — always mounted, floats over everything */}
+      <AIContentAssistant
+        onFill={(data) => setNewMovie(prev => ({ ...prev, ...data }))}
+      />
 
       {/* Edit Movie */}
       {showEditMovie && (
