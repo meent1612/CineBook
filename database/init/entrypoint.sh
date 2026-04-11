@@ -8,6 +8,12 @@ done
 
 echo "MySQL is ready!"
 
+# Skip if already seeded
+if mysql -h db -u root -pCineBook@1234 -e "SELECT 1 FROM users LIMIT 1" cinebook_db > /dev/null 2>&1; then
+    echo "Already initialized, skipping."
+    exit 0
+fi
+
 mysql -h db -u root -pCineBook@1234 < /sql/01_init.sql
 echo "01_init.sql done"
 

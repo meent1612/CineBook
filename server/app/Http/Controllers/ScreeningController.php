@@ -173,14 +173,14 @@ class ScreeningController extends Controller
                 'message' => 'Screening deleted successfully.',
             ]);
             } catch (\Exception $e) {
-        $msg = str_contains($e->getMessage(), 'FK__bookings')
-            ? 'This screening cannot be deleted because it has existing bookings.'
-            : $e->getMessage();
+                $msg = str_contains($e->getMessage(), 'FK__bookings') || str_contains($e->getMessage(), 'foreign key constraint fails')
+                    ? 'This screening cannot be deleted because it has existing bookings.'
+                    : $e->getMessage();
 
-        return response()->json([
-            'success' => false,
-            'message' => $msg,
-        ], 500);
-    }
+                return response()->json([
+                    'success' => false,
+                    'message' => $msg,
+                ], 500);
+            }
     }
 }
