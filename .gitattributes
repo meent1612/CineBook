@@ -6,5 +6,7 @@
 *.md diff=markdown
 *.php diff=php
 
+database/init/entrypoint.sh text eol=lf
+
 /.github export-ignore
 CHANGELOG.md export-ignore
