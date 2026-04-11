@@ -270,7 +270,8 @@ The JSON must have exactly these keys:
   \"category\":      \"<one of: 2D | 3D | IMAX>\",
   \"language\":      \"<original release language, e.g. English>\",
   \"duration_mins\": \"<runtime as a number string, e.g. 148>\",
-  \"status\":        \"<one of: now_showing | coming_soon>\"
+  \"status\":        \"<one of: now_showing | coming_soon>\",
+  \"trailer_url\":   \"<official YouTube trailer URL, e.g. https://www.youtube.com/watch?v=...>\"
 }
 If you do not recognise the movie, still fill every field with plausible values.";
 

@@ -51,6 +51,7 @@ interface AIResult {
   language:      string
   duration_mins: string
   status:        string
+  trailer_url:   string
 }
 
 interface Props {
@@ -76,6 +77,7 @@ const fieldLabel: Record<keyof AIResult, string> = {
   language:      "Language",
   duration_mins: "Duration (mins)",
   status:        "Status",
+  trailer_url:   "Trailer URL",
 }
 
 const statusBadge = (s: string) =>
@@ -170,6 +172,7 @@ export default function AIContentAssistant({ onFill }: Props) {
       language:      result.language,
       duration_mins: result.duration_mins,
       status:        result.status as "now_showing" | "coming_soon",
+      trailer_url:   result.trailer_url,
     })
     setFilled(true)
   }
