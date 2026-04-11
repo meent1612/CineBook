@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import "../CSSfiles/AIChatbot.css"
+import "../CSSfiles/AIchatbot.css"
 
 // ── Types ──────────────────────────────────────────────
 interface Movie {
