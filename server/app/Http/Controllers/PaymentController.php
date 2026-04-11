@@ -40,11 +40,11 @@ class PaymentController extends Controller
         try {
             Mail::to($request->email)->send(new OtpMail($code, $request->movie_title));
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send OTP email. Please check mail config.',
-            ], 500);
-        }
+    return response()->json([
+        'success' => false,
+        'message' => $e->getMessage(), // this will show exact error
+    ], 500);
+}
 
         return response()->json([
             'success' => true,
