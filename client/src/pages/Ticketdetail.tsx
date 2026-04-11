@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import "../CSSfiles/TicketDetail.css"
+import "../CSSfiles/Ticketdetail.css"
 
 // ── Types ──────────────────────────────────────────────
 interface Booking {
